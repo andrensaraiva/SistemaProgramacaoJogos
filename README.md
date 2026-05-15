@@ -43,4 +43,7 @@ SistemaJogosProgramcao/
 
 ## Próximos passos
 
-Veja [docs/PLANO.md](docs/PLANO.md) para o roteiro de desenvolvimento e [docs/SETUP.md](docs/SETUP.md) para configurar o ambiente local.
+- 🔄 **Retomando o projeto?** Comece por [docs/CONTINUAR.md](docs/CONTINUAR.md).
+- 📋 **Quer ver o estado atual?** Confira [docs/STATUS.md](docs/STATUS.md).
+- 🗺️ **Quer ver o roteiro completo?** Veja [docs/PLANO.md](docs/PLANO.md).
+- ⚙️ **Configurar do zero?** Siga [docs/SETUP.md](docs/SETUP.md).

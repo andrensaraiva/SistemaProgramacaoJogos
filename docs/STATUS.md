@@ -1,12 +1,15 @@
 # Status do projeto
 
 > Snapshot vivo do estado da plataforma. Atualizado a cada mudança.
-> **Última atualização:** 2026-05-15 — fim da Fase 1 (autenticação)
+> **Última atualização:** 2026-05-15 — Fase 1 commitada (commit `ca2c182`)
+> **Repositório:** https://github.com/andrensaraiva/SistemaProgramacaoJogos
 
 ## Resumo executivo
 - **Fase atual:** Fase 1 concluída (login funciona, falta só o Supabase estar configurado)
-- **Próximo passo concreto:** **você** criar o projeto no Supabase, aplicar a migration e me passar as keys
+- **Próximo passo concreto:** **você** criar o projeto no Supabase, aplicar a migration e me passar as keys — passo a passo em [CONTINUAR.md](CONTINUAR.md)
 - **Depois disso:** Fase 2 — página de exercício com Monaco Editor + execução de C# via Piston
+
+> 📖 **Sessão pausada em 2026-05-15.** Pra retomar, leia [CONTINUAR.md](CONTINUAR.md).
 
 ## O que está pronto ✅
 
