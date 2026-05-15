@@ -6,124 +6,106 @@
 
 ## TL;DR — o que fazer agora
 
+Fase 2 está concluída e testada. Pra retomar do zero (em outra máquina ou após formatar):
+
 1. Clone o repo e instale deps:
    ```powershell
    git clone https://github.com/andrensaraiva/SistemaProgramacaoJogos.git
    cd SistemaProgramacaoJogos\web
    npm install
    ```
-2. Faça as **3 tarefas pendentes do usuário** (abaixo). Sem elas, nada roda.
-3. Continue a **Fase 2** do [PLANO.md](PLANO.md) — implementar a página de exercício com Monaco + Piston.
+2. Configure Supabase + `.env.local` + seed (passos 1-5 abaixo, se for primeira vez)
+3. Suba o **Piston em Docker** (passo 6 — necessário pra rodar código C#)
+4. Continue a **Fase 3** do [PLANO.md](PLANO.md) — CRUD de turmas, invite code, atribuir listas a turmas.
 
 ---
 
 ## Onde paramos
 
-A **Fase 1 (autenticação)** está completa e commitada. Funciona ponta a ponta:
+A **Fase 2 (exercício rodando no navegador)** está completa, commitada e testada ponta a ponta:
+- Lista de exercícios em `/exercicios` (3 públicos via seed)
+- Página de resolução com Monaco Editor lazy-loaded
+- Botão "Testar" → `/api/run` → Piston self-hosted
+- Botão "Enviar" → Server Action roda todos os casos (incl. ocultos), persiste em `submissions`, dá XP/level
+- Validado: "Olá, Mundo!" → +10 XP no painel ✅
+
+E a **Fase 1 (autenticação)** já estava completa antes:
 - Login / Cadastro / Logout via Supabase Auth (com Server Actions)
 - Proteção de rotas via [proxy.ts](../web/proxy.ts)
-- Validação de formulários com Zod e mensagens em PT-BR
-- Tema customizado com paleta de cores e dark mode
+- Validação de formulários com Zod, mensagens em PT-BR
+- Tema customizado com paleta e dark mode
 
 Veja o snapshot completo em [STATUS.md](STATUS.md).
 
-## ⚠️ Tarefas pendentes do usuário (bloqueantes)
+## Setup do zero (só se for outra máquina)
 
-Sem fazer essas, **nada roda**. Mesmo eu (IA) não consigo fazer no seu lugar — precisa de cliques na sua conta.
+Se você está no mesmo PC onde já fez tudo, pula essa seção. Pra setup novo:
 
-### 1️⃣ Criar projeto no Supabase
+### 1. Supabase (uma vez)
+- Cria projeto em https://supabase.com/dashboard (região `sa-east-1`, free)
+- SQL Editor → roda [supabase/migrations/0001_init.sql](../supabase/migrations/0001_init.sql)
+- SQL Editor → roda [supabase/seed/0001_exercises.sql](../supabase/seed/0001_exercises.sql) (depois de cadastrar 1 perfil)
+- Authentication → Email Provider: **Enable** ON, **Confirm email** OFF
+- Settings → API: copia URL, anon, service_role
 
-1. Vá em https://supabase.com/dashboard
-2. Clique em **New project**
-3. Preencha:
-   - **Name:** `sistema-jogos-programacao`
-   - **Database Password:** (escolha uma senha forte, **anote em local seguro** — você vai precisar pra acessar o DB direto)
-   - **Region:** South America (São Paulo) — `sa-east-1`
-   - **Pricing Plan:** Free
-4. Clique em **Create new project**
-5. Espere ~2 minutos o projeto subir (o painel mostra um loader)
+### 2. `.env.local` em `web/`
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+GEMINI_API_KEY=AIza...
+PISTON_API_URL=http://localhost:2000/api/v2
+```
 
-### 2️⃣ Aplicar a migration do banco
+### 3. Piston em Docker (necessário pra rodar código)
 
-1. No projeto recém-criado, abra **SQL Editor** (ícone de `<>` no menu lateral)
-2. Clique em **+ New query**
-3. Abra o arquivo [supabase/migrations/0001_init.sql](../supabase/migrations/0001_init.sql) localmente
-4. Copie **todo o conteúdo** e cole no SQL Editor
-5. Clique em **Run** (ou Ctrl+Enter)
-6. Confira: deve dizer **Success. No rows returned** e nas tabelas (menu **Table Editor** lateral) você deve ver as 11 tabelas: `profiles`, `classes`, `class_members`, `exercises`, `exercise_tests`, `assignments`, `assignment_exercises`, `submissions`, `badges`, `user_badges`, `duels`
-
-### 3️⃣ Pegar as 3 keys e criar `.env.local`
-
-1. No Supabase, vá em **Settings → API** (ícone de engrenagem no menu lateral)
-2. Copie 3 valores:
-   - **Project URL** (algo tipo `https://xxxxx.supabase.co`)
-   - **`anon` `public`** key (chave longa começando com `eyJ...`)
-   - **`service_role`** key (outra chave longa, **ESSA É SECRETA — nunca compartilhe nem commite**)
-3. (Opcional para Fase 6) Pegue uma key do Gemini em https://aistudio.google.com/app/apikey → **Create API key**
-4. Crie um arquivo `.env.local` em `web/` (mesma pasta do `package.json`):
-
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-   SUPABASE_SERVICE_ROLE_KEY=eyJ...
-   GEMINI_API_KEY=
-   PISTON_API_URL=https://emkc.org/api/v2/piston
-   ```
-
-5. **NUNCA commite esse arquivo** — ele já está no `.gitignore`.
-
-### 4️⃣ Configurar Auth no Supabase (importante!)
-
-Por padrão, o Supabase exige **confirmação de e-mail** antes do usuário conseguir entrar. Pra desenvolvimento, vamos desligar isso (depois você liga em produção).
-
-1. Em **Authentication → Sign In / Up → Email**
-2. Desmarque **Confirm email** (ou marque se quiser, mas terá que confirmar via inbox a cada teste)
-3. Salve
-
-### 5️⃣ Testar localmente
+A API pública do Piston (emkc.org) virou whitelist-only em **15/02/2026**. Subimos o nosso:
 
 ```powershell
+# Docker Desktop precisa estar rodando (baleia verde no tray)
+docker volume create piston_data
+docker run -d --name piston_api --privileged --restart unless-stopped `
+  -v piston_data:/piston -p 2000:2000 ghcr.io/engineer-man/piston:latest
+
+# Instalar dotnet (única vez — fica no volume)
+$body = '{"language":"dotnet","version":"5.0.201"}'
+Invoke-RestMethod -Uri "http://localhost:2000/api/v2/packages" -Method Post `
+  -ContentType "application/json" -Body $body
+```
+
+Confirma que `csharp.net` está em `http://localhost:2000/api/v2/runtimes`.
+
+### 4. Subir o app
+```powershell
 cd web
+npm install
 npm run dev
 ```
 
-Abra http://localhost:3000 — você deve ver a landing page. Clique em **Criar conta**, cadastre-se como **Professor**, faça login, deve cair no `/painel`.
-
-Se der erro:
-- **"Invalid URL"** ou similar → falta `.env.local` ou as keys estão erradas
-- **Auth user mas sem profile** → a migration não rodou ou rodou pela metade. Volte ao SQL Editor e rode de novo
-- **Outros erros** → cole o erro no console do navegador (F12) na próxima sessão pra eu debugar
-
 ---
 
-## O que vem depois (próximas fases)
+## O que vem depois (próxima fase)
 
-Veja o [PLANO.md](PLANO.md) inteiro. Resumo das próximas 3 fases:
-
-### Fase 2 — Exercício rodando no navegador (próxima)
-Construir o ❤️ da plataforma:
-- `/exercicios` — lista de exercícios
-- `/exercicios/[id]` — página com Monaco Editor (já instalado, `@monaco-editor/react`)
-- API route `/api/run` — recebe código do aluno, manda pra **Piston API**, devolve stdout/stderr
-- Sistema de casos de teste (já tem na tabela `exercise_tests`)
-- Submissão: roda todos os casos, persiste em `submissions`, dá XP se passar
+### Fase 3 — Gestão de turmas (próxima)
+- CRUD de turmas pro professor (criar, listar, deletar)
+- Página de invite code pro aluno entrar na turma
+- CRUD de assignments (listas/desafios/provas) atribuídos a turmas
+- Visão de progresso pro professor (quem fez o quê, quando, status)
 
 **Arquivos esperados a criar:**
-- `web/src/app/(app)/exercicios/page.tsx` (lista)
-- `web/src/app/(app)/exercicios/[id]/page.tsx` (resolver)
-- `web/src/app/(app)/exercicios/[id]/_editor.tsx` (Monaco — client component)
-- `web/src/app/api/run/route.ts` (POST → Piston)
-- `web/src/lib/exercises/judge.ts` (lógica de comparação stdout esperado vs obtido)
-
-### Fase 3 — Gestão de turmas
-- CRUD de turmas pro professor
-- Aluno entra com invite code
-- Atribuir listas a turmas
+- `web/src/app/(app)/turmas/page.tsx` (lista de turmas)
+- `web/src/app/(app)/turmas/nova/page.tsx` (criar turma — só professor)
+- `web/src/app/(app)/turmas/[id]/page.tsx` (detalhe + alunos + assignments)
+- `web/src/app/(app)/turmas/entrar/page.tsx` (aluno cola invite code)
+- `web/src/lib/classes/actions.ts` (Server Actions: createClass, joinClass, etc.)
 
 ### Fase 4 — Gamificação
-- Trigger no DB pra dar XP automaticamente quando submission é aprovada
-- Subir de nível (regra: 100 XP × nível)
+- Trigger no DB pra dar XP automaticamente quando submission é aprovada (hoje é manual no Server Action — precisa migrar)
 - Distribuir badges automaticamente
+- Ranking da turma + ranking global
+
+### Fase 5+ — Antifraude, IA, X1, Unity, Polimento
+Roteiro completo em [PLANO.md](PLANO.md).
 
 ---
 
@@ -131,7 +113,7 @@ Construir o ❤️ da plataforma:
 
 Quando você reabrir o Claude Code nessa pasta, sugiro mandar uma mensagem assim:
 
-> "Continuei o projeto. Já fiz as tarefas do CONTINUAR.md (criei o Supabase, apliquei a migration, configurei o .env.local, o login funciona). Bora pra Fase 2: página de exercício com Monaco + Piston."
+> "Continuando o projeto. Fase 2 (Monaco + Piston self-hosted) já roda ponta a ponta. Bora pra Fase 3: gestão de turmas (CRUD + invite code + atribuir listas)."
 
 Aí eu já tenho contexto pra continuar de onde parei.
 
