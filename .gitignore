@@ -1,0 +1,42 @@
+# Dependências
+node_modules/
+**/node_modules/
+
+# Builds
+.next/
+out/
+dist/
+build/
+
+# Variáveis de ambiente
+.env
+.env.local
+.env*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS / Claude
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+
+# Supabase local
+.supabase/
+
+# Unity (nos templates)
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+*.csproj
+*.sln
+*.suo
+*.user
