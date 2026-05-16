@@ -23,10 +23,10 @@ Roteiro incremental do MVP. Cada etapa entrega algo testável.
 - [ ] Persistir submissão e resultado no banco
 
 ## Fase 3 — Gestão de turmas
-- [ ] CRUD de turmas (professor)
-- [ ] Convite por código pra aluno entrar na turma
-- [ ] CRUD de listas de exercícios e atribuição a turma
-- [ ] Visão do progresso: quem fez o quê, nota, tempo
+- [x] CRUD de turmas (professor)
+- [x] Convite por código pra aluno entrar na turma
+- [x] CRUD de listas de exercícios e atribuição a turma
+- [x] Visão do progresso: quem fez o quê, nota, tempo
 
 ## Fase 4 — Gamificação
 - [ ] XP e níveis por exercício resolvido (dificuldade ponderada)
