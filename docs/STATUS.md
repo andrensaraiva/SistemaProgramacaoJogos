@@ -1,85 +1,128 @@
 # Status do projeto
 
 > Snapshot vivo do estado da plataforma. Atualizado a cada mudança.
-> **Última atualização:** 2026-05-15 — Fase 2 ✅ ponta a ponta (testada com Olá Mundo, +10 XP confirmado)
+> **Última atualização:** 2026-05-16 — Fases 2 e 3 commitadas (merge das duas branches)
 > **Repositório:** https://github.com/andrensaraiva/SistemaProgramacaoJogos
 
 ## Resumo executivo
-- **Fase atual:** Fase 2 concluída e testada localmente (Monaco + Piston self-hosted + submissão com XP)
-- **Próximo passo concreto:** commitar a Fase 2 e iniciar a Fase 3 (CRUD de turmas, invite code, atribuir listas a turmas)
-- **Mudança importante:** A API pública do Piston (`emkc.org`) virou whitelist-only em **15/02/2026**. Agora usamos Piston **self-hosted via Docker**. Setup novo documentado em [SETUP.md](SETUP.md) seção 4.
+
+| | |
+|---|---|
+| **Fases concluídas** | Fase 1 (auth) + Fase 2 (exercícios) + Fase 3 (turmas) |
+| **Próxima fase** | **Fase 4** — gamificação (trigger XP automático, badges, ranking) |
+| **Pendência** | nenhuma bloqueante. Setup completo, fluxo validado end-to-end. |
+| **Pré-req novo** | Docker Desktop com container `piston_api` rodando (Piston público virou whitelist-only em 15/02/2026) |
+
+---
 
 ## O que está pronto ✅
 
 ### Fase 0 — Fundação
-- [x] Estrutura de pastas, [README](../README.md), [PLANO](PLANO.md), [SETUP](SETUP.md)
+- [x] Estrutura de pastas, [README](../README.md), [PLANO](PLANO.md), [SETUP](SETUP.md), [CONTINUAR](CONTINUAR.md)
 - [x] `.gitignore` na raiz e git inicializado
-- [x] Scaffolding **Next.js 16.2.6** + TypeScript + Tailwind 4 + App Router + Turbopack em [web/](../web/)
-- [x] Deps instaladas: `@supabase/supabase-js`, `@supabase/ssr`, `@monaco-editor/react`, `monaco-editor`, `zod`, `@google/generative-ai`
+- [x] Scaffolding **Next.js 16.2.6** + TypeScript + Tailwind 4 + App Router + Turbopack
+- [x] Deps: `@supabase/supabase-js`, `@supabase/ssr`, `@monaco-editor/react`, `monaco-editor`, `zod`, `@google/generative-ai`
 
 ### Banco de dados
-- [x] [supabase/migrations/0001_init.sql](../supabase/migrations/0001_init.sql) — esquema completo:
-  - 11 tabelas: profiles, classes, class_members, exercises, exercise_tests, assignments, assignment_exercises, submissions, badges, user_badges, duels
-  - RLS habilitado em todas com políticas por papel (aluno/professor)
-  - Trigger que cria perfil automaticamente quando alguém se cadastra
-  - Seed inicial de 5 badges (Primeira Vitória, Semana Consistente, Mão Própria, Duelista, Curioso)
-- [x] [supabase/seed/0001_exercises.sql](../supabase/seed/0001_exercises.sql) — 3 exercícios C# públicos (Olá Mundo, Soma, FizzBuzz) com casos de teste visíveis e ocultos. Idempotente.
+- [x] [supabase/migrations/0001_init.sql](../supabase/migrations/0001_init.sql) — 11 tabelas + RLS completo:
+  - `profiles`, `classes`, `class_members`, `exercises`, `exercise_tests`
+  - `assignments`, `assignment_exercises`, `submissions`
+  - `badges`, `user_badges`, `duels`
+  - Trigger que cria perfil automaticamente no cadastro
+  - Seed: 5 badges padrão
+- [x] [supabase/seed/0001_exercises.sql](../supabase/seed/0001_exercises.sql) — 3 exercícios C# públicos (Olá Mundo, Soma, FizzBuzz) com testes visíveis e ocultos. Idempotente.
 
 ### Fase 1 — Autenticação
-- [x] [web/src/lib/supabase/client.ts](../web/src/lib/supabase/client.ts) — cliente Supabase browser
-- [x] [web/src/lib/supabase/server.ts](../web/src/lib/supabase/server.ts) — cliente Supabase server (cookies async)
-- [x] [web/src/lib/supabase/middleware.ts](../web/src/lib/supabase/middleware.ts) — refresh de sessão e proteção de rotas
-- [x] [web/src/lib/supabase/admin.ts](../web/src/lib/supabase/admin.ts) — cliente service_role (bypassa RLS, só server-side)
-- [x] [web/proxy.ts](../web/proxy.ts) — proxy global do Next 16
-- [x] [web/src/lib/auth/actions.ts](../web/src/lib/auth/actions.ts) — Server Actions: `login`, `signup`, `logout`
-- [x] [web/src/lib/auth/dal.ts](../web/src/lib/auth/dal.ts) — Data Access Layer: `verifySession`, `getProfile`, `isProfessor` (cached)
+- [x] Cliente Supabase browser e server (cookies async)
+- [x] [web/src/lib/supabase/admin.ts](../web/src/lib/supabase/admin.ts) — cliente service_role (`import "server-only"`)
+- [x] Proxy global com refresh de sessão e proteção de rotas
+- [x] Server Actions: `login`, `signup`, `logout` (Zod + mensagens PT-BR)
+- [x] DAL: `verifySession`, `getProfile`, `isProfessor` (React cache)
+- [x] Páginas: `/entrar`, `/cadastrar` (com seletor aluno/professor)
+- [x] Layout autenticado com header, nav e logout
 
-### Fase 2 — Exercício rodando no navegador 🆕
+### Fase 2 — Exercício rodando no navegador
 - [x] [web/src/lib/exercises/types.ts](../web/src/lib/exercises/types.ts) — tipos `Exercise`, `SampleTest`, `RunResult`, `SubmissionResult`
-- [x] [web/src/lib/exercises/judge.ts](../web/src/lib/exercises/judge.ts) — `compareOutputs` tolera `\r\n`, espaços no fim de linha e linhas em branco no fim
-- [x] [web/src/lib/exercises/piston.ts](../web/src/lib/exercises/piston.ts) — cliente da Piston API (`csharp.net`, `python`, `javascript`)
-- [x] [web/src/app/api/run/route.ts](../web/src/app/api/run/route.ts) — POST que valida com Zod e proxia pra Piston (botão "Testar")
-- [x] [web/src/app/(app)/exercicios/page.tsx](../web/src/app/(app)/exercicios/page.tsx) — lista todos os `is_public=true`, agrupa por dificuldade
-- [x] [web/src/app/(app)/exercicios/[id]/page.tsx](../web/src/app/(app)/exercicios/[id]/page.tsx) — server component que busca exercício + testes visíveis
-- [x] [web/src/app/(app)/exercicios/[id]/_workbench.tsx](../web/src/app/(app)/exercicios/[id]/_workbench.tsx) — client com Monaco lazy (`dynamic({ssr:false})`), botões Testar/Enviar, painel de saída
-- [x] [web/src/app/(app)/exercicios/[id]/actions.ts](../web/src/app/(app)/exercicios/[id]/actions.ts) — Server Action `submitSolution`: lê todos os testes (incl. ocultos via service_role) → roda no Piston em série → persiste em `submissions` → soma XP e recalcula nível se passou em todos
+- [x] [web/src/lib/exercises/judge.ts](../web/src/lib/exercises/judge.ts) — `compareOutputs` tolera `\r\n` e espaços no fim de linha
+- [x] [web/src/lib/exercises/piston.ts](../web/src/lib/exercises/piston.ts) — cliente Piston (csharp.net, python, javascript)
+- [x] [web/src/app/api/run/route.ts](../web/src/app/api/run/route.ts) — POST validado com Zod (botão "Testar")
+- [x] [web/src/app/(app)/exercicios/page.tsx](../web/src/app/(app)/exercicios/page.tsx) — lista exercícios públicos
+- [x] [web/src/app/(app)/exercicios/[id]/page.tsx](../web/src/app/(app)/exercicios/[id]/page.tsx) — server fetch
+- [x] [web/src/app/(app)/exercicios/[id]/_workbench.tsx](../web/src/app/(app)/exercicios/[id]/_workbench.tsx) — client com Monaco lazy
+- [x] [web/src/app/(app)/exercicios/[id]/actions.ts](../web/src/app/(app)/exercicios/[id]/actions.ts) — `submitSolution`: roda todos os testes, persiste, dá XP
 
-### Páginas e UI
-- [x] [web/src/app/layout.tsx](../web/src/app/layout.tsx) — root em PT-BR com tema customizado
-- [x] [web/src/app/globals.css](../web/src/app/globals.css) — paleta com tokens (primary roxo, success, danger, warning) + dark mode automático
-- [x] [web/src/app/page.tsx](../web/src/app/page.tsx) — landing pública com hero + 4 features
-- [x] [web/src/app/(auth)/](../web/src/app/(auth)/) — `/entrar` e `/cadastrar`
-- [x] [web/src/app/(app)/painel/page.tsx](../web/src/app/(app)/painel/page.tsx) — dashboard com saudação, XP, nível
-- [x] [web/src/app/(app)/exercicios/](../web/src/app/(app)/exercicios/) — fluxo completo de exercícios (lista → resolver → submeter)
-- [x] Componentes UI: [Button](../web/src/components/ui/button.tsx), [Input/Field](../web/src/components/ui/input.tsx), [Logo](../web/src/components/logo.tsx)
+### Fase 3 — Gestão de turmas
+- [x] **CRUD de turmas (professor)**
+  - [web/src/app/(app)/turmas/page.tsx](../web/src/app/(app)/turmas/page.tsx) — lista (professor: suas turmas; aluno: turmas inscritas)
+  - [web/src/app/(app)/turmas/nova/](../web/src/app/(app)/turmas/nova/) — criar turma com código de convite automático
+  - [web/src/app/(app)/turmas/[id]/editar/](../web/src/app/(app)/turmas/[id]/editar/) — editar nome e descrição
+  - Excluir turma com confirmação (cascade: membros + listas)
+- [x] **Convite por código**
+  - [web/src/app/(app)/turmas/entrar/](../web/src/app/(app)/turmas/entrar/) — aluno entra com código de 8 chars
+  - [web/src/app/(app)/turmas/[id]/](../web/src/app/(app)/turmas/[id]/) — exibe código + botão "Copiar" (professor)
+  - Sair da turma com confirmação
+- [x] **CRUD de listas**
+  - [web/src/app/(app)/turmas/[id]/listas/nova/](../web/src/app/(app)/turmas/[id]/listas/nova/) — criar com tipo (lista/desafio/prova) e prazo
+  - Excluir lista (submissões dos alunos são mantidas)
+- [x] **Visão de progresso**
+  - [web/src/app/(app)/turmas/[id]/listas/[lid]/page.tsx](../web/src/app/(app)/turmas/[id]/listas/[lid]/page.tsx)
+  - Professor: tabela alunos × exercícios com ícones de status (✓/✗/—/…/!)
+  - Aluno: resumo do próprio progresso com contagem de aprovados
+- [x] [web/src/lib/turmas/actions.ts](../web/src/lib/turmas/actions.ts) — 7 server actions
+- [x] [web/src/components/confirm-form.tsx](../web/src/components/confirm-form.tsx) — wrapper de confirmação client-side
+- [x] `/painel` atualizado: turmas recentes linkadas, CTAs contextuais, contagem real de conquistas
+
+### Componentes UI
+- [x] `Button` (variantes: primary/secondary/ghost/danger)
+- [x] `Input` + `Field` (com label e mensagem de erro)
+- [x] `ConfirmForm` — wrapper de `confirm()` dialog
+- [x] `CopyButton` — copia código de convite
 
 ### Validação
-- [x] `tsc --noEmit` passa sem erros (Next 16 + React 19 + tipos do Supabase)
+- [x] `tsc --noEmit` passa sem erros (Next 16 + React 19)
+
+---
 
 ## Fluxo que já funciona end-to-end
-1. Landing → cadastro → painel ✅
-2. Painel → "Exercícios" no header → lista com 3 exercícios ✅
-3. Clica em "Olá, Mundo!" → carrega Monaco com starter code ✅
-4. **Testar** → manda pro `/api/run` → Piston compila/executa → mostra stdout/stderr ✅
-5. **Enviar** → Server Action roda todos os casos (incl. ocultos) → marca aprovado/reprovado → adiciona XP no perfil → revalida `/painel` ✅
 
-## Pendências do usuário 👋
-Nenhuma bloqueante no momento. Todas as 5 tarefas iniciais (Supabase, migration, .env, Confirm email, teste) foram concluídas, e o fluxo de submissão foi validado.
+**Como professor:**
+1. Cadastrar como Professor → `/cadastrar`
+2. Criar turma → `/turmas/nova`
+3. Copiar código de convite → `/turmas/[id]`
+4. Criar lista de exercícios → `/turmas/[id]/listas/nova`
+5. Ver progresso dos alunos → `/turmas/[id]/listas/[lid]`
+
+**Como aluno:**
+1. Cadastrar como Aluno → `/cadastrar`
+2. Entrar em turma com código → `/turmas/entrar`
+3. Ver listas atribuídas → `/turmas/[id]`
+4. Abrir um exercício → `/exercicios/[id]`
+5. Editar no Monaco → **Testar** → **Enviar**
+6. Submissão aprovada → +XP automaticamente no perfil
+7. Ver progresso → `/turmas/[id]/listas/[lid]`
+
+---
 
 ## Notas técnicas
-- **Piston self-hosted:** rodando em Docker local (`piston_api`, port 2000, `--privileged --restart unless-stopped`, volume `piston_data`). Pacote `dotnet 5.0.201` instalado (4 linguagens: csharp.net, fsharp.net, basic.net, fsi). `run_timeout` é 3000ms (limite do container). Comandos completos em [SETUP.md](SETUP.md) seção 4.
+
+- **Piston self-hosted:** Docker local (`piston_api`, port 2000, `--privileged --restart unless-stopped`, volume `piston_data`). Pacote `dotnet 5.0.201` (4 linguagens: csharp.net, fsharp.net, basic.net, fsi). `run_timeout` é 3000ms (limite do container). Comandos em [SETUP.md](SETUP.md) seção 4.
 - **Pra deploy:** Vercel não roda Docker — vamos precisar hospedar o Piston em Fly.io, Railway, VPS, ou pedir whitelist no emkc. Decisão pra Fase 9.
-- **XP / Level:** regra simples — `level = floor(xp / 100) + 1`. Pode evoluir na Fase 4 (trigger no DB).
-- **Service role:** o cliente em `lib/supabase/admin.ts` usa `import "server-only"` pra falhar o build se for importado num client component.
-- **Monaco:** carregado com `dynamic({ ssr: false })` porque depende de `window`. Tema `vs-dark` fixo por enquanto.
+- **XP / Level:** hoje calculado dentro do `submitSolution` (regra `level = floor(xp/100) + 1`). Na Fase 4 migra pra trigger no DB com peso por dificuldade.
+- **Service role:** o cliente em `lib/supabase/admin.ts` tem `import "server-only"` pra falhar build se importado num client component.
+- **Monaco:** carregado com `dynamic({ ssr: false })` (depende de `window`). Tema `vs-dark` fixo.
+- **Tabela de progresso da Fase 3:** vai popular automaticamente conforme alunos enviam submissões da Fase 2 — já está integrada via `submissions.exercise_id` + `assignment_exercises`.
+
+---
 
 ## Próximas fases
-1. **Fase 3** — Gestão de turmas (próxima)
-2. Fase 4 — Gamificação (badges automáticos, ranking)
-3. Fase 5 — Antifraude (paste detection, similaridade)
-4. Fase 6 — IA (Gemini gera exercícios)
-5. Fase 7 — X1 (PvP via Realtime)
-6. Fase 8 — Frente Unity (GitHub Classroom)
-7. Fase 9 — Polimento e deploy
+
+| Fase | Descrição | Status |
+|---|---|---|
+| **Fase 4** | Gamificação (XP por trigger, badges automáticos, ranking) | **próxima** |
+| Fase 5 | Antifraude (paste detection, telemetria, similaridade) | — |
+| Fase 6 | IA — gerar exercícios com Gemini | — |
+| Fase 7 | X1 (duelos PvP via Supabase Realtime) | — |
+| Fase 8 | Frente Unity (GitHub Classroom) | — |
+| Fase 9 | Polimento, hospedagem do Piston em prod, deploy na Vercel | — |
 
 Roteiro detalhado em [PLANO.md](PLANO.md).

@@ -1,52 +1,61 @@
 # Como continuar o projeto
 
 > Documento de retomada. Leia isso primeiro quando voltar a trabalhar.
-> **Data da última sessão:** 2026-05-15
+> **Data da última sessão:** 2026-05-16
 > **Repositório:** https://github.com/andrensaraiva/SistemaProgramacaoJogos
 
 ## TL;DR — o que fazer agora
 
-Fase 2 está concluída e testada. Pra retomar do zero (em outra máquina ou após formatar):
+Fases 1, 2 e 3 estão **completas e rodando**. Pra retomar:
 
-1. Clone o repo e instale deps:
+1. Clone o repo e instale deps (se for outra máquina):
    ```powershell
    git clone https://github.com/andrensaraiva/SistemaProgramacaoJogos.git
    cd SistemaProgramacaoJogos\web
    npm install
    ```
-2. Configure Supabase + `.env.local` + seed (passos 1-5 abaixo, se for primeira vez)
-3. Suba o **Piston em Docker** (passo 6 — necessário pra rodar código C#)
-4. Continue a **Fase 3** do [PLANO.md](PLANO.md) — CRUD de turmas, invite code, atribuir listas a turmas.
+2. Configure Supabase + `.env.local` + seeds (passos abaixo, se for setup novo)
+3. Suba o **Piston em Docker** (necessário pra rodar código C#)
+4. Continue a **Fase 4** do [PLANO.md](PLANO.md) — gamificação: trigger automático de XP, badges, ranking.
 
 ---
 
 ## Onde paramos
 
-A **Fase 2 (exercício rodando no navegador)** está completa, commitada e testada ponta a ponta:
-- Lista de exercícios em `/exercicios` (3 públicos via seed)
-- Página de resolução com Monaco Editor lazy-loaded
+As **Fases 1, 2 e 3** estão completas e commitadas:
+
+**Fase 1 — Autenticação:**
+- Login / Cadastro / Logout via Supabase Auth com Server Actions
+- Proteção de rotas via [proxy.ts](../web/proxy.ts) global
+- Diferenciação de papéis: `aluno` vs `professor`
+- Tema customizado com paleta e dark mode
+
+**Fase 2 — Exercício no navegador:**
+- Lista em `/exercicios` com 3 exercícios C# públicos (via seed)
+- Resolução com Monaco Editor lazy-loaded
 - Botão "Testar" → `/api/run` → Piston self-hosted
 - Botão "Enviar" → Server Action roda todos os casos (incl. ocultos), persiste em `submissions`, dá XP/level
 - Validado: "Olá, Mundo!" → +10 XP no painel ✅
 
-E a **Fase 1 (autenticação)** já estava completa antes:
-- Login / Cadastro / Logout via Supabase Auth (com Server Actions)
-- Proteção de rotas via [proxy.ts](../web/proxy.ts)
-- Validação de formulários com Zod, mensagens em PT-BR
-- Tema customizado com paleta e dark mode
+**Fase 3 — Gestão de turmas:**
+- Professor: criar, editar, excluir turmas; criar e excluir listas
+- Aluno: entrar em turma com código de convite de 8 chars; sair
+- Página de turma com código copiável e lista de membros (professor)
+- Visão de progresso: professor vê tabela alunos × exercícios; aluno vê próprio status
 
-Veja o snapshot completo em [STATUS.md](STATUS.md).
+---
 
 ## Setup do zero (só se for outra máquina)
 
-Se você está no mesmo PC onde já fez tudo, pula essa seção. Pra setup novo:
+Se você está no PC onde já fez tudo, pula essa seção.
 
 ### 1. Supabase (uma vez)
 - Cria projeto em https://supabase.com/dashboard (região `sa-east-1`, free)
 - SQL Editor → roda [supabase/migrations/0001_init.sql](../supabase/migrations/0001_init.sql)
-- SQL Editor → roda [supabase/seed/0001_exercises.sql](../supabase/seed/0001_exercises.sql) (depois de cadastrar 1 perfil)
+- Cadastra-se primeiro como Professor em `/cadastrar` (precisa de pelo menos 1 perfil)
+- SQL Editor → roda [supabase/seed/0001_exercises.sql](../supabase/seed/0001_exercises.sql) (3 exercícios C# públicos)
 - Authentication → Email Provider: **Enable** ON, **Confirm email** OFF
-- Settings → API: copia URL, anon, service_role
+- Settings → API: copia URL, anon key, service_role key
 
 ### 2. `.env.local` em `web/`
 ```env
@@ -73,7 +82,7 @@ Invoke-RestMethod -Uri "http://localhost:2000/api/v2/packages" -Method Post `
   -ContentType "application/json" -Body $body
 ```
 
-Confirma que `csharp.net` está em `http://localhost:2000/api/v2/runtimes`.
+Confirma que `csharp.net` aparece em `http://localhost:2000/api/v2/runtimes`.
 
 ### 4. Subir o app
 ```powershell
@@ -82,68 +91,61 @@ npm install
 npm run dev
 ```
 
+Abre http://localhost:3000 — cria conta como Professor, depois outra como Aluno (navegador anônimo), e testa o fluxo completo (turma + lista + resolver exercício).
+
 ---
 
-## O que vem depois (próxima fase)
+## O que vem depois — Fase 4 (próxima)
 
-### Fase 3 — Gestão de turmas (próxima)
-- CRUD de turmas pro professor (criar, listar, deletar)
-- Página de invite code pro aluno entrar na turma
-- CRUD de assignments (listas/desafios/provas) atribuídos a turmas
-- Visão de progresso pro professor (quem fez o quê, quando, status)
+Gamificação completa:
 
-**Arquivos esperados a criar:**
-- `web/src/app/(app)/turmas/page.tsx` (lista de turmas)
-- `web/src/app/(app)/turmas/nova/page.tsx` (criar turma — só professor)
-- `web/src/app/(app)/turmas/[id]/page.tsx` (detalhe + alunos + assignments)
-- `web/src/app/(app)/turmas/entrar/page.tsx` (aluno cola invite code)
-- `web/src/lib/classes/actions.ts` (Server Actions: createClass, joinClass, etc.)
+- **XP automático via trigger no DB** — hoje o XP é dado manualmente pelo Server Action `submitSolution`. Migrar pra trigger PostgreSQL em `submissions` aprovadas, multiplicando por dificuldade (fácil=1x, médio=1.5x, difícil=2x, desafio=3x).
+- **Distribuição automática de badges** — quando um aluno bate uma condição (primeira aprovada, 7 dias seguidos, 10 exercícios sem paste, etc.), insere em `user_badges` automaticamente.
+- **Ranking da turma + ranking global** — view ou query agregada por XP.
+- **Notificação ao aluno** quando ganha badge novo (toast no painel).
 
-### Fase 4 — Gamificação
-- Trigger no DB pra dar XP automaticamente quando submission é aprovada (hoje é manual no Server Action — precisa migrar)
-- Distribuir badges automaticamente
-- Ranking da turma + ranking global
+**Arquivos esperados:**
+- `supabase/migrations/0002_xp_trigger.sql` (trigger + função)
+- `web/src/app/(app)/ranking/page.tsx` (ranking global)
+- `web/src/app/(app)/turmas/[id]/ranking/page.tsx` (ranking da turma)
+- `web/src/lib/badges/check.ts` (lógica de verificação de condições)
+- Refatorar `submitSolution` pra remover o `update profiles set xp = ...` manual
 
-### Fase 5+ — Antifraude, IA, X1, Unity, Polimento
+### Fases 5+ — Antifraude, IA, X1, Unity, Polimento
 Roteiro completo em [PLANO.md](PLANO.md).
 
 ---
 
 ## Como invocar a próxima sessão
 
-Quando você reabrir o Claude Code nessa pasta, sugiro mandar uma mensagem assim:
+Quando reabrir o Claude Code aqui, manda algo como:
 
-> "Continuando o projeto. Fase 2 (Monaco + Piston self-hosted) já roda ponta a ponta. Bora pra Fase 3: gestão de turmas (CRUD + invite code + atribuir listas)."
-
-Aí eu já tenho contexto pra continuar de onde parei.
-
-Se você ficou travado em alguma das tarefas pendentes, manda o erro e eu te ajudo.
+> "Continuando o projeto. Fases 1, 2 e 3 estão prontas e rodando. Bora pra Fase 4: gamificação (trigger automático de XP, badges, ranking)."
 
 ---
 
 ## Comandos úteis
 
 ```powershell
-# Rodar dev server
+# Dev server
 cd web; npm run dev
 
-# Type-check
+# Type-check (sem build)
 cd web; npx tsc --noEmit
 
 # Lint
 cd web; npm run lint
 
-# Build de produção (testar antes de deploy)
+# Build de produção
 cd web; npm run build
 
-# Atualizar deps
-cd web; npm outdated
-cd web; npm update
+# Piston container
+docker ps --filter name=piston_api          # ver se está rodando
+docker start piston_api                     # se estiver parado
+docker logs piston_api --tail 30            # se quebrou
 
-# Ver status do git
+# Git
 git status
-
-# Ver logs
 git log --oneline
 ```
 
@@ -152,46 +154,70 @@ git log --oneline
 ## Estrutura atual de pastas
 
 ```
-SistemaJogosProgramcao/
-├── README.md                 # Visão geral pública
+SistemaProgramacaoJogos/
+├── README.md
 ├── .gitignore
 ├── docs/
-│   ├── PLANO.md              # Roteiro de desenvolvimento (9 fases)
-│   ├── SETUP.md              # Como configurar do zero
-│   ├── STATUS.md             # Snapshot atual (atualizado a cada mudança)
+│   ├── PLANO.md              # Roteiro das 9 fases
+│   ├── SETUP.md              # Configurar do zero (Supabase + Docker)
+│   ├── STATUS.md             # Snapshot atual
 │   └── CONTINUAR.md          # Este arquivo
 ├── supabase/
-│   ├── README.md
-│   └── migrations/
-│       └── 0001_init.sql     # Esquema completo (11 tabelas + RLS)
-└── web/                      # Aplicação Next.js
+│   ├── migrations/
+│   │   └── 0001_init.sql     # 11 tabelas + RLS + seed badges
+│   └── seed/
+│       └── 0001_exercises.sql # 3 exercícios C# públicos
+└── web/                       # Next.js 16
     ├── package.json
-    ├── proxy.ts              # Proxy global (auth + redirects)
-    ├── .env.example          # Template de variáveis (commitado)
-    ├── .env.local            # ⚠️ você precisa criar (NÃO commitar)
+    ├── proxy.ts               # Proteção global de rotas
+    ├── .env.example
     └── src/
         ├── app/
         │   ├── layout.tsx
-        │   ├── page.tsx              # Landing pública
-        │   ├── (auth)/               # Grupo de rotas de auth
-        │   │   ├── layout.tsx
-        │   │   ├── entrar/
-        │   │   └── cadastrar/
-        │   └── (app)/                # Grupo de rotas autenticadas
-        │       ├── layout.tsx        # Header com nav e logout
-        │       └── painel/
-        │           └── page.tsx
+        │   ├── page.tsx                       # Landing pública
+        │   ├── (auth)/
+        │   │   ├── entrar/                    # Login
+        │   │   └── cadastrar/                 # Cadastro (aluno/professor)
+        │   ├── (app)/                         # Rotas autenticadas
+        │   │   ├── layout.tsx                 # Header + nav + logout
+        │   │   ├── painel/                    # Dashboard
+        │   │   ├── exercicios/                # ← FASE 2
+        │   │   │   ├── page.tsx               # Lista
+        │   │   │   └── [id]/
+        │   │   │       ├── page.tsx           # Server: busca exercício + testes visíveis
+        │   │   │       ├── _workbench.tsx     # Client: Monaco + Testar/Enviar
+        │   │   │       └── actions.ts         # submitSolution
+        │   │   └── turmas/                    # ← FASE 3
+        │   │       ├── page.tsx               # Lista de turmas
+        │   │       ├── nova/                  # Criar turma (professor)
+        │   │       ├── entrar/                # Entrar com código (aluno)
+        │   │       └── [id]/
+        │   │           ├── page.tsx           # Detalhe: membros, listas, convite
+        │   │           ├── editar/            # Editar turma
+        │   │           └── listas/
+        │   │               ├── nova/          # Criar lista
+        │   │               └── [lid]/         # Progresso: alunos × exercícios
+        │   └── api/
+        │       └── run/                       # ← FASE 2: POST → Piston
         ├── components/
         │   ├── logo.tsx
+        │   ├── confirm-form.tsx               # Wrapper de confirm() client-side
         │   └── ui/
         │       ├── button.tsx
         │       └── input.tsx
         └── lib/
             ├── auth/
-            │   ├── actions.ts        # Server Actions (login/signup/logout)
-            │   └── dal.ts            # Data Access Layer (verifySession, getProfile)
+            │   ├── actions.ts                 # login, signup, logout
+            │   └── dal.ts                     # verifySession, getProfile, isProfessor
+            ├── exercises/                     # ← FASE 2
+            │   ├── types.ts
+            │   ├── judge.ts                   # compareOutputs (normaliza \r\n e trailing ws)
+            │   └── piston.ts                  # cliente Piston (csharp.net)
+            ├── turmas/
+            │   └── actions.ts                 # 7 server actions
             └── supabase/
-                ├── client.ts         # Browser client
-                ├── server.ts         # Server client
-                └── middleware.ts     # Helper do proxy
+                ├── client.ts
+                ├── server.ts
+                ├── middleware.ts
+                └── admin.ts                   # cliente service_role (server-only)
 ```

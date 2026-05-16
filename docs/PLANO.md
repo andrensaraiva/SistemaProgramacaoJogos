@@ -16,17 +16,17 @@ Roteiro incremental do MVP. Cada etapa entrega algo testável.
 - [ ] Dashboard básico do professor (lista de turmas que criou)
 
 ## Fase 2 — O coração: exercício rodando no navegador
-- [ ] Página de exercício com Monaco Editor
-- [ ] API route `/api/run` que envia código pra Piston API e devolve resultado
-- [ ] Sistema de "casos de teste" (entrada → saída esperada)
-- [ ] Submissão: roda todos os casos de teste, marca aprovado/reprovado
-- [ ] Persistir submissão e resultado no banco
+- [x] Página de exercício com Monaco Editor
+- [x] API route `/api/run` que envia código pra Piston API e devolve resultado
+- [x] Sistema de "casos de teste" (entrada → saída esperada)
+- [x] Submissão: roda todos os casos de teste, marca aprovado/reprovado
+- [x] Persistir submissão e resultado no banco
 
 ## Fase 3 — Gestão de turmas
-- [ ] CRUD de turmas (professor)
-- [ ] Convite por código pra aluno entrar na turma
-- [ ] CRUD de listas de exercícios e atribuição a turma
-- [ ] Visão do progresso: quem fez o quê, nota, tempo
+- [x] CRUD de turmas (professor)
+- [x] Convite por código pra aluno entrar na turma
+- [x] CRUD de listas de exercícios e atribuição a turma
+- [x] Visão do progresso: quem fez o quê, nota, tempo
 
 ## Fase 4 — Gamificação
 - [ ] XP e níveis por exercício resolvido (dificuldade ponderada)
