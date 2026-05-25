@@ -4,16 +4,16 @@ Roteiro incremental do MVP. Cada etapa entrega algo testável.
 
 ## Fase 0 — Fundação (você está aqui)
 - [x] Estrutura de pastas e documentação inicial
-- [ ] Scaffolding Next.js 15 com Tailwind e TypeScript
-- [ ] Esquema do banco no Supabase (migrations SQL)
-- [ ] Configuração do projeto Supabase (criar projeto na dashboard, pegar keys)
+- [x] Scaffolding Next.js com Tailwind e TypeScript
+- [x] Esquema do banco no Supabase (migrations SQL)
+- [x] Configuração documentada do projeto Supabase (criar projeto na dashboard, pegar keys)
 
 ## Fase 1 — Login e primeira tela útil
-- [ ] Autenticação via Supabase Auth (email + senha; Google opcional)
-- [ ] Diferenciação de papéis: `professor`, `aluno`
-- [ ] Landing page e onboarding
-- [ ] Dashboard básico do aluno (lista de turmas em que está)
-- [ ] Dashboard básico do professor (lista de turmas que criou)
+- [x] Autenticação via Supabase Auth (email + senha; Google opcional)
+- [x] Diferenciação de papéis: `professor`, `aluno`
+- [x] Landing page e onboarding
+- [x] Dashboard básico do aluno (lista de turmas em que está)
+- [x] Dashboard básico do professor (lista de turmas que criou)
 
 ## Fase 2 — O coração: exercício rodando no navegador
 - [x] Página de exercício com Monaco Editor
@@ -29,34 +29,36 @@ Roteiro incremental do MVP. Cada etapa entrega algo testável.
 - [x] Visão do progresso: quem fez o quê, nota, tempo
 
 ## Fase 4 — Gamificação
-- [ ] XP e níveis por exercício resolvido (dificuldade ponderada)
-- [ ] Conquistas (badges) — primeira submissão verde, 7 dias seguidos, etc.
-- [ ] Ranking da turma e ranking global
+- [x] XP e níveis por exercício resolvido (dificuldade ponderada)
+- [x] Conquistas (badges) — primeira submissão verde, 7 dias seguidos, etc.
+- [x] Ranking da turma e ranking global
+- [x] Notificação ao aluno quando desbloquear badge nova
 
 ## Fase 5 — Antifraude
-- [ ] Hook de evento `paste` no Monaco — marca submissão como suspeita
-- [ ] Telemetria: tempo entre primeira tecla e submissão
-- [ ] Comparação de similaridade entre submissões da mesma turma
-- [ ] Notificação ao professor com nível de suspeita
+- [x] Hook de evento `paste` no Monaco — marca submissão como suspeita
+- [x] Telemetria: tempo entre primeira tecla e submissão
+- [x] Comparação de similaridade entre submissões da mesma turma
+- [x] Notificação ao professor com nível de suspeita
 
 ## Fase 6 — IA (Gemini)
-- [ ] Endpoint para professor gerar exercício novo a partir de um prompt
-- [ ] Endpoint para aluno gerar "exercício extra" similar ao atual
-- [ ] Caching de exercícios gerados (evitar gastar quota)
+- [x] Endpoint para professor gerar exercício novo a partir de um prompt
+- [x] Endpoint para aluno gerar "exercício extra" similar ao atual
+- [x] Caching de exercícios gerados (evitar gastar quota)
 
 ## Fase 7 — X1 (PvP)
-- [ ] Sala de duelo via Supabase Realtime
-- [ ] Matchmaking simples (convite por link ou random na turma)
-- [ ] Mesmo exercício pros dois, primeiro a fazer todos os testes verdes ganha
-- [ ] Histórico de duelos e ELO
+- [x] Sala de duelo por convite
+- [x] Matchmaking simples por codigo
+- [x] Mesmo exercício pros dois, primeiro a fazer todos os testes verdes ganha
+- [x] Histórico de duelos
+- [x] ELO
 
 ## Fase 8 — Frente Unity (paralela)
-- [ ] Template `classroom-templates/csharp-basico/` — projeto .NET com testes xUnit
-- [ ] Template `classroom-templates/unity-projeto/` — projeto Unity mínimo com PlayMode/EditMode tests + workflow do game-ci
-- [ ] Documentação: como o professor cria uma turma no GitHub Classroom e usa o template
-- [ ] Página na plataforma que puxa nota dos repositórios via GitHub API
+- [x] Template `classroom-templates/csharp-basico/` — projeto .NET com testes xUnit
+- [x] Template `classroom-templates/unity-projeto/` — projeto Unity mínimo com PlayMode/EditMode tests + workflow do game-ci
+- [x] Documentação: como o professor cria uma turma no GitHub Classroom e usa o template
+- [x] Página na plataforma que puxa nota dos repositórios via GitHub API
 
 ## Fase 9 — Polimento e deploy
-- [ ] Deploy na Vercel
-- [ ] Manual completo do professor (`docs/SETUP.md` e `docs/MANUAL.md`)
-- [ ] Tour guiado pro primeiro acesso do aluno
+- [x] Preparação para deploy na Vercel documentada
+- [x] Manual completo do professor (`docs/SETUP.md` e `docs/MANUAL.md`)
+- [x] Tour guiado pro primeiro acesso do aluno

@@ -36,7 +36,6 @@ Thumbs.db
 [Bb]uilds/
 [Ll]ogs/
 [Mm]emoryCaptures/
-*.csproj
 *.sln
 *.suo
 *.user

@@ -1,5 +1,54 @@
 # Status do projeto
 
+## Atualizacao 2026-05-20
+
+Fase 5 iniciada:
+
+- O Workbench captura evento de paste, contagem de mudancas no editor e tempo entre primeira edicao e submissao.
+- `submitSolution` persiste `paste_event_count`, `keystroke_count`, `time_to_solve_ms`, `suspicion_score` e `suspicion_reasons` em `submissions`.
+- A pontuacao inicial marca sinais como `paste_detected`, `very_fast_submission` e `low_edit_count`.
+- A tela de progresso da lista mostra alertas antifraude para o professor, incluindo score, motivos e indicador por exercicio.
+- A mesma tela compara as submissões mais recentes da turma e sinaliza codigos com similaridade alta.
+
+Dev server:
+
+- `npm run dev` usa Webpack e `127.0.0.1` por padrao para reduzir uso de memoria no Windows.
+- `npm run dev:turbo` mantem Turbopack disponivel como opcional.
+
+Fase 6 iniciada:
+
+- Professores podem acessar `/exercicios/gerar` para criar exercicios C# com Gemini.
+- A geracao salva enunciado, codigo inicial, solucao interna e testes visiveis/ocultos no Supabase.
+- Alunos podem gerar um exercicio extra similar a partir da tela de qualquer exercicio.
+- `supabase/migrations/0003_ai_cache.sql` adiciona cache opcional para reduzir chamadas repetidas ao Gemini.
+- Configure `GEMINI_API_KEY` e, opcionalmente, `GEMINI_MODEL` no `.env.local`.
+
+Fase 7 iniciada:
+
+- `/duelos` permite criar duelo, entrar por codigo, abrir o exercicio e atualizar o vencedor.
+- O vencedor e calculado pela primeira submissao aprovada apos o inicio do duelo.
+- Duelos concluidos atualizam ELO, vitorias, derrotas e exibem o delta na tela.
+
+Fase 8 iniciada:
+
+- Templates adicionados em `classroom-templates/csharp-basico` e `classroom-templates/unity-projeto`.
+- `/unity` documenta o fluxo GitHub Classroom dentro da plataforma.
+- `/unity/github` consulta a GitHub API, salva repositorios acompanhados e mostra nota estimada por GitHub Actions.
+
+Fase 9 iniciada:
+
+- Tour guiado de primeiro acesso do aluno aparece no `/painel` uma vez por navegador.
+
+Fase 4 iniciada:
+
+- `supabase/migrations/0002_gamification.sql` adiciona `xp_awarded`, trigger de recompensas, multiplicador por dificuldade e badges automaticos.
+- `submitSolution` nao atualiza mais `profiles.xp` manualmente; agora persiste a submissao e usa `xp_awarded` retornado pelo banco.
+- XP e concedido apenas na primeira aprovacao do exercicio por aluno, evitando farm por reenvio.
+- Badges automaticos implementados: `first_green`, `no_paste` e `streak_7`.
+- Ranking global disponivel em `/ranking`.
+- Ranking de turma disponivel em `/turmas/[id]/ranking`.
+- A tela de submissao exibe uma notificacao quando uma nova badge e desbloqueada.
+
 > Snapshot vivo do estado da plataforma. Atualizado a cada mudança.
 > **Última atualização:** 2026-05-16 — Fases 2 e 3 commitadas (merge das duas branches)
 > **Repositório:** https://github.com/andrensaraiva/SistemaProgramacaoJogos

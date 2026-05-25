@@ -1,4 +1,4 @@
-// Tipos compartilhados pra exercícios, execução e julgamento.
+// Tipos compartilhados para exercicios, execucao e julgamento.
 
 export type Language = "csharp" | "python" | "javascript";
 export type Difficulty = "facil" | "medio" | "dificil" | "desafio";
@@ -21,7 +21,6 @@ export type SampleTest = {
   weight: number;
 };
 
-// Resposta crua de uma execução no Piston (o que o /api/run retorna)
 export type RunResult = {
   stdout: string;
   stderr: string;
@@ -30,7 +29,12 @@ export type RunResult = {
   language_version?: string;
 };
 
-// Resultado de uma submissão completa (Server Action)
+export type IntegritySignals = {
+  paste_event_count: number;
+  time_to_solve_ms: number | null;
+  keystroke_count: number;
+};
+
 export type SubmissionResult =
   | { ok: false; message: string }
   | {
@@ -39,6 +43,7 @@ export type SubmissionResult =
       passed: number;
       total: number;
       xp_earned: number;
+      badges_awarded: string[];
       first_fail: {
         ord: number;
         stdin: string;

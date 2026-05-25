@@ -34,6 +34,19 @@ Todas as tabelas têm RLS habilitado. Resumo da política:
 - **Professor** vê tudo das suas turmas (alunos, submissões, duelos)
 - **Exercícios públicos** (`is_public=true`) qualquer um vê
 
+## Reparar banco existente
+
+Se o Supabase ja tem a `0001_init.sql` aplicada, nao rode a migration inicial
+de novo. Para habilitar gamificacao/antifraude em um banco existente, rode no
+SQL Editor:
+
+```text
+supabase/migrations/0002_gamification_repair_idempotent.sql
+```
+
+Essa query e idempotente: pode rodar mais de uma vez sem erro de tipo/tabela ja
+existente.
+
 ## Migrations futuras
 
 Numere em sequência (`0002_*.sql`, `0003_*.sql`). Nunca edite uma migration já aplicada — crie uma nova com o `ALTER`.

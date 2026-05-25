@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import type {
@@ -11,7 +11,7 @@ import type {
   SubmissionResult,
 } from "@/lib/exercises/types";
 
-import { submitSolution } from "./actions";
+import { generateSimilarExercise, submitSolution } from "./actions";
 
 // Monaco é pesado e usa APIs de browser — só carrega no cliente.
 const MonacoEditor = dynamic(
@@ -32,6 +32,12 @@ const MONACO_LANGUAGE: Record<Exercise["language"], string> = {
   javascript: "javascript",
 };
 
+const BADGE_LABELS: Record<string, string> = {
+  first_green: "Primeira Vitoria",
+  no_paste: "Mao Propria",
+  streak_7: "Semana Consistente",
+};
+
 type Props = {
   exercise: Exercise;
   sampleTests: SampleTest[];
@@ -43,8 +49,13 @@ export function Workbench({ exercise, sampleTests }: Props) {
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [submission, setSubmission] = useState<SubmissionResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [extraMsg, setExtraMsg] = useState<string | null>(null);
   const [running, startRun] = useTransition();
   const [submitting, startSubmit] = useTransition();
+  const [generatingExtra, startGenerateExtra] = useTransition();
+  const firstEditAt = useRef<number | null>(null);
+  const pasteEventCount = useRef(0);
+  const keystrokeCount = useRef(0);
 
   function handleTest() {
     setErrorMsg(null);
@@ -82,8 +93,29 @@ export function Workbench({ exercise, sampleTests }: Props) {
     setErrorMsg(null);
     setRunResult(null);
     startSubmit(async () => {
-      const result = await submitSolution(exercise.id, code);
+      const result = await submitSolution(exercise.id, code, {
+        paste_event_count: pasteEventCount.current,
+        keystroke_count: keystrokeCount.current,
+        time_to_solve_ms:
+          firstEditAt.current === null ? null : Date.now() - firstEditAt.current,
+      });
       setSubmission(result);
+    });
+  }
+
+  function handleCodeChange(value: string | undefined) {
+    if (firstEditAt.current === null) {
+      firstEditAt.current = Date.now();
+    }
+    keystrokeCount.current += 1;
+    setCode(value ?? "");
+  }
+
+  function handleGenerateExtra() {
+    setExtraMsg(null);
+    startGenerateExtra(async () => {
+      const result = await generateSimilarExercise(exercise.id);
+      if (result && !result.ok) setExtraMsg(result.message);
     });
   }
 
@@ -125,16 +157,43 @@ export function Workbench({ exercise, sampleTests }: Props) {
             </p>
           </div>
         )}
+
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="text-sm font-semibold">Treino extra</div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Gere um exercicio parecido para praticar sem mexer neste desafio.
+          </p>
+          <div className="mt-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleGenerateExtra}
+              disabled={generatingExtra}
+            >
+              {generatingExtra ? "Gerando..." : "Gerar exercicio extra"}
+            </Button>
+          </div>
+          {extraMsg && (
+            <div className="mt-3 rounded-md border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
+              {extraMsg}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Editor + execução */}
       <div className="flex flex-col gap-4">
-        <div className="overflow-hidden rounded-2xl border border-border">
+        <div
+          className="overflow-hidden rounded-2xl border border-border"
+          onPasteCapture={() => {
+            pasteEventCount.current += 1;
+          }}
+        >
           <MonacoEditor
             height="420px"
             language={MONACO_LANGUAGE[exercise.language]}
             value={code}
-            onChange={(v) => setCode(v ?? "")}
+            onChange={handleCodeChange}
             theme="vs-dark"
             options={{
               minimap: { enabled: false },
@@ -249,6 +308,23 @@ function SubmissionOutput({ result }: { result: SubmissionResult }) {
           {result.xp_earned > 0 && ` · +${result.xp_earned} XP`}
         </div>
       </div>
+      {result.badges_awarded.length > 0 && (
+        <div className="mt-3 rounded-xl border border-primary/40 bg-primary/10 p-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-primary">
+            Nova conquista desbloqueada
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {result.badges_awarded.map((badgeId) => (
+              <span
+                key={badgeId}
+                className="rounded-full border border-primary/30 bg-background px-3 py-1 text-xs font-medium text-foreground"
+              >
+                {BADGE_LABELS[badgeId] ?? badgeId}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       {result.first_fail && (
         <div className="mt-3 text-xs">
           <div className="font-medium">

@@ -13,8 +13,6 @@ type Params = Promise<{ id: string }>;
 export default async function TurmaPage({ params }: { params: Params }) {
   const { id } = await params;
   const profile = await getProfile();
-  const isProf =
-    profile?.role === "professor" || profile?.role === "admin";
 
   const supabase = await createClient();
 
@@ -69,6 +67,9 @@ export default async function TurmaPage({ params }: { params: Params }) {
         </div>
 
         <div className="flex gap-2">
+          <Link href={`/turmas/${id}/ranking`}>
+            <Button variant="secondary">Ranking</Button>
+          </Link>
           {isOwner && (
             <>
               <Link href={`/turmas/${id}/editar`}>

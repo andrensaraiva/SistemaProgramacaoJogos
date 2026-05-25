@@ -37,11 +37,17 @@ PISTON_API_URL=http://localhost:2000/api/v2
 # GitHub OAuth (opcional, pra integrar com Classroom)
 # GITHUB_CLIENT_ID=
 # GITHUB_CLIENT_SECRET=
+GITHUB_PERSONAL_ACCESS_TOKEN=
 ```
 
 ## 3. Aplicar o esquema do banco
 
 No SQL Editor do Supabase:
+> Para banco novo, rode os scripts nesta ordem:
+> `0001_init.sql`, `0002_gamification_repair_idempotent.sql`,
+> `0003_ai_cache.sql`, `0004_duel_elo_github.sql` e depois o seed
+> `0001_exercises.sql`.
+
 1. Cole e execute [supabase/migrations/0001_init.sql](../supabase/migrations/0001_init.sql) (cria 11 tabelas + RLS)
 2. Cole e execute [supabase/seed/0001_exercises.sql](../supabase/seed/0001_exercises.sql) (3 exercícios C# de exemplo — rode depois de cadastrar pelo menos um perfil)
 
@@ -75,6 +81,8 @@ Abrir http://localhost:3000.
 
 ## 6. Deploy na Vercel
 
+Checklist completo em [DEPLOY.md](DEPLOY.md).
+
 1. Suba este projeto pro GitHub
 2. Em https://vercel.com/new, importe o repositório
 3. Em **Root Directory**, defina `web`
@@ -83,5 +91,9 @@ Abrir http://localhost:3000.
 6. Deploy. Vai te dar uma URL `*.vercel.app` que você pode compartilhar com os alunos.
 
 ## 7. Frente Unity (GitHub Classroom)
+
+Abra `/unity` para ver os templates e `/unity/github` para sincronizar notas de
+repositorios. Repositorios publicos funcionam sem token; para privados,
+configure `GITHUB_PERSONAL_ACCESS_TOKEN` com permissao de leitura de Actions.
 
 Veja [GITHUB_CLASSROOM.md](GITHUB_CLASSROOM.md) (será criado quando chegarmos na Fase 8).

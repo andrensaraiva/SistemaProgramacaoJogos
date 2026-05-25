@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -31,12 +32,36 @@ export const getProfile = cache(async () => {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, role, display_name, avatar_url, xp, level")
+    .select("id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses")
     .eq("id", user.id)
     .single();
 
-  if (error || !profile) return null;
-  return profile;
+  if (!error && profile) return profile;
+
+  const metadata = user.user_metadata ?? {};
+  const rawRole = metadata.role;
+  const role = rawRole === "professor" || rawRole === "admin" ? rawRole : "aluno";
+  const displayName =
+    typeof metadata.display_name === "string" && metadata.display_name.trim()
+      ? metadata.display_name.trim()
+      : user.email?.split("@")[0] ?? "Aluno";
+
+  const admin = createAdminClient();
+  const { data: repairedProfile, error: repairError } = await admin
+    .from("profiles")
+    .upsert(
+      {
+        id: user.id,
+        role,
+        display_name: displayName,
+      },
+      { onConflict: "id" },
+    )
+    .select("id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses")
+    .single();
+
+  if (repairError || !repairedProfile) return null;
+  return repairedProfile;
 });
 
 export const isProfessor = cache(async () => {

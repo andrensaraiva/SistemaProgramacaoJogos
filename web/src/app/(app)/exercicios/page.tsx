@@ -1,17 +1,18 @@
 import Link from "next/link";
 
-import { verifySession } from "@/lib/auth/dal";
+import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 
 const DIFFICULTY_LABEL: Record<string, { label: string; className: string }> = {
-  facil: { label: "Fácil", className: "bg-success/15 text-success" },
-  medio: { label: "Médio", className: "bg-warning/15 text-warning" },
-  dificil: { label: "Difícil", className: "bg-danger/15 text-danger" },
+  facil: { label: "Facil", className: "bg-success/15 text-success" },
+  medio: { label: "Medio", className: "bg-warning/15 text-warning" },
+  dificil: { label: "Dificil", className: "bg-danger/15 text-danger" },
   desafio: { label: "Desafio", className: "bg-primary/15 text-primary" },
 };
 
 export default async function ExerciciosPage() {
-  await verifySession();
+  const profile = await getProfile();
+  const isProfessor = profile?.role === "professor" || profile?.role === "admin";
   const supabase = await createClient();
 
   const { data: exercises, error } = await supabase
@@ -23,45 +24,54 @@ export default async function ExerciciosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-bold">Exercícios</h1>
-        <p className="mt-1 text-muted-foreground">
-          Resolva pra ganhar XP e subir de nível.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Exercicios</h1>
+          <p className="mt-1 text-muted-foreground">
+            Resolva pra ganhar XP e subir de nivel.
+          </p>
+        </div>
+        {isProfessor && (
+          <Link
+            href="/exercicios/gerar"
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+          >
+            Gerar com IA
+          </Link>
+        )}
       </div>
 
       {error && (
         <div className="rounded-md border border-danger/40 bg-danger/10 p-4 text-sm text-danger">
-          Erro ao carregar exercícios: {error.message}
+          Erro ao carregar exercicios: {error.message}
         </div>
       )}
 
       {!error && (exercises?.length ?? 0) === 0 && (
         <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
-          <h2 className="text-lg font-semibold">Nenhum exercício ainda</h2>
+          <h2 className="text-lg font-semibold">Nenhum exercicio ainda</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Aplique o seed em <code>supabase/seed/0001_exercises.sql</code> no
-            SQL Editor do Supabase pra popular 3 exercícios de exemplo.
+            Rode <code>npm run seed:demo</code> ou gere um exercicio com IA.
           </p>
         </div>
       )}
 
       <div className="grid gap-3">
-        {(exercises ?? []).map((ex) => {
+        {(exercises ?? []).map((exercise) => {
           const diff =
-            DIFFICULTY_LABEL[ex.difficulty] ?? DIFFICULTY_LABEL.facil;
+            DIFFICULTY_LABEL[exercise.difficulty] ?? DIFFICULTY_LABEL.facil;
           return (
             <Link
-              key={ex.id}
-              href={`/exercicios/${ex.id}`}
+              key={exercise.id}
+              href={`/exercicios/${exercise.id}`}
               className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40 hover:bg-primary/5"
             >
               <div className="min-w-0">
-                <div className="text-lg font-semibold">{ex.title}</div>
+                <div className="text-lg font-semibold">{exercise.title}</div>
                 <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="uppercase">{ex.language}</span>
-                  <span>·</span>
-                  <span>{ex.xp_reward} XP</span>
+                  <span className="uppercase">{exercise.language}</span>
+                  <span>-</span>
+                  <span>{exercise.xp_reward} XP</span>
                 </div>
               </div>
               <span

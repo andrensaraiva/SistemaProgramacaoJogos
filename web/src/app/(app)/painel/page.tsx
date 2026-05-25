@@ -1,11 +1,26 @@
 import Link from "next/link";
 
+import { StudentOnboardingTour } from "@/components/student-onboarding-tour";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function PainelPage() {
   const profile = await getProfile();
+
+  if (!profile) {
+    return (
+      <div className="rounded-2xl border border-danger/40 bg-danger/10 p-6">
+        <h1 className="text-xl font-semibold">Perfil nao encontrado</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Sua sessao foi criada, mas o perfil ainda nao existe no banco.
+          Verifique se a migration inicial do Supabase foi aplicada e se
+          `SUPABASE_SERVICE_ROLE_KEY` esta configurada no `.env.local`.
+        </p>
+      </div>
+    );
+  }
+
   const isProf = profile?.role === "professor" || profile?.role === "admin";
 
   const supabase = await createClient();
@@ -17,7 +32,7 @@ export default async function PainelPage() {
     const { data } = await supabase
       .from("classes")
       .select("id, name")
-      .eq("owner_id", profile!.id)
+      .eq("owner_id", profile.id)
       .order("created_at", { ascending: false })
       .limit(3);
     turmasRecentes = data ?? [];
@@ -26,7 +41,7 @@ export default async function PainelPage() {
     const { data } = await supabase
       .from("class_members")
       .select("class:classes!class_id(id, name)")
-      .eq("student_id", profile!.id)
+      .eq("student_id", profile.id)
       .order("joined_at", { ascending: false })
       .limit(3);
     turmasRecentes =
@@ -40,10 +55,12 @@ export default async function PainelPage() {
   const { count: badgeCount } = await supabase
     .from("user_badges")
     .select("*", { count: "exact", head: true })
-    .eq("user_id", profile!.id);
+    .eq("user_id", profile.id);
 
   return (
     <div className="flex flex-col gap-8">
+      {!isProf && <StudentOnboardingTour />}
+
       <div>
         <h1 className="text-3xl font-bold">
           Olá, {profile?.display_name ?? ""}!

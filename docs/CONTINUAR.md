@@ -1,5 +1,46 @@
 # Como continuar o projeto
 
+## Atualizacao 2026-05-20
+
+A Fase 4 foi iniciada. Ja existem:
+
+- Migration `supabase/migrations/0002_gamification.sql` com `xp_awarded`, trigger de XP/level, multiplicador por dificuldade e badges automaticos.
+- `submitSolution` usando o XP retornado pelo banco, sem update manual em `profiles`.
+- Ranking global em `/ranking`.
+- Ranking da turma em `/turmas/[id]/ranking`.
+- Notificacao na tela de submissao quando uma badge nova for desbloqueada.
+
+Proximo passo natural: testar a migration no Supabase real e seguir para a Fase 5 (antifraude).
+
+Fase 5 tambem foi iniciada:
+
+- Workbench captura paste, contagem de mudancas no editor e tempo ate submissao.
+- `submitSolution` salva esses sinais em `submissions` e calcula `suspicion_score`/`suspicion_reasons`.
+- A tela de progresso da lista mostra alertas antifraude para o professor.
+- A tela tambem compara as submissões mais recentes e sinaliza codigo muito parecido entre alunos.
+
+Fase 6 foi iniciada:
+
+- Professores podem acessar `/exercicios/gerar` para gerar exercicios C# com Gemini.
+- A geracao cria exercicio, solucao interna e testes visiveis/ocultos no Supabase.
+- Alunos podem gerar exercicio extra similar pela tela do exercicio.
+- A migration `0003_ai_cache.sql` adiciona cache opcional das respostas da IA.
+- Configure `GEMINI_API_KEY` no `.env.local`; `GEMINI_MODEL` e opcional.
+
+Fase 7/8 foram iniciadas:
+
+- `/duelos` cria duelos por codigo e calcula vencedor pela primeira submissao aprovada.
+- Duelos concluidos atualizam ELO, vitorias, derrotas e badge `duel_win_5`.
+- `/unity` aponta para templates GitHub Classroom em `classroom-templates/`.
+- `/unity/github` sincroniza repositorios via GitHub API e mostra nota estimada a partir do GitHub Actions.
+- Aplique tambem `supabase/migrations/0004_duel_elo_github.sql`.
+
+Fase 9 foi iniciada:
+
+- Alunos recebem um tour guiado no primeiro acesso ao `/painel`.
+
+Proximo passo natural: rodar o fluxo completo em `docs/TEST_FLOW.md`, testar `/exercicios/gerar` com uma chave Gemini valida e fazer o deploy na conta Vercel escolhida.
+
 > Documento de retomada. Leia isso primeiro quando voltar a trabalhar.
 > **Data da última sessão:** 2026-05-16
 > **Repositório:** https://github.com/andrensaraiva/SistemaProgramacaoJogos
@@ -129,6 +170,9 @@ Quando reabrir o Claude Code aqui, manda algo como:
 ```powershell
 # Dev server
 cd web; npm run dev
+
+# Dev server com Turbopack, se a maquina tiver memoria sobrando
+cd web; npm run dev:turbo
 
 # Type-check (sem build)
 cd web; npx tsc --noEmit
