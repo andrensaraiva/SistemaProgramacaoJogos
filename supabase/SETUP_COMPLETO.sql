@@ -755,6 +755,12 @@ create policy "dono gerencia attendance_sessions" on public.attendance_sessions
     select 1 from public.class_units cu join public.classes c on c.id = cu.class_id
     where cu.id = class_unit_id and c.owner_id = auth.uid()
   ));
+create policy "aluno le sessoes da sua turma" on public.attendance_sessions
+  for select using (exists (
+    select 1 from public.class_units cu
+    where cu.id = attendance_sessions.class_unit_id
+      and public.is_class_member(cu.class_id, auth.uid())
+  ));
 
 create policy "dono gerencia attendance_marks" on public.attendance_marks
   for all using (exists (
