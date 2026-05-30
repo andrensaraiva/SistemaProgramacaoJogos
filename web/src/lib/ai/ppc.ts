@@ -93,12 +93,12 @@ export async function extractPpc(rawText: string): Promise<PpcDraft> {
     throw new Error("GEMINI_API_KEY não configurada no .env.local");
   }
 
-  const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+  const modelName = process.env.GEMINI_MODEL || "gemini-flash-latest";
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: modelName });
 
-  // PPCs são longos; o gemini-1.5-flash tem janela grande, então mandamos um
-  // bom trecho. 250k chars cobre a formação técnica mesmo depois do índice/infra.
+  // PPCs são longos; os modelos flash atuais têm janela grande, então mandamos
+  // um bom trecho. 250k chars cobre a formação técnica mesmo depois do índice/infra.
   const text = rawText.slice(0, 250_000);
 
   const result = await model.generateContent({

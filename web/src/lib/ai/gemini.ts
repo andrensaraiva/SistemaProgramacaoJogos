@@ -34,7 +34,7 @@ export async function generateCsharpExercise({
     throw new Error("GEMINI_API_KEY nao configurada no .env.local");
   }
 
-  const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+  const modelName = process.env.GEMINI_MODEL || "gemini-flash-latest";
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: modelName });
 
