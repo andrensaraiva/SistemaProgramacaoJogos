@@ -29,12 +29,79 @@ type Draft = {
 const textareaCls =
   "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50";
 
+// Carrega o pdf.js sob demanda via CDN (não entra no bundle). Extrai o texto de
+// todas as páginas do PDF no próprio navegador — o backend continua recebendo só texto.
+const PDFJS_VERSION = "4.7.76";
+const PDFJS_URL = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.mjs`;
+const PDFJS_WORKER = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`;
+
+type PdfJsLib = {
+  GlobalWorkerOptions: { workerSrc: string };
+  getDocument: (src: { data: ArrayBuffer }) => {
+    promise: Promise<{
+      numPages: number;
+      getPage: (n: number) => Promise<{
+        getTextContent: () => Promise<{ items: Array<{ str?: string }> }>;
+      }>;
+    }>;
+  };
+};
+
+let pdfjsPromise: Promise<PdfJsLib> | null = null;
+async function loadPdfJs(): Promise<PdfJsLib> {
+  if (!pdfjsPromise) {
+    pdfjsPromise = import(/* webpackIgnore: true */ PDFJS_URL).then((mod) => {
+      const lib = (mod.default ?? mod) as PdfJsLib;
+      lib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+      return lib;
+    });
+  }
+  return pdfjsPromise;
+}
+
+async function extrairTextoDoPdf(file: File): Promise<string> {
+  const pdfjs = await loadPdfJs();
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data: buffer }).promise;
+  const partes: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    partes.push(content.items.map((it) => it.str ?? "").join(" "));
+  }
+  return partes.join("\n\n");
+}
+
 export function ImportarPpcForm() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, startSave] = useTransition();
+
+  async function onPdfSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permite reenviar o mesmo arquivo
+    if (!file) return;
+    setError(null);
+    setPdfLoading(true);
+    try {
+      const extraido = await extrairTextoDoPdf(file);
+      if (extraido.trim().length < 50) {
+        throw new Error(
+          "Não consegui extrair texto deste PDF (pode ser um PDF escaneado/imagem). Copie e cole o texto manualmente.",
+        );
+      }
+      setText(extraido);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Falha ao ler o PDF. Cole o texto manualmente.",
+      );
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   async function analisar() {
     setError(null);
@@ -106,13 +173,33 @@ export function ImportarPpcForm() {
   if (!draft) {
     return (
       <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-card p-4">
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={onPdfSelected}
+              disabled={pdfLoading}
+              className="hidden"
+            />
+            <span className="inline-flex items-center justify-center gap-2 rounded-lg bg-muted px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/70 disabled:opacity-50 border border-border">
+              {pdfLoading ? "Lendo PDF..." : "📄 Enviar PDF do PPC"}
+            </span>
+          </label>
+          <span className="text-xs text-muted-foreground">
+            O texto é extraído no seu navegador e cai no campo abaixo. Você pode
+            revisar antes de analisar. PDFs escaneados (imagem) não funcionam —
+            nesse caso, copie e cole o texto.
+          </span>
+        </div>
+
         <Field label="Texto do PPC" htmlFor="ppc">
           <textarea
             id="ppc"
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={14}
-            placeholder="Cole aqui o texto extraído do PDF do PPC..."
+            placeholder="Cole aqui o texto extraído do PDF do PPC — ou use o botão acima para enviar o PDF."
             className={`${textareaCls} resize-y font-mono`}
           />
         </Field>

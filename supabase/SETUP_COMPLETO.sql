@@ -439,24 +439,40 @@ returns boolean language sql stable as $$
   select exists (select 1 from public.profiles where id = uid and role in ('professor', 'admin'))
 $$;
 
+-- Helpers SECURITY DEFINER para quebrar a recursão entre `classes` e
+-- `class_members` (cada policy consultava a outra tabela, disparando o
+-- avaliador de RLS dela em loop). Rodando como definer, leem as tabelas SEM
+-- reavaliar RLS, então não há ciclo.
+create or replace function public.is_class_owner(target_class uuid, uid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.classes c where c.id = target_class and c.owner_id = uid)
+$$;
+
+create or replace function public.is_class_member(target_class uuid, uid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.class_members m
+    where m.class_id = target_class and m.student_id = uid)
+$$;
+
 -- profiles
 create policy "ler proprio perfil" on public.profiles for select using (auth.uid() = id);
 create policy "professor le perfis dos alunos das suas turmas" on public.profiles for select using (
   public.is_professor(auth.uid()) and exists (
-    select 1 from public.class_members cm join public.classes c on c.id = cm.class_id
-    where cm.student_id = profiles.id and c.owner_id = auth.uid()));
+    select 1 from public.class_members cm
+    where cm.student_id = profiles.id and public.is_class_owner(cm.class_id, auth.uid())));
 create policy "atualizar proprio perfil" on public.profiles for update using (auth.uid() = id);
 
 -- classes
 create policy "dono gerencia classes" on public.classes for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
-create policy "aluno le classes em que esta" on public.classes for select using (exists (
-  select 1 from public.class_members where class_id = classes.id and student_id = auth.uid()));
+create policy "aluno le classes em que esta" on public.classes for select using (
+  public.is_class_member(classes.id, auth.uid()));
 
 -- class_members
 create policy "aluno se inscreve" on public.class_members for insert with check (auth.uid() = student_id);
 create policy "aluno ve sua matricula" on public.class_members for select using (auth.uid() = student_id);
-create policy "dono ve membros" on public.class_members for select using (exists (
-  select 1 from public.classes where id = class_members.class_id and owner_id = auth.uid()));
+create policy "dono ve membros" on public.class_members for select using (
+  public.is_class_owner(class_members.class_id, auth.uid()));
 
 -- exercises
 create policy "ler exercicios publicos" on public.exercises for select using (is_public or author_id = auth.uid());
