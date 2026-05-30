@@ -41,7 +41,7 @@ export default async function FrequenciaPage({
       .order("joined_at"),
     supabase
       .from("attendance_sessions")
-      .select("id, session_number, date, label")
+      .select("id, session_number, period, date, label")
       .eq("class_unit_id", classUnitId)
       .order("session_number"),
   ]);
@@ -84,6 +84,7 @@ export default async function FrequenciaPage({
         sessions={(sessions ?? []).map((s) => ({
           id: s.id,
           number: s.session_number,
+          period: s.period ?? 1,
           date: s.date,
           label: s.label,
         }))}

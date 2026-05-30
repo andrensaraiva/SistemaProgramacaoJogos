@@ -647,12 +647,14 @@ create index class_units_class_idx on public.class_units (class_id);
 create table public.attendance_sessions (
   id uuid primary key default gen_random_uuid(),
   class_unit_id uuid not null references public.class_units(id) on delete cascade,
-  session_number integer not null,
+  session_number integer not null,       -- ordem global da aula (1, 2, 3...)
+  period integer not null default 1,     -- posição da aula DENTRO do dia (1ª, 2ª...)
   date date,
   label text,
   unique (class_unit_id, session_number)
 );
 create index attendance_sessions_cu_idx on public.attendance_sessions (class_unit_id, session_number);
+create index attendance_sessions_cu_date_period_idx on public.attendance_sessions (class_unit_id, date, period);
 
 create type public.attendance_status as enum ('presente', 'falta', 'atraso');
 

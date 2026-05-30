@@ -636,49 +636,56 @@ async function seedCurriculo(supabase, { teacherId, classId, studentIds }) {
     .single()
     .throwOnError();
 
-  // Frequência de exemplo: 3 aulas com marcações variadas.
+  // Frequência de exemplo: 2 dias com 4 aulas cada (period 1–4), demonstrando
+  // presença POR AULA (o aluno pode faltar só a algumas aulas do dia).
   const day = (offset) => {
     const d = new Date();
     d.setDate(d.getDate() - offset);
     return d.toISOString().slice(0, 10);
   };
-  const sessionsSpec = [
-    { n: 1, date: day(14), label: "Aula 01 — Lógica" },
-    { n: 2, date: day(7), label: "Aula 02 — Tipos" },
-    { n: 3, date: day(0), label: "Aula 03 — Controle de fluxo" },
+  const dias = [
+    { date: day(7), label: "Lógica e tipos", aulas: 4 },
+    { date: day(0), label: "Controle de fluxo", aulas: 4 },
   ];
-  const { data: sessions } = await supabase
-    .from("attendance_sessions")
-    .insert(
-      sessionsSpec.map((s) => ({
+  const sessionRows = [];
+  let n = 0;
+  for (const dia of dias) {
+    for (let p = 1; p <= dia.aulas; p++) {
+      n++;
+      sessionRows.push({
         class_unit_id: classUnit.id,
-        session_number: s.n,
-        date: s.date,
-        label: s.label,
-      })),
-    )
-    .select("id, session_number")
-    .throwOnError();
-
-  // Aluno 1 sempre presente; Aluno 2 com 1 atraso e 1 falta.
-  const status = {
-    1: { [studentIds[0]]: "presente", [studentIds[1]]: "presente" },
-    2: { [studentIds[0]]: "presente", [studentIds[1]]: "atraso" },
-    3: { [studentIds[0]]: "presente", [studentIds[1]]: "falta" },
-  };
-  const marks = [];
-  for (const s of sessions) {
-    for (const studentId of studentIds) {
-      marks.push({
-        session_id: s.id,
-        student_id: studentId,
-        status: status[s.session_number][studentId],
+        session_number: n,
+        period: p,
+        date: dia.date,
+        label: dia.label,
       });
     }
   }
+  const { data: sessions } = await supabase
+    .from("attendance_sessions")
+    .insert(sessionRows)
+    .select("id, session_number, period, date")
+    .throwOnError();
+
+  // Aluno 1: presente em tudo. Aluno 2: no dia 1 faltou a 1ª e a 2ª aula;
+  // no dia 2 chegou atrasado na 1ª e faltou a última.
+  const marks = [];
+  for (const s of sessions) {
+    marks.push({ session_id: s.id, student_id: studentIds[0], status: "presente" });
+
+    let status2 = "presente";
+    if (s.date === dias[0].date && (s.period === 1 || s.period === 2)) {
+      status2 = "falta";
+    } else if (s.date === dias[1].date && s.period === 1) {
+      status2 = "atraso";
+    } else if (s.date === dias[1].date && s.period === dias[1].aulas) {
+      status2 = "falta";
+    }
+    marks.push({ session_id: s.id, student_id: studentIds[1], status: status2 });
+  }
   await must(supabase.from("attendance_marks").insert(marks));
 
-  console.log("Plano de ensino demo + frequência de exemplo criados.");
+  console.log("Plano de ensino demo + frequência por aula (2 dias x 4) criados.");
 }
 
 async function main() {

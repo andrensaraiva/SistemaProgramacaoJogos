@@ -26,8 +26,12 @@ async function ownsClassUnit(classUnitId: string, userId: string) {
   return cls?.owner_id === userId;
 }
 
-/** Cria a próxima sessão (aula numerada) de uma UC da turma. */
-export async function criarSessao(
+/**
+ * Cria as aulas de UM dia. Um dia pode ter várias aulas/tempos (campo `period`
+ * 1..N). Cada uma vira uma attendance_session com a mesma data e session_number
+ * sequencial. Aceita `date`, `quantidade` (nº de aulas no dia) e `label`.
+ */
+export async function criarAulasDoDia(
   classUnitId: string,
   formData: FormData,
 ): Promise<ActionResult> {
@@ -39,6 +43,12 @@ export async function criarSessao(
     return { ok: false, message: "Você não é dono desta turma." };
   }
 
+  const dateStr = (formData.get("date") as string) || null;
+  const label = (formData.get("label") as string) || null;
+  const qtdRaw = Number(formData.get("quantidade"));
+  const quantidade =
+    Number.isFinite(qtdRaw) && qtdRaw >= 1 ? Math.min(Math.trunc(qtdRaw), 12) : 1;
+
   const admin = createAdminClient();
   const { data: last } = await admin
     .from("attendance_sessions")
@@ -48,17 +58,18 @@ export async function criarSessao(
     .limit(1)
     .maybeSingle();
 
-  const next = (last?.session_number ?? 0) + 1;
-  const dateStr = (formData.get("date") as string) || null;
-
-  const { error } = await admin.from("attendance_sessions").insert({
+  const base = last?.session_number ?? 0;
+  const rows = Array.from({ length: quantidade }, (_, i) => ({
     class_unit_id: classUnitId,
-    session_number: next,
+    session_number: base + i + 1,
+    period: i + 1,
     date: dateStr,
-    label: (formData.get("label") as string) || null,
-  });
+    label,
+  }));
+
+  const { error } = await admin.from("attendance_sessions").insert(rows);
   if (error) {
-    return { ok: false, message: `Não foi possível criar a aula: ${error.message}` };
+    return { ok: false, message: `Não foi possível criar as aulas: ${error.message}` };
   }
 
   revalidatePath(`/turmas`);

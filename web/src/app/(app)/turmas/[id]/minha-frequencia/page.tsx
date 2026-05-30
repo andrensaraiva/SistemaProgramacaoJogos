@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 type Session = {
   id: string;
   session_number: number;
+  period: number;
   date: string | null;
   label: string | null;
 };
@@ -61,7 +62,7 @@ export default async function MinhaFrequenciaPage({
 
       const { data: sessions } = await supabase
         .from("attendance_sessions")
-        .select("id, session_number, date, label")
+        .select("id, session_number, period, date, label")
         .eq("class_unit_id", cu.id)
         .order("session_number");
 
@@ -194,15 +195,17 @@ export default async function MinhaFrequenciaPage({
                       className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
                     >
                       <div>
-                        <span className="font-medium">Aula {s.session_number}</span>
+                        <span className="font-medium">
+                          {s.date
+                            ? new Date(s.date).toLocaleDateString("pt-BR")
+                            : `Aula ${s.session_number}`}
+                        </span>
+                        <span className="ml-2 text-muted-foreground">
+                          {s.period}ª aula
+                        </span>
                         {s.label && (
-                          <span className="ml-2 text-muted-foreground">
-                            {s.label}
-                          </span>
-                        )}
-                        {s.date && (
                           <span className="ml-2 text-xs text-muted-foreground">
-                            {new Date(s.date).toLocaleDateString("pt-BR")}
+                            {s.label}
                           </span>
                         )}
                       </div>
