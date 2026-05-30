@@ -222,6 +222,13 @@ export function ImportarPpcForm() {
               : `${text.length.toLocaleString("pt-BR")} caracteres`}
           </span>
         </div>
+        {text.length > 250_000 && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            ⚠️ Texto longo: a IA usa só os primeiros ~250.000 caracteres. Se a
+            parte técnica estiver no fim do PDF, apague o índice e a formação
+            geral básica do começo, ou cole só os módulos técnicos.
+          </p>
+        )}
       </div>
     );
   }

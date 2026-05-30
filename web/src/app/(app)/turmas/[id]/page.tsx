@@ -16,7 +16,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
 
   const supabase = await createClient();
 
-  const { data: turma } = await supabase
+  const { data: turma, error: turmaError } = await supabase
     .from("classes")
     .select(
       "id, name, description, invite_code, owner_id, owner:profiles!owner_id(display_name)",
@@ -24,6 +24,10 @@ export default async function TurmaPage({ params }: { params: Params }) {
     .eq("id", id)
     .single();
 
+  // Erro de banco (ex.: RLS) não é "não encontrado" — não mascarar como 404.
+  if (turmaError && turmaError.code !== "PGRST116") {
+    throw new Error(`Falha ao carregar a turma: ${turmaError.message}`);
+  }
   if (!turma) notFound();
 
   const isOwner = turma.owner_id === profile?.id;

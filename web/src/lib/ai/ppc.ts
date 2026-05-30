@@ -97,8 +97,9 @@ export async function extractPpc(rawText: string): Promise<PpcDraft> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: modelName });
 
-  // PPCs são longos; limita a entrada para caber no contexto e no free-tier.
-  const text = rawText.slice(0, 120_000);
+  // PPCs são longos; o gemini-1.5-flash tem janela grande, então mandamos um
+  // bom trecho. 250k chars cobre a formação técnica mesmo depois do índice/infra.
+  const text = rawText.slice(0, 250_000);
 
   const result = await model.generateContent({
     contents: [
