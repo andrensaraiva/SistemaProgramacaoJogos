@@ -434,15 +434,15 @@ alter table public.badges enable row level security;
 alter table public.user_badges enable row level security;
 alter table public.duels enable row level security;
 
+-- Funções auxiliares como SECURITY DEFINER: leem as tabelas SEM reavaliar o
+-- RLS delas, então policies que as chamam nunca entram em recursão. is_professor
+-- PRECISA ser definer: é chamada em muitas policies e lê `profiles` — sem definer,
+-- avaliar uma policy de `profiles` reentra no RLS de `profiles` (stack overflow).
 create or replace function public.is_professor(uid uuid)
-returns boolean language sql stable as $$
+returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.profiles where id = uid and role in ('professor', 'admin'))
 $$;
 
--- Helpers SECURITY DEFINER para quebrar a recursão entre `classes` e
--- `class_members` (cada policy consultava a outra tabela, disparando o
--- avaliador de RLS dela em loop). Rodando como definer, leem as tabelas SEM
--- reavaliar RLS, então não há ciclo.
 create or replace function public.is_class_owner(target_class uuid, uid uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.classes c where c.id = target_class and c.owner_id = uid)
@@ -455,12 +455,20 @@ returns boolean language sql stable security definer set search_path = public as
     where m.class_id = target_class and m.student_id = uid)
 $$;
 
+-- "O professor é dono de ALGUMA turma do aluno?" — encapsula o cruzamento
+-- profiles↔class_members↔classes numa única função definer (sem recursão).
+create or replace function public.teaches_student(prof uuid, student uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.class_members m
+    join public.classes c on c.id = m.class_id
+    where m.student_id = student and c.owner_id = prof)
+$$;
+
 -- profiles
 create policy "ler proprio perfil" on public.profiles for select using (auth.uid() = id);
 create policy "professor le perfis dos alunos das suas turmas" on public.profiles for select using (
-  public.is_professor(auth.uid()) and exists (
-    select 1 from public.class_members cm
-    where cm.student_id = profiles.id and public.is_class_owner(cm.class_id, auth.uid())));
+  public.teaches_student(auth.uid(), profiles.id));
 create policy "atualizar proprio perfil" on public.profiles for update using (auth.uid() = id);
 
 -- classes
