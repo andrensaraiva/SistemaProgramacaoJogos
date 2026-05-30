@@ -88,11 +88,11 @@ No fim ele roda uma **verificação** — confira que a última linha mostra alg
 `linguagens_ativas` ≥ 1, `correcao_manual_ok = true`, `language_id_ok = true` e
 `tabelas_curriculo = 11`.
 
-> Se o seu banco **já existia** e você só quer aplicar a novidade do currículo sem
-> apagar nada, rode apenas
-> [`supabase/migrations/0007_curriculum.sql`](../supabase/migrations/0007_curriculum.sql)
-> (é aditivo e idempotente). Para um teste limpo do zero, use o
-> `SETUP_COMPLETO.sql` acima.
+> Para um teste limpo do zero, use o `SETUP_COMPLETO.sql` acima. Para aplicar só
+> mudanças incrementais num banco que já existe, use a Supabase CLI
+> (`npx supabase db push`) — veja [SUPABASE_CLI.md](SUPABASE_CLI.md). As migrations
+> ficam em `supabase/migrations/` (nomeadas com timestamp, ex.:
+> `20250101000007_curriculum.sql`).
 
 ---
 
