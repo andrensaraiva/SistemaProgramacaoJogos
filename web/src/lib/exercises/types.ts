@@ -1,6 +1,8 @@
 // Tipos compartilhados para exercicios, execucao e julgamento.
 
-export type Language = "csharp" | "python" | "javascript";
+// Linguagem agora é dinâmica (slug vindo da tabela `languages`). Mantemos o
+// alias como `string` para compatibilidade com o código existente.
+export type Language = string;
 export type Difficulty = "facil" | "medio" | "dificil" | "desafio";
 
 export type Exercise = {
@@ -9,6 +11,10 @@ export type Exercise = {
   description: string;
   starter_code: string;
   language: Language;
+  // Rótulo amigável da linguagem (ex: "C#", "Python") e modo do Monaco.
+  // Opcionais para compatibilidade com chamadas antigas.
+  language_label?: string;
+  monaco_language?: string;
   difficulty: Difficulty;
   xp_reward: number;
 };

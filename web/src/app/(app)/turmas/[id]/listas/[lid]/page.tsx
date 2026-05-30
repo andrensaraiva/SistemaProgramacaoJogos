@@ -12,6 +12,7 @@ type Params = Promise<{ id: string; lid: string }>;
 type ExerciseRow = { id: string; title: string; ord: number };
 type StudentRow = { id: string; display_name: string };
 type SubmissionRow = {
+  id: string;
   student_id: string;
   exercise_id: string;
   status: string;
@@ -24,6 +25,7 @@ type SubmissionRow = {
   keystroke_count: number;
   suspicion_score: number;
   suspicion_reasons: string[] | null;
+  manual_grade: number | null;
 };
 
 type SimilarityAlert = {
@@ -101,7 +103,7 @@ export default async function ListaProgressoPage({ params }: { params: Params })
     const { data: allSubs } = await supabase
       .from("submissions")
       .select(
-        "student_id, exercise_id, status, passed_count, total_count, created_at, code, paste_event_count, time_to_solve_ms, keystroke_count, suspicion_score, suspicion_reasons",
+        "id, student_id, exercise_id, status, passed_count, total_count, created_at, code, paste_event_count, time_to_solve_ms, keystroke_count, suspicion_score, suspicion_reasons, manual_grade",
       )
       .eq("assignment_id", lid)
       .order("created_at", { ascending: false });
@@ -184,6 +186,24 @@ export default async function ListaProgressoPage({ params }: { params: Params })
                             ? getSuspicionReasons(sub, similar)
                             : [];
 
+                          const cellInner = (
+                            <>
+                              <span className={style.className}>
+                                {style.icon}
+                              </span>
+                              {reasons.length > 0 && (
+                                <span className="ml-1 rounded-full bg-warning/20 px-1.5 py-0.5 text-[10px] font-semibold text-warning">
+                                  !
+                                </span>
+                              )}
+                              {sub?.manual_grade != null && (
+                                <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                                  {sub.manual_grade}
+                                </span>
+                              )}
+                            </>
+                          );
+
                           return (
                             <td
                               key={exercise.id}
@@ -195,15 +215,19 @@ export default async function ListaProgressoPage({ params }: { params: Params })
                                       reasons,
                                       similar,
                                       studentNames,
-                                    )
+                                    ) + " · clique para corrigir"
                                   : "Nao enviado"
                               }
                             >
-                              <span className={style.className}>{style.icon}</span>
-                              {reasons.length > 0 && (
-                                <span className="ml-1 rounded-full bg-warning/20 px-1.5 py-0.5 text-[10px] font-semibold text-warning">
-                                  !
-                                </span>
+                              {sub ? (
+                                <Link
+                                  href={`/turmas/${id}/listas/${lid}/corrigir/${sub.id}`}
+                                  className="inline-flex items-center rounded px-1 hover:bg-muted"
+                                >
+                                  {cellInner}
+                                </Link>
+                              ) : (
+                                cellInner
                               )}
                             </td>
                           );
@@ -235,7 +259,9 @@ export default async function ListaProgressoPage({ params }: { params: Params })
 
   const { data: mySubs } = await supabase
     .from("submissions")
-    .select("exercise_id, status, passed_count, total_count, created_at")
+    .select(
+      "exercise_id, status, passed_count, total_count, created_at, manual_grade, manual_feedback",
+    )
     .eq("assignment_id", lid)
     .eq("student_id", profile.id)
     .order("created_at", { ascending: false });
@@ -277,19 +303,36 @@ export default async function ListaProgressoPage({ params }: { params: Params })
           return (
             <div
               key={exercise.id}
-              className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3"
+              className="rounded-xl border border-border bg-card px-4 py-3"
             >
-              <span className="text-sm font-medium">{exercise.title}</span>
-              <div className="flex items-center gap-3">
-                {sub && (
-                  <span className="text-xs text-muted-foreground">
-                    {sub.passed_count}/{sub.total_count} testes
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">{exercise.title}</span>
+                <div className="flex items-center gap-3">
+                  {sub?.manual_grade != null && (
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
+                      Nota {sub.manual_grade}
+                    </span>
+                  )}
+                  {sub && (
+                    <span className="text-xs text-muted-foreground">
+                      {sub.passed_count}/{sub.total_count} testes
+                    </span>
+                  )}
+                  <span className={`text-base ${style.className}`}>
+                    {style.icon}
                   </span>
-                )}
-                <span className={`text-base ${style.className}`}>
-                  {style.icon}
-                </span>
+                </div>
               </div>
+              {sub?.manual_feedback && (
+                <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
+                  <div className="font-semibold text-primary">
+                    Feedback do professor
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap text-foreground">
+                    {sub.manual_feedback}
+                  </p>
+                </div>
+              )}
             </div>
           );
         })}

@@ -146,6 +146,23 @@ export default async function TurmaPage({ params }: { params: Params }) {
         </div>
       </section>
 
+      {/* Unidades curriculares + frequência (professor only) */}
+      {isOwner && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Unidades curriculares</h2>
+            <Link href={`/turmas/${id}/ucs`}>
+              <Button variant="secondary">Gerenciar UCs e frequência</Button>
+            </Link>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Vincule as unidades curriculares que você leciona nesta turma,
+            escolha o plano de ensino e controle a frequência (presença, falta e
+            atraso) por aula.
+          </p>
+        </section>
+      )}
+
       {/* Membros (professor only) */}
       {isOwner && (
         <section className="flex flex-col gap-4">

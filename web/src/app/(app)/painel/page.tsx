@@ -1,6 +1,10 @@
 import Link from "next/link";
 
 import { StudentOnboardingTour } from "@/components/student-onboarding-tour";
+import {
+  UpcomingDeadlines,
+  type DeadlineItem,
+} from "@/components/upcoming-deadlines";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
@@ -56,6 +60,9 @@ export default async function PainelPage() {
     .from("user_badges")
     .select("*", { count: "exact", head: true })
     .eq("user_id", profile.id);
+
+  // Próximas entregas: assignments com prazo das turmas do usuário.
+  const deadlines = await loadUpcomingDeadlines(supabase, profile.id, isProf);
 
   return (
     <div className="flex flex-col gap-8">
@@ -128,6 +135,8 @@ export default async function PainelPage() {
         />
       </div>
 
+      <UpcomingDeadlines items={deadlines} />
+
       {isProf && turmasCount === 0 && (
         <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
           <h2 className="text-lg font-semibold">Crie sua primeira turma</h2>
@@ -157,6 +166,58 @@ export default async function PainelPage() {
       )}
     </div>
   );
+}
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+async function loadUpcomingDeadlines(
+  supabase: SupabaseServerClient,
+  profileId: string,
+  isProf: boolean,
+): Promise<DeadlineItem[]> {
+  // 1. IDs das turmas do usuário (dono, se professor; matrícula, se aluno).
+  let classIds: string[] = [];
+  if (isProf) {
+    const { data } = await supabase
+      .from("classes")
+      .select("id")
+      .eq("owner_id", profileId);
+    classIds = (data ?? []).map((c) => c.id);
+  } else {
+    const { data } = await supabase
+      .from("class_members")
+      .select("class_id")
+      .eq("student_id", profileId);
+    classIds = (data ?? []).map((m) => m.class_id);
+  }
+
+  if (classIds.length === 0) return [];
+
+  // 2. Assignments com prazo, ordenados pelo mais próximo. Inclui as atrasadas
+  //    dos últimos 7 dias para o aluno não perder o que ficou para trás.
+  const sevenDaysAgo = new Date(
+    Date.now() - 7 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+
+  const { data } = await supabase
+    .from("assignments")
+    .select("id, title, due_at, class:classes!class_id(id, name)")
+    .in("class_id", classIds)
+    .not("due_at", "is", null)
+    .gte("due_at", sevenDaysAgo)
+    .order("due_at", { ascending: true })
+    .limit(6);
+
+  return (data ?? []).map((a) => {
+    const cls = a.class as unknown as { id: string; name: string };
+    return {
+      assignmentId: a.id,
+      classId: cls.id,
+      title: a.title,
+      className: cls.name,
+      dueAt: a.due_at as string,
+    };
+  });
 }
 
 function StatCard({

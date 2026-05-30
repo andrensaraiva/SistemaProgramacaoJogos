@@ -85,6 +85,7 @@ export async function generateExerciseAction(
       starter_code: generated.starter_code,
       solution: generated.solution,
       language: "csharp",
+      language_id: "csharp",
       difficulty: parsed.data.difficulty,
       xp_reward: parsed.data.xp_reward,
       is_public: parsed.data.is_public,

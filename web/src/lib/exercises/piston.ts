@@ -1,22 +1,20 @@
 import "server-only";
 
-import type { Language, RunResult } from "./types";
+import { getLanguage, getLanguageSyncFallback } from "./languages";
+import type { RunResult } from "./types";
 
-// Mapeia nossas linguagens internas pros runtimes que a API pública do Piston usa.
+// Executa código em uma das linguagens do catálogo (tabela `languages`).
 // Veja: https://github.com/engineer-man/piston (lista de runtimes)
-const PISTON_LANGUAGE: Record<Language, { language: string; file: string }> = {
-  csharp: { language: "csharp.net", file: "main.cs" },
-  python: { language: "python", file: "main.py" },
-  javascript: { language: "javascript", file: "main.js" },
-};
 
 type ExecuteParams = {
-  language: Language;
+  // Aceita o id da linguagem (slug). Compatível com os valores antigos do enum
+  // ('csharp' | 'python' | 'javascript') e com os novos ('cpp', 'java'...).
+  language: string;
   code: string;
   stdin?: string;
 };
 
-// Resposta crua do Piston em /api/v2/piston/execute
+// Resposta crua do Piston em /execute
 type PistonResponse = {
   language: string;
   version: string;
@@ -44,15 +42,32 @@ export async function executeCode({
   code,
   stdin = "",
 }: ExecuteParams): Promise<RunResult> {
-  const config = PISTON_LANGUAGE[language];
+  // Resolve a linguagem (tabela → fallback estático).
+  const lang =
+    (await getLanguage(language)) ?? getLanguageSyncFallback(language);
+
+  if (!lang) {
+    throw new Error(`Linguagem desconhecida: ${language}`);
+  }
+
+  if (lang.runner === "simulator") {
+    // Arduino e afins ainda não rodam aqui — ver docs/ARDUINO_PLANO.md.
+    throw new Error(
+      `A linguagem "${lang.label}" usa um runner especial ainda não disponível.`,
+    );
+  }
+
+  if (lang.runner !== "piston" || !lang.piston_runtime) {
+    throw new Error(`A linguagem "${lang.label}" não é executável.`);
+  }
 
   const res = await fetch(`${PISTON_BASE}/execute`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      language: config.language,
-      version: "*",
-      files: [{ name: config.file, content: code }],
+      language: lang.piston_runtime,
+      version: lang.piston_version || "*",
+      files: [{ name: lang.source_file, content: code }],
       stdin,
       compile_timeout: 10_000,
       run_timeout: 3_000,

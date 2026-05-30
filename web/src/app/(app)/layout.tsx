@@ -8,6 +8,7 @@ import { getProfile } from "@/lib/auth/dal";
 const NAV = [
   { href: "/painel", label: "Painel" },
   { href: "/exercicios", label: "Exercícios" },
+  { href: "/cursos", label: "Cursos" },
   { href: "/turmas", label: "Turmas" },
   { href: "/ranking", label: "Ranking" },
   { href: "/duelos", label: "Duelos" },

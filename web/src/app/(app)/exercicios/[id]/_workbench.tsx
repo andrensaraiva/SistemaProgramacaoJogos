@@ -26,12 +26,6 @@ const MonacoEditor = dynamic(
   },
 );
 
-const MONACO_LANGUAGE: Record<Exercise["language"], string> = {
-  csharp: "csharp",
-  python: "python",
-  javascript: "javascript",
-};
-
 const BADGE_LABELS: Record<string, string> = {
   first_green: "Primeira Vitoria",
   no_paste: "Mao Propria",
@@ -53,6 +47,8 @@ export function Workbench({ exercise, sampleTests }: Props) {
   const [running, startRun] = useTransition();
   const [submitting, startSubmit] = useTransition();
   const [generatingExtra, startGenerateExtra] = useTransition();
+  const [aiText, setAiText] = useState<string | null>(null);
+  const [aiLoading, startAi] = useTransition();
   const firstEditAt = useRef<number | null>(null);
   const pasteEventCount = useRef(0);
   const keystrokeCount = useRef(0);
@@ -111,6 +107,44 @@ export function Workbench({ exercise, sampleTests }: Props) {
     setCode(value ?? "");
   }
 
+  function handleAssist(mode: "explain" | "hint") {
+    setAiText(null);
+    // Junta o melhor contexto de erro disponível (execução rápida ou submissão).
+    const fail =
+      submission && submission.ok ? submission.first_fail : null;
+    const stderr = fail?.stderr ?? runResult?.stderr ?? undefined;
+    const stdout = fail?.got ?? runResult?.stdout ?? undefined;
+    const expected = fail?.expected ?? undefined;
+    startAi(async () => {
+      try {
+        const res = await fetch("/api/ai/assist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode,
+            language: exercise.language_label ?? exercise.language,
+            exerciseTitle: exercise.title,
+            exerciseDescription: exercise.description,
+            code,
+            stderr,
+            stdout,
+            expected,
+          }),
+        });
+        const data = await res.json();
+        setAiText(
+          res.ok
+            ? data.text
+            : typeof data.error === "string"
+              ? data.error
+              : "Não foi possível obter ajuda agora.",
+        );
+      } catch {
+        setAiText("Falha de rede ao pedir ajuda à IA.");
+      }
+    });
+  }
+
   function handleGenerateExtra() {
     setExtraMsg(null);
     startGenerateExtra(async () => {
@@ -125,8 +159,8 @@ export function Workbench({ exercise, sampleTests }: Props) {
       <div className="flex flex-col gap-4">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">
-            {exercise.language} · {exercise.difficulty} · {exercise.xp_reward}{" "}
-            XP
+            {exercise.language_label ?? exercise.language} ·{" "}
+            {exercise.difficulty} · {exercise.xp_reward} XP
           </div>
           <h1 className="mt-1 text-2xl font-bold">{exercise.title}</h1>
         </div>
@@ -191,7 +225,7 @@ export function Workbench({ exercise, sampleTests }: Props) {
         >
           <MonacoEditor
             height="420px"
-            language={MONACO_LANGUAGE[exercise.language]}
+            language={exercise.monaco_language ?? exercise.language}
             value={code}
             onChange={handleCodeChange}
             theme="vs-dark"
@@ -201,6 +235,14 @@ export function Workbench({ exercise, sampleTests }: Props) {
               tabSize: 4,
               automaticLayout: true,
               scrollBeyondLastLine: false,
+              // Autocomplete mais rico
+              quickSuggestions: true,
+              suggestOnTriggerCharacters: true,
+              wordBasedSuggestions: "currentDocument",
+              tabCompletion: "on",
+              parameterHints: { enabled: true },
+              snippetSuggestions: "inline",
+              bracketPairColorization: { enabled: true },
             }}
           />
         </div>
@@ -229,6 +271,41 @@ export function Workbench({ exercise, sampleTests }: Props) {
             {submitting ? "Enviando…" : "Enviar"}
           </Button>
         </div>
+
+        {/* Tutor de IA — não entrega a resposta, só explica/dá dica */}
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
+          <span className="text-xs font-semibold text-muted-foreground">
+            Tutor IA:
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => handleAssist("hint")}
+            disabled={aiLoading}
+          >
+            {aiLoading ? "Pensando…" : "💡 Dica"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => handleAssist("explain")}
+            disabled={aiLoading}
+          >
+            🔍 Explicar erro
+          </Button>
+          <span className="text-[11px] text-muted-foreground">
+            (a IA não dá a resposta pronta)
+          </span>
+        </div>
+
+        {aiText && (
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm">
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
+              Tutor IA
+            </div>
+            <p className="whitespace-pre-wrap leading-relaxed">{aiText}</p>
+          </div>
+        )}
 
         {errorMsg && (
           <div className="rounded-md border border-danger/40 bg-danger/10 p-3 text-sm text-danger">

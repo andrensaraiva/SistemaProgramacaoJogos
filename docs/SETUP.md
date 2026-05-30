@@ -1,5 +1,9 @@
 # Setup do ambiente
 
+> 📌 **O guia completo e atualizado é o [SETUP_COMPLETO_PASSO_A_PASSO.md](SETUP_COMPLETO_PASSO_A_PASSO.md).**
+> Use-o para configurar tudo do zero. Este arquivo permanece como referência
+> rápida das partes que não mudam (Supabase, Piston, Vercel, Unity).
+
 Passo a passo para colocar a plataforma rodando do zero.
 
 ## Pré-requisitos
@@ -42,14 +46,18 @@ GITHUB_PERSONAL_ACCESS_TOKEN=
 
 ## 3. Aplicar o esquema do banco
 
-No SQL Editor do Supabase:
-> Para banco novo, rode os scripts nesta ordem:
-> `0001_init.sql`, `0002_gamification_repair_idempotent.sql`,
-> `0003_ai_cache.sql`, `0004_duel_elo_github.sql` e depois o seed
-> `0001_exercises.sql`.
+No SQL Editor do Supabase, cole e execute **o arquivo único**
+[supabase/SETUP_COMPLETO.sql](../supabase/SETUP_COMPLETO.sql). Ele faz reset +
+cria todo o schema (todas as fases, incluindo a camada curricular) + seed base de
+badges/linguagens em uma só execução.
 
-1. Cole e execute [supabase/migrations/0001_init.sql](../supabase/migrations/0001_init.sql) (cria 11 tabelas + RLS)
-2. Cole e execute [supabase/seed/0001_exercises.sql](../supabase/seed/0001_exercises.sql) (3 exercícios C# de exemplo — rode depois de cadastrar pelo menos um perfil)
+Depois rode o seed demo (passo 5) para criar usuários, turma, exercícios e o curso
+técnico de exemplo.
+
+> Banco já existente e você só quer a novidade do currículo sem apagar nada? Rode
+> apenas [supabase/migrations/0007_curriculum.sql](../supabase/migrations/0007_curriculum.sql)
+> (aditivo e idempotente). As migrations `0001`…`0007` continuam no repositório
+> como histórico; para um setup limpo prefira o `SETUP_COMPLETO.sql`.
 
 ## 4. Subir o Piston (execução de código)
 
@@ -74,10 +82,12 @@ Confirma que `csharp.net` aparece em `http://localhost:2000/api/v2/runtimes`.
 ```powershell
 cd web
 npm install
+npm run seed:demo:reset   # usuários demo + turma + exercícios + curso técnico
 npm run dev
 ```
 
-Abrir http://localhost:3000.
+Abrir http://127.0.0.1:3000 (o dev sobe nesse host). Credenciais demo impressas
+pelo seed: `prof.demo@codequest.dev` / `password123` (e `aluno1`/`aluno2`).
 
 ## 6. Deploy na Vercel
 

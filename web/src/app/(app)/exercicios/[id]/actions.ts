@@ -32,7 +32,7 @@ export async function submitSolution(
 
   const { data: exercise, error: exErr } = await admin
     .from("exercises")
-    .select("id, language")
+    .select("id, language, language_id")
     .eq("id", exerciseId)
     .single();
 
@@ -65,7 +65,8 @@ export async function submitSolution(
     let result;
     try {
       result = await executeCode({
-        language: exercise.language as Language,
+        // Prefere o catálogo dinâmico; cai pro enum antigo se nulo.
+        language: (exercise.language_id ?? exercise.language) as Language,
         code,
         stdin: t.stdin,
       });
@@ -204,6 +205,7 @@ export async function generateSimilarExercise(exerciseId: string) {
       starter_code: generated.starter_code,
       solution: generated.solution,
       language: "csharp",
+      language_id: "csharp",
       difficulty: source.difficulty,
       xp_reward: Math.max(5, Math.round((source.xp_reward ?? 10) * 0.75)),
       is_public: true,

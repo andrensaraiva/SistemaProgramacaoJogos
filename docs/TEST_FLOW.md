@@ -1,15 +1,13 @@
 # Fluxo de teste completo
 
-Use este roteiro depois de aplicar as migrations e recriar o seed demo.
+Use este roteiro depois de configurar o ambiente. O setup completo do zero está
+em [SETUP_COMPLETO_PASSO_A_PASSO.md](SETUP_COMPLETO_PASSO_A_PASSO.md).
 
 ## 1. Preparar banco e seed
 
-No SQL Editor do Supabase, rode:
-
-1. `supabase/migrations/0001_init.sql` apenas se o banco estiver vazio.
-2. `supabase/migrations/0002_gamification_repair_idempotent.sql`
-3. `supabase/migrations/0003_ai_cache.sql`
-4. `supabase/migrations/0004_duel_elo_github.sql`
+No SQL Editor do Supabase, cole e execute o arquivo único
+`supabase/SETUP_COMPLETO.sql` (reset + schema completo, incluindo a camada
+curricular).
 
 No terminal:
 
@@ -18,6 +16,8 @@ cd web
 npm run seed:demo:reset
 npm run dev
 ```
+
+O site sobe em http://127.0.0.1:3000.
 
 ## 2. Contas demo
 
@@ -117,3 +117,32 @@ O teste deve passar com a implementacao de exemplo do template.
 
 Para repositorios privados, configure `GITHUB_PERSONAL_ACCESS_TOKEN` no
 `web/.env.local` com permissao de leitura de Actions.
+
+## 8. Camada curricular (PPC -> plano de ensino -> frequencia)
+
+Pre-requisito da importacao por IA: `GEMINI_API_KEY` no `web/.env.local`. O resto
+funciona sem IA (o curso ja vem no seed).
+
+Professor:
+
+1. Entrar como professor e abrir `Cursos`.
+2. Abrir `Tecnico em Jogos Digitais (parte tecnica)`.
+3. Abrir a UC `Codificacao de Sistemas de Jogos Digitais` e conferir objetivo,
+   habilidades, conhecimentos e bibliografia.
+4. (IA) `Cursos -> + Importar PPC (IA)`: colar o texto do PDF, `Analisar com IA`,
+   revisar o rascunho e `Salvar curso`.
+5. Na UC, criar um plano de ensino e adicionar blocos de aulas.
+
+Clonagem (precisa de uma 2a conta de professor):
+
+6. Cadastrar outro usuario com papel `professor`.
+7. Abrir a mesma UC e clicar `Clonar` no plano de um colega.
+8. Confirmar que vira copia editavel e o original nao muda.
+
+Frequencia:
+
+9. Como professor dono, `Turma Demo -> Gerenciar UCs e frequencia`.
+10. A UC de Codificacao ja vem vinculada; clicar `Frequencia`.
+11. Ver a grade aluno x aula preenchida pelo seed.
+12. Clicar numa celula para alternar Presente -> Atraso -> Falta.
+13. Criar `+ Nova aula` e marcar presencas; conferir a coluna `F / A` por aluno.
