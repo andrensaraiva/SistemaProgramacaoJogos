@@ -34,7 +34,7 @@ export default async function CorrigirPage({ params }: { params: Params }) {
   const { data: sub } = await admin
     .from("submissions")
     .select(
-      "id, code, status, passed_count, total_count, created_at, manual_grade, manual_feedback, student_id, assignment_id, student:profiles!student_id(display_name), exercise:exercises!exercise_id(title, language, language_id), assignment:assignments!assignment_id(class_id, title, class:classes!class_id(owner_id, name))",
+      "id, code, submission_link, response_text, status, passed_count, total_count, created_at, manual_grade, manual_feedback, student_id, assignment_id, student:profiles!student_id(display_name), exercise:exercises!exercise_id(title, language, language_id, exercise_type), assignment:assignments!assignment_id(class_id, title, class:classes!class_id(owner_id, name))",
     )
     .eq("id", sid)
     .single();
@@ -50,6 +50,7 @@ export default async function CorrigirPage({ params }: { params: Params }) {
     title: string;
     language: string;
     language_id: string | null;
+    exercise_type: string | null;
   };
   const student = sub.student as unknown as { display_name: string };
 
@@ -111,7 +112,10 @@ export default async function CorrigirPage({ params }: { params: Params }) {
         classId={id}
         assignmentId={lid}
         submissionId={sub.id}
+        exerciseType={exercise.exercise_type ?? "codigo"}
         code={sub.code}
+        submissionLink={sub.submission_link}
+        responseText={sub.response_text}
         monacoLanguage={lang?.monaco_language ?? langSlug}
         currentGrade={sub.manual_grade}
         currentFeedback={sub.manual_feedback}

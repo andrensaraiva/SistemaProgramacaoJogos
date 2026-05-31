@@ -3,13 +3,24 @@ import { notFound } from "next/navigation";
 
 import { ConfirmForm } from "@/components/confirm-form";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import { excluirLista } from "@/lib/turmas/actions";
 
+import { AnexarExercicios } from "./_anexar";
+import { EntregaForm } from "./_entrega";
+
 type Params = Promise<{ id: string; lid: string }>;
 
-type ExerciseRow = { id: string; title: string; ord: number };
+type ExerciseRow = {
+  id: string;
+  title: string;
+  ord: number;
+  exercise_type?: string;
+  is_group?: boolean;
+  response_template?: string | null;
+};
 type StudentRow = { id: string; display_name: string };
 type SubmissionRow = {
   id: string;
@@ -44,6 +55,7 @@ const STATUS_ICON: Record<string, { icon: string; className: string }> = {
   reprovado: { icon: "X", className: "text-red-500 font-bold" },
   rodando: { icon: "...", className: "text-yellow-500" },
   erro: { icon: "!", className: "text-orange-500" },
+  entregue: { icon: "↑", className: "text-primary font-bold" },
 };
 
 const SUSPICION_LABELS: Record<string, string> = {
@@ -79,16 +91,36 @@ export default async function ListaProgressoPage({ params }: { params: Params })
 
   const { data: assignmentExercises } = await supabase
     .from("assignment_exercises")
-    .select("ord, exercise:exercises!exercise_id(id, title)")
+    .select("ord, exercise:exercises!exercise_id(id, title, exercise_type, is_group, response_template)")
     .eq("assignment_id", lid)
     .order("ord");
 
   const exercises: ExerciseRow[] = (assignmentExercises ?? []).map((ae) => {
-    const ex = ae.exercise as unknown as { id: string; title: string };
-    return { id: ex.id, title: ex.title, ord: ae.ord };
+    const ex = ae.exercise as unknown as {
+      id: string;
+      title: string;
+      exercise_type?: string;
+      is_group?: boolean;
+      response_template?: string | null;
+    };
+    return {
+      id: ex.id,
+      title: ex.title,
+      ord: ae.ord,
+      exercise_type: ex.exercise_type ?? "codigo",
+      is_group: ex.is_group ?? false,
+      response_template: ex.response_template ?? null,
+    };
   });
 
   if (isOwner) {
+    // Exercícios disponíveis para anexar (públicos ou do professor).
+    const { data: disponiveis } = await supabase
+      .from("exercises")
+      .select("id, title, exercise_type")
+      .or(`is_public.eq.true,author_id.eq.${profile?.id}`)
+      .order("created_at", { ascending: false });
+
     const { data: membros } = await supabase
       .from("class_members")
       .select("student:profiles!student_id(id, display_name)")
@@ -126,6 +158,21 @@ export default async function ListaProgressoPage({ params }: { params: Params })
     return (
       <div className="flex flex-col gap-6">
         <Header lista={lista} cls={cls} isOwner={isOwner} />
+
+        <AnexarExercicios
+          classId={id}
+          assignmentId={lid}
+          anexados={exercises.map((e) => ({
+            id: e.id,
+            title: e.title,
+            exercise_type: e.exercise_type ?? "codigo",
+          }))}
+          disponiveis={(disponiveis ?? []).map((d) => ({
+            id: d.id,
+            title: d.title,
+            exercise_type: d.exercise_type ?? "codigo",
+          }))}
+        />
 
         {exercises.length === 0 && <EmptyExercises isOwner={isOwner} />}
 
@@ -260,7 +307,7 @@ export default async function ListaProgressoPage({ params }: { params: Params })
   const { data: mySubs } = await supabase
     .from("submissions")
     .select(
-      "exercise_id, status, passed_count, total_count, created_at, manual_grade, manual_feedback",
+      "exercise_id, status, passed_count, total_count, created_at, manual_grade, manual_feedback, submission_link, response_text",
     )
     .eq("assignment_id", lid)
     .eq("student_id", profile.id)
@@ -293,6 +340,7 @@ export default async function ListaProgressoPage({ params }: { params: Params })
       <div className="flex flex-col gap-2">
         {exercises.map((exercise) => {
           const sub = mySubMap.get(exercise.id);
+          const isCode = (exercise.exercise_type ?? "codigo") === "codigo";
           const style = sub
             ? STATUS_ICON[sub.status] ?? {
                 icon: "?",
@@ -305,24 +353,56 @@ export default async function ListaProgressoPage({ params }: { params: Params })
               key={exercise.id}
               className="rounded-xl border border-border bg-card px-4 py-3"
             >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{exercise.title}</span>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium">
+                  {isCode ? (
+                    <Link
+                      href={`/exercicios/${exercise.id}`}
+                      className="hover:text-primary"
+                    >
+                      {exercise.title}
+                    </Link>
+                  ) : (
+                    exercise.title
+                  )}
+                  {exercise.is_group && (
+                    <StatusBadge label="Grupo" tone="info" className="ml-2" />
+                  )}
+                </span>
                 <div className="flex items-center gap-3">
                   {sub?.manual_grade != null && (
                     <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
                       Nota {sub.manual_grade}
                     </span>
                   )}
-                  {sub && (
+                  {sub && isCode && (
                     <span className="text-xs text-muted-foreground">
                       {sub.passed_count}/{sub.total_count} testes
                     </span>
                   )}
-                  <span className={`text-base ${style.className}`}>
-                    {style.icon}
-                  </span>
+                  {!isCode && sub ? (
+                    <StatusBadge status={sub.status} />
+                  ) : (
+                    <span className={`text-base ${style.className}`}>
+                      {style.icon}
+                    </span>
+                  )}
                 </div>
               </div>
+
+              {/* Entrega para exercícios não-código */}
+              {!isCode && (
+                <EntregaForm
+                  classId={id}
+                  assignmentId={lid}
+                  exerciseId={exercise.id}
+                  tipo={exercise.exercise_type as "apresentacao" | "modelo_resposta"}
+                  responseTemplate={exercise.response_template}
+                  currentLink={sub?.submission_link}
+                  currentResponse={sub?.response_text}
+                />
+              )}
+
               {sub?.manual_feedback && (
                 <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
                   <div className="font-semibold text-primary">

@@ -157,6 +157,8 @@ create type public.difficulty as enum ('facil', 'medio', 'dificil', 'desafio');
 -- Mantido por compatibilidade; a fonte da verdade nova é languages.id (language_id).
 create type public.language as enum ('csharp', 'python', 'javascript');
 
+create type public.exercise_type as enum ('codigo', 'apresentacao', 'modelo_resposta');
+
 create table public.exercises (
   id uuid primary key default gen_random_uuid(),
   author_id uuid references public.profiles(id) on delete set null,
@@ -170,6 +172,9 @@ create table public.exercises (
   xp_reward integer not null default 10,
   is_public boolean not null default false,
   generated_by_ai boolean not null default false,
+  exercise_type public.exercise_type not null default 'codigo',
+  is_group boolean not null default false,        -- trabalho em grupo
+  response_template text,                         -- enunciado/modelo p/ 'modelo_resposta'
   created_at timestamptz not null default now()
 );
 create index exercises_language_id_idx on public.exercises (language_id);
@@ -209,14 +214,17 @@ create table public.assignment_exercises (
 -- =============================================================================
 -- 6. SUBMISSÕES (+ antifraude + correção manual)
 -- =============================================================================
-create type public.submission_status as enum ('rodando', 'aprovado', 'reprovado', 'erro');
+create type public.submission_status as enum ('rodando', 'aprovado', 'reprovado', 'erro', 'entregue');
 
 create table public.submissions (
   id uuid primary key default gen_random_uuid(),
   exercise_id uuid not null references public.exercises(id) on delete cascade,
   student_id uuid not null references public.profiles(id) on delete cascade,
   assignment_id uuid references public.assignments(id) on delete set null,
-  code text not null,
+  code text,                                  -- null em entregas não-código
+  submission_link text,                       -- link externo (apresentacao)
+  response_text text,                         -- resposta preenchida (modelo_resposta)
+  group_id uuid,                              -- entrega de grupo (FK adicionada na seção de grupos)
   status public.submission_status not null default 'rodando',
   passed_count integer not null default 0,
   total_count integer not null default 0,
@@ -286,13 +294,16 @@ declare
   base_xp integer; diff public.difficulty; earned_xp integer := 0;
   approved_before integer := 0; clean_approved_count integer := 0;
   has_seven_day_streak boolean := false;
+  etype public.exercise_type;
 begin
   new.xp_awarded := 0; new.badges_awarded := '{}'; new.xp_processed_at := null;
   if new.status <> 'aprovado' then return new; end if;
 
-  select e.xp_reward, e.difficulty into base_xp, diff
+  select e.xp_reward, e.difficulty, e.exercise_type into base_xp, diff, etype
   from public.exercises e where e.id = new.exercise_id;
   if base_xp is null then return new; end if;
+  -- Só código gera XP/badges automáticos; entregas têm nota manual.
+  if etype is distinct from 'codigo' then return new; end if;
 
   select count(*) into approved_before from public.submissions s
   where s.student_id = new.student_id and s.status = 'aprovado';

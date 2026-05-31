@@ -5,6 +5,11 @@
 export type Language = string;
 export type Difficulty = "facil" | "medio" | "dificil" | "desafio";
 
+// Tipo de exercício: código (Piston + testes), apresentação (entrega de link)
+// ou modelo de resposta (aluno preenche um texto). Os dois últimos são
+// corrigidos manualmente.
+export type ExerciseType = "codigo" | "apresentacao" | "modelo_resposta";
+
 export type Exercise = {
   id: string;
   title: string;
@@ -17,6 +22,9 @@ export type Exercise = {
   monaco_language?: string;
   difficulty: Difficulty;
   xp_reward: number;
+  exercise_type?: ExerciseType;
+  is_group?: boolean;
+  response_template?: string | null;
 };
 
 export type SampleTest = {

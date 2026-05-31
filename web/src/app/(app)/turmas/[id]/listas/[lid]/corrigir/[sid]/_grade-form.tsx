@@ -22,7 +22,10 @@ type Props = {
   classId: string;
   assignmentId: string;
   submissionId: string;
-  code: string;
+  exerciseType: string;
+  code: string | null;
+  submissionLink: string | null;
+  responseText: string | null;
   monacoLanguage: string;
   currentGrade: number | null;
   currentFeedback: string | null;
@@ -32,7 +35,10 @@ export function GradeForm({
   classId,
   assignmentId,
   submissionId,
+  exerciseType,
   code,
+  submissionLink,
+  responseText,
   monacoLanguage,
   currentGrade,
   currentFeedback,
@@ -43,24 +49,54 @@ export function GradeForm({
     undefined,
   );
 
+  const isCode = exerciseType === "codigo";
+
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-      {/* Código do aluno (somente leitura) */}
-      <div className="overflow-hidden rounded-2xl border border-border">
-        <MonacoEditor
-          height="480px"
-          language={monacoLanguage}
-          value={code}
-          theme="vs-dark"
-          options={{
-            readOnly: true,
-            minimap: { enabled: false },
-            fontSize: 14,
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-          }}
-        />
-      </div>
+      {/* Entrega do aluno */}
+      {isCode ? (
+        <div className="overflow-hidden rounded-2xl border border-border">
+          <MonacoEditor
+            height="480px"
+            language={monacoLanguage}
+            value={code ?? ""}
+            theme="vs-dark"
+            options={{
+              readOnly: true,
+              minimap: { enabled: false },
+              fontSize: 14,
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+            }}
+          />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Entrega do aluno
+          </h2>
+          {submissionLink ? (
+            <a
+              href={submissionLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="break-all text-sm text-primary underline"
+            >
+              {submissionLink}
+            </a>
+          ) : null}
+          {responseText ? (
+            <p className="whitespace-pre-wrap rounded-lg border border-border bg-background/40 p-3 text-sm">
+              {responseText}
+            </p>
+          ) : null}
+          {!submissionLink && !responseText && (
+            <p className="text-sm text-muted-foreground">
+              O aluno ainda não enviou a entrega.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Formulário de correção */}
       <form action={formAction} className="flex flex-col gap-4">
