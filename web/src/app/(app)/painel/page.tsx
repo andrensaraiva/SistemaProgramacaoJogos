@@ -6,6 +6,8 @@ import {
   type DeadlineItem,
 } from "@/components/upcoming-deadlines";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
 import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 
@@ -68,22 +70,18 @@ export default async function PainelPage() {
     <div className="flex flex-col gap-8">
       {!isProf && <StudentOnboardingTour />}
 
-      <div>
-        <h1 className="text-3xl font-bold">
-          Olá, {profile?.display_name ?? ""}!
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          {isProf
+      <PageHeader
+        title={`Olá, ${profile?.display_name ?? ""}!`}
+        description={
+          isProf
             ? "Bem-vindo de volta. Acompanhe suas turmas e crie novos exercícios."
-            : "Bora resolver alguns exercícios? Você está no nível " +
-              profile?.level +
-              "."}
-        </p>
-      </div>
+            : `Bora resolver alguns exercícios? Você está no nível ${profile?.level}.`
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <StatCard title="XP total" value={`${profile?.xp ?? 0}`} hint="pontos de experiência" />
+        <StatCard title="XP total" value={`${profile?.xp ?? 0}`} tone="primary" hint="pontos de experiência" />
         <StatCard title="Nível" value={`${profile?.level ?? 1}`} hint="continue resolvendo pra subir" />
         <StatCard
           title="Conquistas"
@@ -218,24 +216,6 @@ async function loadUpcomingDeadlines(
       dueAt: a.due_at as string,
     };
   });
-}
-
-function StatCard({
-  title,
-  value,
-  hint,
-}: {
-  title: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5">
-      <div className="text-sm font-medium text-muted-foreground">{title}</div>
-      <div className="mt-2 text-3xl font-bold">{value}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
-    </div>
-  );
 }
 
 function QuickCard({

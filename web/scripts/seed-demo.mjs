@@ -333,6 +333,17 @@ async function resetDemoData(supabase) {
   // foram removidos junto com a turma acima).
   await must(supabase.from("courses").delete().eq("name", COURSE.name));
 
+  // Exercícios de trabalho (não-código) criados por seedTrabalhos.
+  await must(
+    supabase
+      .from("exercises")
+      .delete()
+      .in("title", [
+        "Apresentação: Conceito do Jogo (GDD)",
+        "Ficha técnica do personagem",
+      ]),
+  );
+
   const titles = EXERCISES.map((exercise) => exercise.title);
   const { data: demoExercises, error: exercisesError } = await supabase
     .from("exercises")
@@ -478,6 +489,113 @@ async function seedDemo(supabase) {
 
   // ---- Camada curricular: curso + plano de ensino demo + frequência ----
   await seedCurriculo(supabase, { teacherId, classId: classroom.id, studentIds });
+
+  // ---- Trabalhos não-código: apresentação + modelo de resposta + grupo ----
+  await seedTrabalhos(supabase, { teacherId, classId: classroom.id, studentIds });
+}
+
+// Exercícios que NÃO são de código (apresentação por link e modelo de resposta),
+// um grupo com os dois alunos e uma entrega de grupo já corrigida — para
+// demonstrar tipos de exercício, grupos e o dashboard com notas/entregas.
+async function seedTrabalhos(supabase, { teacherId, classId, studentIds }) {
+  // 1. Exercício de apresentação (em grupo).
+  const { data: apres } = await supabase
+    .from("exercises")
+    .insert({
+      author_id: teacherId,
+      title: "Apresentação: Conceito do Jogo (GDD)",
+      description:
+        "Em grupo, preparem slides com o conceito do jogo (gênero, mecânicas, público) e entreguem o link.",
+      starter_code: "",
+      language: "csharp",
+      language_id: null,
+      difficulty: "medio",
+      xp_reward: 0,
+      is_public: true,
+      exercise_type: "apresentacao",
+      is_group: true,
+    })
+    .select("id")
+    .single()
+    .throwOnError();
+
+  // 2. Exercício de modelo de resposta (individual).
+  const { data: modelo } = await supabase
+    .from("exercises")
+    .insert({
+      author_id: teacherId,
+      title: "Ficha técnica do personagem",
+      description: "Preencha a ficha do personagem principal do seu jogo.",
+      starter_code: "",
+      language: "csharp",
+      language_id: null,
+      difficulty: "facil",
+      xp_reward: 0,
+      is_public: true,
+      exercise_type: "modelo_resposta",
+      is_group: false,
+      response_template:
+        "Nome:\nClasse/arquétipo:\nHabilidades:\nHistória de fundo:",
+    })
+    .select("id")
+    .single()
+    .throwOnError();
+
+  // 3. Lista "Trabalhos" com os dois exercícios.
+  const { data: lista } = await supabase
+    .from("assignments")
+    .insert({ class_id: classId, title: "Trabalhos", kind: "lista" })
+    .select("id")
+    .single()
+    .throwOnError();
+
+  await must(
+    supabase.from("assignment_exercises").insert([
+      { assignment_id: lista.id, exercise_id: apres.id, ord: 1 },
+      { assignment_id: lista.id, exercise_id: modelo.id, ord: 2 },
+    ]),
+  );
+
+  // 4. Grupo com os dois alunos.
+  const { data: grupo } = await supabase
+    .from("class_groups")
+    .insert({ class_id: classId, name: "Grupo 1 — Plataforma 2D" })
+    .select("id")
+    .single()
+    .throwOnError();
+  await must(
+    supabase.from("class_group_members").insert(
+      studentIds.map((sid) => ({ group_id: grupo.id, student_id: sid })),
+    ),
+  );
+
+  // 5. Entrega de grupo (apresentação) já corrigida + entrega individual.
+  await must(
+    supabase.from("submissions").insert([
+      {
+        exercise_id: apres.id,
+        assignment_id: lista.id,
+        student_id: studentIds[0],
+        group_id: grupo.id,
+        status: "entregue",
+        submission_link: "https://docs.google.com/presentation/d/exemplo-gdd",
+        manual_grade: 9,
+        manual_feedback: "Ótimo conceito! Caprichem na arte na próxima entrega.",
+        graded_by: teacherId,
+        graded_at: new Date().toISOString(),
+      },
+      {
+        exercise_id: modelo.id,
+        assignment_id: lista.id,
+        student_id: studentIds[0],
+        status: "entregue",
+        response_text:
+          "Nome: Aria\nClasse/arquétipo: Exploradora\nHabilidades: dash duplo\nHistória de fundo: ...",
+      },
+    ]),
+  );
+
+  console.log("Trabalhos demo (apresentação + modelo + grupo) criados.");
 }
 
 // Grava o curso técnico, cria um plano de ensino do prof.demo para a UC de
