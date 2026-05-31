@@ -1,6 +1,10 @@
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState, ErrorState } from "@/components/ui/states";
 import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 
@@ -162,15 +166,15 @@ function TurmasShell({
 }) {
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-        <Link href={actionHref}>
-          <Button>{actionLabel}</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title={title}
+        description={description}
+        actions={
+          <Link href={actionHref}>
+            <Button>{actionLabel}</Button>
+          </Link>
+        }
+      />
       {children}
     </div>
   );
@@ -194,68 +198,38 @@ function TurmaCard({
   listCount: number;
 }) {
   return (
-    <div className="flex flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-5">
-      <div>
-        <h2 className="text-base font-semibold leading-tight">{name}</h2>
-        {description && (
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-            {description}
-          </p>
-        )}
-        {professorName && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            Prof. {professorName}
-          </p>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-          {memberCount !== undefined && (
-            <span>
-              {memberCount} aluno{memberCount !== 1 ? "s" : ""}
-            </span>
+    <Link href={`/turmas/${id}`} className="group">
+      <Card className="flex h-full flex-col justify-between gap-4 transition-colors group-hover:border-primary/50">
+        <div>
+          <h2 className="text-base font-semibold leading-tight">{name}</h2>
+          {description && (
+            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+              {description}
+            </p>
           )}
-          <span>
+          {professorName && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Prof. {professorName}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {memberCount !== undefined && (
+            <Badge tone="neutral">
+              {memberCount} aluno{memberCount !== 1 ? "s" : ""}
+            </Badge>
+          )}
+          <Badge tone="neutral">
             {listCount} lista{listCount !== 1 ? "s" : ""}
-          </span>
+          </Badge>
           {inviteCode && (
-            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">
+            <span className="ml-auto rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">
               {inviteCode}
             </span>
           )}
         </div>
-        <Link
-          href={`/turmas/${id}`}
-          className="text-xs font-medium text-primary hover:underline"
-        >
-          Ver turma
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
-      <h2 className="font-semibold">{title}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-    </div>
-  );
-}
-
-function ErrorState({ message }: { message: string }) {
-  return (
-    <div className="rounded-2xl border border-danger/40 bg-danger/10 p-6">
-      <h1 className="text-lg font-semibold">Nao foi possivel carregar turmas</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{message}</p>
-    </div>
+      </Card>
+    </Link>
   );
 }
