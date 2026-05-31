@@ -106,6 +106,9 @@ export default async function TurmaUcsPage({
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <Link href={`/turmas/${id}/ucs/${cu.id}/dashboard`}>
+                    <Button variant="secondary">Dashboard</Button>
+                  </Link>
                   <Link href={`/turmas/${id}/ucs/${cu.id}/frequencia`}>
                     <Button variant="secondary">Frequência</Button>
                   </Link>
