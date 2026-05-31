@@ -1,17 +1,28 @@
-export function Logo({ className = "" }: { className?: string }) {
+export function Logo({
+  className = "",
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
   return (
     <span
       className={`inline-flex items-center gap-2 font-semibold tracking-tight ${className}`}
     >
       <span
         aria-hidden
-        className="grid h-7 w-7 place-items-center rounded-md bg-primary font-mono text-sm text-primary-foreground"
+        className="grid h-8 w-8 place-items-center rounded-lg font-mono text-sm text-white glow-primary"
+        style={{
+          background: "linear-gradient(135deg, var(--primary), var(--accent))",
+        }}
       >
         {"</>"}
       </span>
-      <span>
-        Sistema <span className="text-primary">Jogos</span>
-      </span>
+      {!compact && (
+        <span className="text-base">
+          Sistema <span className="text-gradient">Jogos</span>
+        </span>
+      )}
     </span>
   );
 }

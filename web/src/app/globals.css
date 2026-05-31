@@ -1,37 +1,54 @@
 @import "tailwindcss";
 
+/* Dark mode controlado por classe .dark no <html> (toggle manual com persistência).
+   A classe é aplicada por um script anti-flash no layout + ThemeToggle. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #fafafa;
-  --foreground: #0a0a0a;
+  --background: #f7f7fb;
+  --foreground: #0a0a0f;
   --card: #ffffff;
-  --card-foreground: #0a0a0a;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --border: #e4e4e7;
-  --primary: #6d28d9;          /* roxo principal */
+  --card-foreground: #0a0a0f;
+  --muted: #f1f1f6;
+  --muted-foreground: #6b6b78;
+  --border: #e6e6ee;
+  --ring: #7c3aed;
+
+  --primary: #7c3aed;          /* roxo vibrante */
   --primary-foreground: #ffffff;
   --accent: #06b6d4;           /* ciano */
-  --success: #16a34a;          /* verde — aprovado */
-  --danger: #dc2626;           /* vermelho — reprovado */
-  --warning: #f59e0b;          /* amarelo — suspeita */
+  --accent-foreground: #04222a;
+  --success: #16a34a;          /* verde — aprovado/presente */
+  --danger: #e11d48;           /* rosa-vermelho — reprovado/falta */
+  --warning: #f59e0b;          /* amarelo — atraso/suspeita */
+
+  /* Gamificação */
+  --xp: #f59e0b;               /* dourado — XP/nível */
+  --xp-2: #fb7185;             /* gradiente XP (fim) */
+
+  --radius: 0.85rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b;
-    --foreground: #fafafa;
-    --card: #18181b;
-    --card-foreground: #fafafa;
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa;
-    --border: #27272a;
-    --primary: #8b5cf6;
-    --primary-foreground: #ffffff;
-    --accent: #22d3ee;
-    --success: #22c55e;
-    --danger: #ef4444;
-    --warning: #fbbf24;
-  }
+.dark {
+  --background: #0a0a12;
+  --foreground: #f4f4f8;
+  --card: #14141f;
+  --card-foreground: #f4f4f8;
+  --muted: #1e1e2b;
+  --muted-foreground: #a3a3b3;
+  --border: #262635;
+  --ring: #a78bfa;
+
+  --primary: #a78bfa;
+  --primary-foreground: #1a1024;
+  --accent: #22d3ee;
+  --accent-foreground: #04222a;
+  --success: #22c55e;
+  --danger: #fb7185;
+  --warning: #fbbf24;
+
+  --xp: #fbbf24;
+  --xp-2: #fb7185;
 }
 
 @theme inline {
@@ -42,14 +59,19 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --color-ring: var(--ring);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-xp: var(--xp);
+  --color-xp-2: var(--xp-2);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius-xl: var(--radius);
 }
 
 html,
@@ -62,7 +84,33 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Estilos utilitários para ranks/badges no futuro */
+/* ----- Utilitários gamificados ----- */
+
+/* Brilho suave em torno de elementos de destaque (conquistas, nível). */
 .glow-primary {
-  box-shadow: 0 0 30px -5px color-mix(in srgb, var(--primary) 40%, transparent);
+  box-shadow: 0 0 28px -6px color-mix(in srgb, var(--primary) 55%, transparent);
+}
+.glow-xp {
+  box-shadow: 0 0 24px -6px color-mix(in srgb, var(--xp) 60%, transparent);
+}
+
+/* Texto com gradiente (títulos de impacto). */
+.text-gradient {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Barra de XP. */
+.xp-fill {
+  background: linear-gradient(90deg, var(--xp), var(--xp-2));
+}
+
+/* Transição padrão suave para hover/tema. */
+.transition-theme {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
