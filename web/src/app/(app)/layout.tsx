@@ -1,72 +1,47 @@
-import Link from "next/link";
-
-import { Logo } from "@/components/logo";
+import { AppSidebar } from "@/components/app-sidebar";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { XpBar } from "@/components/xp-bar";
 import { logout } from "@/lib/auth/actions";
 import { getProfile } from "@/lib/auth/dal";
-
-const NAV = [
-  { href: "/painel", label: "Painel" },
-  { href: "/exercicios", label: "Exercícios" },
-  { href: "/cursos", label: "Cursos" },
-  { href: "/turmas", label: "Turmas" },
-  { href: "/ranking", label: "Ranking" },
-  { href: "/duelos", label: "Duelos" },
-  { href: "/unity", label: "Unity" },
-];
 
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const profile = await getProfile();
+  const isProf = profile?.role === "professor" || profile?.role === "admin";
 
-  return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-          <div className="flex items-center gap-8">
-            <Link href="/painel">
-              <Logo />
-            </Link>
-            <nav className="hidden items-center gap-1 md:flex">
-              {NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
+  const sidebarFooter = profile ? (
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-3">
+      <div className="flex items-center gap-3">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+          {profile.display_name.charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium leading-tight">
+            {profile.display_name}
           </div>
-
-          <div className="flex items-center gap-3">
-            {profile && (
-              <div className="hidden items-center gap-3 sm:flex">
-                <div className="text-right">
-                  <div className="text-sm font-medium leading-tight">
-                    {profile.display_name}
-                  </div>
-                  <div className="text-xs leading-tight text-muted-foreground">
-                    Nível {profile.level} · {profile.xp} XP
-                  </div>
-                </div>
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                  {profile.display_name.charAt(0).toUpperCase()}
-                </div>
-              </div>
-            )}
-            <form action={logout}>
-              <Button type="submit" variant="ghost">
-                Sair
-              </Button>
-            </form>
+          <div className="text-xs leading-tight text-muted-foreground">
+            {isProf ? "Professor" : "Aluno"}
           </div>
         </div>
-      </header>
+      </div>
+      {!isProf && <XpBar xp={profile.xp} level={profile.level} />}
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <form action={logout} className="flex-1">
+          <Button type="submit" variant="secondary" className="w-full">
+            Sair
+          </Button>
+        </form>
+      </div>
+    </div>
+  ) : null;
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
+  return (
+    <div className="flex min-h-screen flex-col md:flex-row">
+      <AppSidebar isProf={isProf} footer={sidebarFooter} />
+      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 sm:px-8">
         {children}
       </main>
     </div>
