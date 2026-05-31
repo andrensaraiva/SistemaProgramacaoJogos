@@ -41,6 +41,8 @@ drop table if exists public.assignments cascade;
 drop table if exists public.exercise_tests cascade;
 drop table if exists public.exercises cascade;
 drop table if exists public.languages cascade;
+drop table if exists public.class_group_members cascade;
+drop table if exists public.class_groups cascade;
 drop table if exists public.class_members cascade;
 drop table if exists public.classes cascade;
 drop table if exists public.profiles cascade;
@@ -110,6 +112,22 @@ create table public.class_members (
   joined_at timestamptz not null default now(),
   primary key (class_id, student_id)
 );
+
+-- Grupos de alunos (trabalhos em grupo)
+create table public.class_groups (
+  id uuid primary key default gen_random_uuid(),
+  class_id uuid not null references public.classes(id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now()
+);
+create index class_groups_class_idx on public.class_groups (class_id);
+
+create table public.class_group_members (
+  group_id uuid not null references public.class_groups(id) on delete cascade,
+  student_id uuid not null references public.profiles(id) on delete cascade,
+  primary key (group_id, student_id)
+);
+create index class_group_members_student_idx on public.class_group_members (student_id);
 
 -- =============================================================================
 -- 3. LINGUAGENS (catálogo dinâmico)
@@ -224,7 +242,7 @@ create table public.submissions (
   code text,                                  -- null em entregas não-código
   submission_link text,                       -- link externo (apresentacao)
   response_text text,                         -- resposta preenchida (modelo_resposta)
-  group_id uuid,                              -- entrega de grupo (FK adicionada na seção de grupos)
+  group_id uuid references public.class_groups(id) on delete set null,  -- entrega de grupo
   status public.submission_status not null default 'rodando',
   passed_count integer not null default 0,
   total_count integer not null default 0,
@@ -492,6 +510,28 @@ create policy "aluno se inscreve" on public.class_members for insert with check 
 create policy "aluno ve sua matricula" on public.class_members for select using (auth.uid() = student_id);
 create policy "dono ve membros" on public.class_members for select using (
   public.is_class_owner(class_members.class_id, auth.uid()));
+
+-- grupos
+alter table public.class_groups enable row level security;
+alter table public.class_group_members enable row level security;
+create policy "dono gerencia grupos" on public.class_groups
+  for all using (public.is_class_owner(class_id, auth.uid()))
+  with check (public.is_class_owner(class_id, auth.uid()));
+create policy "aluno le grupos da sua turma" on public.class_groups
+  for select using (public.is_class_member(class_id, auth.uid()));
+create policy "dono gerencia membros do grupo" on public.class_group_members
+  for all using (exists (
+    select 1 from public.class_groups g
+    where g.id = class_group_members.group_id and public.is_class_owner(g.class_id, auth.uid())
+  )) with check (exists (
+    select 1 from public.class_groups g
+    where g.id = class_group_members.group_id and public.is_class_owner(g.class_id, auth.uid())
+  ));
+create policy "aluno le membros do seu grupo" on public.class_group_members
+  for select using (exists (
+    select 1 from public.class_groups g
+    where g.id = class_group_members.group_id and public.is_class_member(g.class_id, auth.uid())
+  ));
 
 -- exercises
 create policy "ler exercicios publicos" on public.exercises for select using (is_public or author_id = auth.uid());
