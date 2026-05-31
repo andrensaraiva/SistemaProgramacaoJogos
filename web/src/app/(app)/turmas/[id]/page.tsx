@@ -75,9 +75,14 @@ export default async function TurmaPage({ params }: { params: Params }) {
             <Button variant="secondary">Ranking</Button>
           </Link>
           {!isOwner && (
-            <Link href={`/turmas/${id}/minha-frequencia`}>
-              <Button variant="secondary">Minha frequência</Button>
-            </Link>
+            <>
+              <Link href={`/turmas/${id}/minhas-notas`}>
+                <Button variant="secondary">Minhas notas</Button>
+              </Link>
+              <Link href={`/turmas/${id}/minha-frequencia`}>
+                <Button variant="secondary">Minha frequência</Button>
+              </Link>
+            </>
           )}
           {isOwner && (
             <>

@@ -484,6 +484,13 @@ returns boolean language sql stable security definer set search_path = public as
     where m.class_id = target_class and m.student_id = uid)
 $$;
 
+create or replace function public.is_group_member(target_group uuid, uid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.class_group_members m
+    where m.group_id = target_group and m.student_id = uid)
+$$;
+
 -- "O professor é dono de ALGUMA turma do aluno?" — encapsula o cruzamento
 -- profiles↔class_members↔classes numa única função definer (sem recursão).
 create or replace function public.teaches_student(prof uuid, student uuid)
@@ -560,6 +567,8 @@ create policy "professor gerencia assignment_exercises" on public.assignment_exe
 
 -- submissions
 create policy "aluno ve suas submissoes" on public.submissions for select using (auth.uid() = student_id);
+create policy "aluno ve entrega do seu grupo" on public.submissions for select using (
+  group_id is not null and public.is_group_member(group_id, auth.uid()));
 create policy "aluno cria submissoes" on public.submissions for insert with check (auth.uid() = student_id);
 create policy "professor ve submissoes da sua turma" on public.submissions for select using (
   public.is_professor(auth.uid()) and exists (
