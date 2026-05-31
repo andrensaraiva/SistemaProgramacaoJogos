@@ -1,5 +1,48 @@
 # Status do projeto
 
+## Atualizacao 2026-05-31
+
+Ponto de partida para a proxima sessao (analise de projeto). Tudo abaixo esta
+commitado em `main` (sincronizado com origin) e verificado com `npm run verify`.
+
+**Camada curricular (Fase 8)** — completa:
+- PPC -> modulos -> UCs (habilidades, conhecimentos em arvore, bibliografia);
+  importacao de PPC por IA (Gemini) extraindo so a parte tecnica.
+- Plano de ensino por professor (clonavel por colegas) com blocos de aulas.
+- Vinculo turma<->UC<->plano; **frequencia por aula do dia** (varios tempos/dia,
+  presente/atraso/falta); visao de frequencia do aluno.
+
+**Plataforma completa (este ciclo)**:
+- **Tipos de exercicio**: codigo (Piston), apresentacao (entrega de link) e
+  modelo de resposta (texto). Criacao manual em `/exercicios/novo`.
+- **Grupos** por turma e entrega em grupo (nota vale para todos os membros).
+- **Notas do aluno** por turma (`/turmas/[id]/minhas-notas`).
+- **Dashboard do professor por UC** (frequencia, atrasos, notas, entregas, com
+  graficos) + **relatorio PDF** via impressao do navegador.
+
+**UI/UX redesenhada**:
+- Sidebar lateral (estilo Canvas), tema claro/escuro com botao (persistido,
+  anti-flash), identidade gamificada (XP/gradientes/glow).
+- Kit de UI em `components/ui/`: Card, PageHeader, StatCard, StatusBadge, Badge,
+  Table, charts (SVG), EmptyState/ErrorState. XpBar e AppSidebar em `components/`.
+
+**Infra/processo**:
+- Supabase CLI configurada: migrations em `supabase/migrations/<timestamp>_nome.sql`
+  aplicadas com `npx supabase db push` (refletir tambem no `SETUP_COMPLETO.sql`).
+- Correcao critica de **recursao de RLS**: funcoes `SECURITY DEFINER`
+  (is_professor, is_class_owner, is_class_member, is_group_member, teaches_student,
+  owns_course) — policies nunca consultam outra tabela com RLS direto.
+- Modelo Gemini padrao: `gemini-flash-latest` (os `gemini-1.5-*` foram aposentados).
+
+**Docs para contribuidores**: `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`,
+`docs/ROADMAP.md` (backlog por papel aluno/professor/admin), `docs/UI_UX.md`,
+`docs/SUPABASE_CLI.md`.
+
+**Proximos passos candidatos** (decidir na analise): deploy (hospedar Piston +
+Vercel), refinos de UI/UX (toasts, skeletons, acessibilidade), aprofundar
+funcionalidades (editor de testes pela UI, rubricas, painel admin, notificacoes),
+ou qualidade (testes automatizados + CI). Detalhes em `docs/ROADMAP.md`.
+
 ## Atualizacao 2026-05-20
 
 Fase 5 iniciada:
