@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { getProfile } from "@/lib/auth/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -108,13 +109,10 @@ export default async function DuelosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-bold">Duelos X1</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Crie um desafio, compartilhe o codigo e vença sendo o primeiro a
-          aprovar o exercicio.
-        </p>
-      </div>
+      <PageHeader
+        title="Duelos X1"
+        description="Crie um desafio, compartilhe o código e vença sendo o primeiro a aprovar o exercício."
+      />
 
       <section className="grid gap-3 sm:grid-cols-3">
         <DuelStat

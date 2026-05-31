@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/ui/page-header";
 import { getProfile } from "@/lib/auth/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -35,12 +36,10 @@ export default async function RankingPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold">Ranking global</h1>
-        <p className="text-sm text-muted-foreground">
-          Alunos ordenados por XP acumulado em exercicios aprovados.
-        </p>
-      </div>
+      <PageHeader
+        title="Ranking global"
+        description="Alunos ordenados por XP acumulado em exercícios aprovados."
+      />
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <table className="w-full text-sm">
