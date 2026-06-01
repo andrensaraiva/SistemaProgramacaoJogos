@@ -1,5 +1,29 @@
 # Status do projeto
 
+## Atualizacao 2026-06-01 (parte 3) — SAEP teorico (1a fatia)
+
+SAEP = prova TEORICA do SENAI (multipla escolha). SAP = prova PRATICA. O instrutor
+prepara os alunos com simulados. O instrutor e o dono: entrada manual de questoes
+e o caminho principal; a IA so sugere (ele revisa).
+
+Migration `0019_saep_teorico.sql` (aditiva, aplicada):
+- Matriz POR CURSO: competency_matrices -> competencies (C1-C8) + knowledge_objects
+  (A-T). A matriz e DADO (multi-curso); questoes mapeiam a esses codigos.
+- Banco: quiz_questions (contexto/comando/resolucao + tags) + quiz_options (A-E,
+  correta, justificativa por alternativa). Formato oficial Contexto+Comando.
+- Simulado = atividade kind='saep_simulado' (1:1 quiz_simulados) +
+  quiz_simulado_questions; quiz_attempts/quiz_answers (correcao automatica + XP).
+
+App:
+- lib/saep/actions.ts (matriz, questao manual, simulado, tentativa) e lib/saep/ai.ts
+  (gera questao no formato SAEP via Gemini, revisada pelo instrutor).
+- Banco de questoes em /saep/questoes (lista/nova/editar) com editor manual +
+  botao "Gerar sugestao". Link SAEP na sidebar (professor).
+
+**Feito so a 1a fatia.** Pendente: UI do simulado dentro da UC (montar/responder),
+**dashboard SAEP por competencia** (enfatizado pelo usuario), duelos de quiz, e o
+**SAP pratico** (rubrica/lista de verificacao Unidade->Elemento->item Sim/Nao/pontos).
+
 ## Atualizacao 2026-06-01 (parte 2) — Projeto Integrador (TCC)
 
 Projeto integrador (TCC do SENAI) como **atividade da UC** (kind=projeto_integrador),
