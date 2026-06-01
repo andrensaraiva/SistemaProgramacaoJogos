@@ -1,5 +1,39 @@
 # Status do projeto
 
+## Atualizacao 2026-06-01
+
+**Reorientacao do modelo: atividades dentro da UC (turma x UC)**. A plataforma
+deixou de ser "Duolingo" (exercicios soltos, atribuicoes por turma) e passou a
+ser orientada a CURSO -> UC -> TURMA. Toda atividade (lista, prova, desafio,
+duelo, Unity, projeto integrador) agora vive num `class_unit`.
+
+Branch: `refactor/atividades-na-uc` (ainda nao mergeada em `main`).
+
+Migrations (aditivas, idempotentes, com backfill conservador — ja aplicadas):
+- `0015_assignments_na_uc.sql`: `assignments.class_unit_id` +
+  `teaching_plan_block_id`; novos `assignment_kind` (duelo/unity/projeto_integrador);
+  helpers `owns_class_unit`/`member_of_class_unit`; RLS aceita os dois caminhos.
+  Backfill: turma com UC unica usa ela; senao cria UC "Geral (migrado)".
+- `0016_duelos_na_uc.sql`: `duels.class_unit_id` + tabela `duel_ratings` (ELO
+  contextual por UC). `profiles.duel_rating/_wins/_losses` ficam por compat.
+- `0017_unity_na_uc.sql`: `github_classroom_repos.class_unit_id` + `assignment_id`.
+
+App:
+- `criarAtividadeNaUc` (em `lib/turmas/actions.ts`) e hub em
+  `turmas/[id]/ucs/[classUnitId]/atividades`.
+- Duelos por UC: `createDuelNaUc`, `finishDuel/cancelDuel` gravam `duel_ratings`
+  quando ha UC; pagina `.../ucs/[cu]/duelos` com ranking contextual.
+- Unity por UC: `syncGithubRepo` aceita `class_unit_id`; pagina `.../ucs/[cu]/unity`.
+- Links Atividades/Duelos/Unity na lista de UCs da turma.
+
+**Fase 2 pendente** (apos UI 100% migrada e dados conferidos): tornar
+`class_unit_id` NOT NULL e remover `class_id` de assignments/duels/repos; mover ou
+aposentar as rotas globais `/duelos` e `/unity`; reclassificar atividades que
+cairam na UC "Geral (migrado)".
+
+**Proximo na fila do usuario**: SAEP (provas praticas+objetivas por curso) e
+projeto integrador — viram novos tipos de atividade da UC.
+
 ## Atualizacao 2026-05-31
 
 Ponto de partida para a proxima sessao (analise de projeto). Tudo abaixo esta
