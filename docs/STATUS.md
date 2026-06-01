@@ -1,5 +1,25 @@
 # Status do projeto
 
+## Atualizacao 2026-06-01 (parte 2) — Projeto Integrador (TCC)
+
+Projeto integrador (TCC do SENAI) como **atividade da UC** (kind=projeto_integrador),
+que o professor inicia quando quiser (cedo ou no fim do curso).
+
+Migration `0018_projeto_integrador.sql` (aditiva, aplicada):
+- `projects` (1:1 com a atividade) -> `project_sprints` -> `project_tasks` (cards)
+  por grupo, com `task_status` (a_fazer/fazendo/concluido), responsavel, sprint, ord.
+- RLS: professor dono da UC gerencia tudo e ve todos os boards; membros do grupo
+  (`is_group_member`) gerenciam os cards do proprio board.
+
+App:
+- `lib/projects/actions.ts`: criarOuObterProjeto, criar/excluirSprint,
+  criar/mover/excluirCard (mover por botao, **sem drag** por ora).
+- Pagina `.../ucs/[cu]/projetos/[assignmentId]`: setup (professor) + sprints +
+  board estilo Trello por grupo (3 colunas). Aluno ve so o board do seu grupo.
+
+**Pendente nesta feature:** drag-and-drop (hoje move por botao); tempo real
+(Supabase Realtime) para edicao simultanea; entrega/nota do projeto.
+
 ## Atualizacao 2026-06-01
 
 **Reorientacao do modelo: atividades dentro da UC (turma x UC)**. A plataforma
