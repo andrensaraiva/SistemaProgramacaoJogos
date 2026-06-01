@@ -109,6 +109,12 @@ export default async function TurmaUcsPage({
                   <Link href={`/turmas/${id}/ucs/${cu.id}/atividades`}>
                     <Button variant="secondary">Atividades</Button>
                   </Link>
+                  <Link href={`/turmas/${id}/ucs/${cu.id}/duelos`}>
+                    <Button variant="secondary">Duelos</Button>
+                  </Link>
+                  <Link href={`/turmas/${id}/ucs/${cu.id}/unity`}>
+                    <Button variant="secondary">Unity</Button>
+                  </Link>
                   <Link href={`/turmas/${id}/ucs/${cu.id}/dashboard`}>
                     <Button variant="secondary">Dashboard</Button>
                   </Link>

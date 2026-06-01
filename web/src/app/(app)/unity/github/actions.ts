@@ -18,6 +18,10 @@ const RepoSchema = z.object({
   student_name: z.string().trim().optional(),
   assignment_title: z.string().trim().optional(),
   class_id: z.string().uuid().optional().or(z.literal("")),
+  // Unity agora é atividade da UC: o repo pode vincular ao class_unit e à
+  // atividade (assignment kind='unity'). Ambos opcionais por compat.
+  class_unit_id: z.string().uuid().optional().or(z.literal("")),
+  assignment_id: z.string().uuid().optional().or(z.literal("")),
 });
 
 type GithubRun = {
@@ -101,6 +105,8 @@ async function syncGithubRepoData(formData: FormData): Promise<GithubRepoState> 
     student_name: formData.get("student_name"),
     assignment_title: formData.get("assignment_title"),
     class_id: formData.get("class_id"),
+    class_unit_id: formData.get("class_unit_id"),
+    assignment_id: formData.get("assignment_id"),
   });
 
   if (!parsed.success) {
@@ -115,6 +121,8 @@ async function syncGithubRepoData(formData: FormData): Promise<GithubRepoState> 
       {
         owner_id: profile.id,
         class_id: parsed.data.class_id || null,
+        class_unit_id: parsed.data.class_unit_id || null,
+        assignment_id: parsed.data.assignment_id || null,
         repo_full_name: parsed.data.repo_full_name,
         student_name: parsed.data.student_name || null,
         assignment_title: parsed.data.assignment_title || null,
@@ -134,7 +142,13 @@ async function syncGithubRepoData(formData: FormData): Promise<GithubRepoState> 
     };
   }
 
+  // Revalida tanto a tela global quanto a da UC (se houver vínculo).
   revalidatePath("/unity/github");
+  if (parsed.data.class_unit_id && parsed.data.class_id) {
+    revalidatePath(
+      `/turmas/${parsed.data.class_id}/ucs/${parsed.data.class_unit_id}/unity`,
+    );
+  }
   return { message: "Repositorio sincronizado." };
 }
 
