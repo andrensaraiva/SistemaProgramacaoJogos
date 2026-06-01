@@ -101,7 +101,11 @@ export default async function AtividadesUcPage({ params }: { params: Params }) {
           atividades.map((a) => (
             <Link
               key={a.id}
-              href={`/turmas/${id}/listas/${a.id}`}
+              href={
+                a.kind === "projeto_integrador"
+                  ? `/turmas/${id}/ucs/${classUnitId}/projetos/${a.id}`
+                  : `/turmas/${id}/listas/${a.id}`
+              }
               className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-primary/40"
             >
               <div>
