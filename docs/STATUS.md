@@ -1,5 +1,31 @@
 # Status do projeto
 
+## Atualizacao 2026-06-01 (deploy iniciado)
+
+Deploy de producao iniciado. Host do Piston escolhido: **Oracle Cloud Always
+Free** (VPS ARM Ampere, unica opcao confiavel — PaaS gratuitas nao permitem
+container `--privileged` que o Piston exige). Infra preparada:
+- `infra/piston/docker-compose.yml` — Piston privileged, exposto so em 127.0.0.1.
+- `infra/piston/setup-server.sh` — instala Docker+Nginx, sobe Piston, instala
+  runtime dotnet 5.0.201, configura proxy reverso (bloqueia `/packages` externo).
+- `docs/DEPLOY_PISTON_ORACLE.md` — guia (criar VM, firewall, SSH, fallback ARM,
+  validacao, seguranca).
+
+Proximo passo do usuario: criar conta/VM na Oracle e rodar o script. Depois:
+Supabase (migrations) + Vercel (import `web/` + env vars). Reforco de seguranca
+pendente (opcional): header secreto entre plataforma e Nginx.
+
+## Atualizacao 2026-06-01
+
+Correcao no guia de deploy (`docs/DEPLOY.md`):
+- `GEMINI_MODEL` ajustado de `gemini-1.5-flash` (aposentado) para
+  `gemini-flash-latest`, alinhado ao resto do projeto.
+- Removida referencia ao `web/.env.production.example` (inexistente); agora o
+  guia aponta para o `web/.env.example` real como referencia das variaveis.
+
+Deploy ainda nao realizado. Bloqueio pratico principal: hospedar o Piston fora
+da Vercel (Fly.io/Railway/VPS) antes do deploy de producao.
+
 ## Atualizacao 2026-05-31
 
 Ponto de partida para a proxima sessao (analise de projeto). Tudo abaixo esta

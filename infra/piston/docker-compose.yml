@@ -1,0 +1,19 @@
+# Piston — execução isolada de código dos alunos (produção).
+# Sobe na VPS (ex.: Oracle Cloud Always Free). Requer modo privileged.
+# Guia completo: docs/DEPLOY_PISTON_ORACLE.md
+services:
+  piston:
+    image: ghcr.io/engineer-man/piston:latest
+    container_name: piston_api
+    privileged: true
+    restart: unless-stopped
+    ports:
+      # Exposto só no localhost; o Nginx (porta 80/443) faz o proxy público.
+      - "127.0.0.1:2000:2000"
+    volumes:
+      - piston_data:/piston
+    tmpfs:
+      - /tmp:exec
+
+volumes:
+  piston_data:

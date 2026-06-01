@@ -45,7 +45,8 @@ Invoke-RestMethod -Uri "https://SEU-PISTON/api/v2/packages" -Method Post `
 
 ## 4. Variaveis
 
-Copie `web/.env.production.example` para a tela Environment Variables da Vercel:
+Use `web/.env.example` como referencia e preencha estes valores na tela
+Environment Variables da Vercel:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
@@ -53,7 +54,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 PISTON_API_URL=
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-1.5-flash
+GEMINI_MODEL=gemini-flash-latest
 GITHUB_PERSONAL_ACCESS_TOKEN=
 ```
 
