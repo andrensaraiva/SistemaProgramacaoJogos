@@ -1,267 +1,170 @@
 # Como continuar o projeto
 
-## Atualizacao 2026-05-20
-
-A Fase 4 foi iniciada. Ja existem:
-
-- Migration `supabase/migrations/0002_gamification.sql` com `xp_awarded`, trigger de XP/level, multiplicador por dificuldade e badges automaticos.
-- `submitSolution` usando o XP retornado pelo banco, sem update manual em `profiles`.
-- Ranking global em `/ranking`.
-- Ranking da turma em `/turmas/[id]/ranking`.
-- Notificacao na tela de submissao quando uma badge nova for desbloqueada.
-
-Proximo passo natural: testar a migration no Supabase real e seguir para a Fase 5 (antifraude).
-
-Fase 5 tambem foi iniciada:
-
-- Workbench captura paste, contagem de mudancas no editor e tempo ate submissao.
-- `submitSolution` salva esses sinais em `submissions` e calcula `suspicion_score`/`suspicion_reasons`.
-- A tela de progresso da lista mostra alertas antifraude para o professor.
-- A tela tambem compara as submissões mais recentes e sinaliza codigo muito parecido entre alunos.
-
-Fase 6 foi iniciada:
-
-- Professores podem acessar `/exercicios/gerar` para gerar exercicios C# com Gemini.
-- A geracao cria exercicio, solucao interna e testes visiveis/ocultos no Supabase.
-- Alunos podem gerar exercicio extra similar pela tela do exercicio.
-- A migration `0003_ai_cache.sql` adiciona cache opcional das respostas da IA.
-- Configure `GEMINI_API_KEY` no `.env.local`; `GEMINI_MODEL` e opcional.
-
-Fase 7/8 foram iniciadas:
-
-- `/duelos` cria duelos por codigo e calcula vencedor pela primeira submissao aprovada.
-- Duelos concluidos atualizam ELO, vitorias, derrotas e badge `duel_win_5`.
-- `/unity` aponta para templates GitHub Classroom em `classroom-templates/`.
-- `/unity/github` sincroniza repositorios via GitHub API e mostra nota estimada a partir do GitHub Actions.
-- Aplique tambem `supabase/migrations/0004_duel_elo_github.sql`.
-
-Fase 9 foi iniciada:
-
-- Alunos recebem um tour guiado no primeiro acesso ao `/painel`.
-
-Proximo passo natural: rodar o fluxo completo em `docs/TEST_FLOW.md`, testar `/exercicios/gerar` com uma chave Gemini valida e fazer o deploy na conta Vercel escolhida.
-
-> Documento de retomada. Leia isso primeiro quando voltar a trabalhar.
-> **Data da última sessão:** 2026-05-16
+> **Documento de retomada. Leia isto primeiro ao voltar a trabalhar.**
+> **Última sessão:** 2026-06-01
+> **Branch atual:** `refactor/atividades-na-uc` (ainda **não** mergeada em `main`)
 > **Repositório:** https://github.com/andrensaraiva/SistemaProgramacaoJogos
+
+Para o histórico detalhado por data, veja [STATUS.md](STATUS.md). Este arquivo é o
+"onde paramos + o que fazer agora".
+
+---
 
 ## TL;DR — o que fazer agora
 
-Fases 1, 2 e 3 estão **completas e rodando**. Pra retomar:
+O projeto passou por uma **reorientação de modelo** (de "Duolingo" para
+**CURSO → UC → TURMA**) e ganhou três features grandes. Tudo está na branch
+`refactor/atividades-na-uc`, com typecheck + lint limpos, mas **ainda não foi
+mergeado nem rodado na app** (só validado com `tsc`, `eslint` e `supabase db push`).
 
-1. Clone o repo e instale deps (se for outra máquina):
-   ```powershell
-   git clone https://github.com/andrensaraiva/SistemaProgramacaoJogos.git
-   cd SistemaProgramacaoJogos\web
-   npm install
-   ```
-2. Configure Supabase + `.env.local` + seeds (passos abaixo, se for setup novo)
-3. Suba o **Piston em Docker** (necessário pra rodar código C#)
-4. Continue a **Fase 4** do [PLANO.md](PLANO.md) — gamificação: trigger automático de XP, badges, ranking.
+**Próximos passos, em ordem de recomendação:**
 
----
-
-## Onde paramos
-
-As **Fases 1, 2 e 3** estão completas e commitadas:
-
-**Fase 1 — Autenticação:**
-- Login / Cadastro / Logout via Supabase Auth com Server Actions
-- Proteção de rotas via [proxy.ts](../web/proxy.ts) global
-- Diferenciação de papéis: `aluno` vs `professor`
-- Tema customizado com paleta e dark mode
-
-**Fase 2 — Exercício no navegador:**
-- Lista em `/exercicios` com 3 exercícios C# públicos (via seed)
-- Resolução com Monaco Editor lazy-loaded
-- Botão "Testar" → `/api/run` → Piston self-hosted
-- Botão "Enviar" → Server Action roda todos os casos (incl. ocultos), persiste em `submissions`, dá XP/level
-- Validado: "Olá, Mundo!" → +10 XP no painel ✅
-
-**Fase 3 — Gestão de turmas:**
-- Professor: criar, editar, excluir turmas; criar e excluir listas
-- Aluno: entrar em turma com código de convite de 8 chars; sair
-- Página de turma com código copiável e lista de membros (professor)
-- Visão de progresso: professor vê tabela alunos × exercícios; aluno vê próprio status
+1. **Rodar a app e validar visualmente** o que foi construído (ver "Como testar" abaixo).
+   Nada foi clicado num navegador ainda.
+2. **Dashboard SAEP por competência** (o usuário enfatizou) — os dados já existem,
+   falta a tela de agregação.
+3. **Duelos de quiz** (modo SAEP) e **SAP prático** (rubrica/lista de verificação).
+4. Quando estável, **merge da branch em `main`**.
 
 ---
 
-## Setup do zero (só se for outra máquina)
+## Onde paramos (sessão de 2026-06-01)
 
-Se você está no PC onde já fez tudo, pula essa seção.
+Quatro blocos de trabalho, todos commitados na branch `refactor/atividades-na-uc`:
 
-### 1. Supabase (uma vez)
-- Cria projeto em https://supabase.com/dashboard (região `sa-east-1`, free)
-- SQL Editor → roda [supabase/migrations/0001_init.sql](../supabase/migrations/0001_init.sql)
-- Cadastra-se primeiro como Professor em `/cadastrar` (precisa de pelo menos 1 perfil)
-- SQL Editor → roda [supabase/seed/0001_exercises.sql](../supabase/seed/0001_exercises.sql) (3 exercícios C# públicos)
-- Authentication → Email Provider: **Enable** ON, **Confirm email** OFF
-- Settings → API: copia URL, anon key, service_role key
+### 1. Atividades vivem dentro da UC (turma × UC)
+Reorientação do modelo. Toda atividade (lista, prova, desafio, duelo, Unity,
+projeto integrador, simulado SAEP) é uma `assignment` ligada a um `class_unit`
+(turma × UC), não mais solta por turma.
+- Migrations `0015` (assignments + kinds novos), `0016` (duelos + ELO contextual
+  `duel_ratings`), `0017` (Unity por UC).
+- Hub de atividades em `turmas/[id]/ucs/[classUnitId]/atividades`.
+- `exercises` continua sendo **banco reutilizável**; só a atribuição vincula à UC.
+- `class_id` mantido por compat — **Fase 2 pendente**: tornar `class_unit_id` NOT
+  NULL, remover `class_id`, aposentar rotas globais `/duelos` e `/unity`,
+  reclassificar atividades que caíram na UC "Geral (migrado)".
 
-### 2. `.env.local` em `web/`
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
-GEMINI_API_KEY=AIza...
-PISTON_API_URL=http://localhost:2000/api/v2
-```
+### 2. Projeto Integrador (TCC) — board estilo Trello por grupo
+- Migration `0018`: `projects` (1:1 com a atividade `kind=projeto_integrador`)
+  → `project_sprints` → `project_tasks` (cards por grupo).
+- Página em `turmas/[id]/ucs/[cu]/projetos/[assignmentId]`: professor configura +
+  cria sprints; cada grupo tem seu board (3 colunas, cards movidos por botão).
+- **Sem drag-and-drop e sem tempo real ainda** (decisão de MVP). Falta entrega/nota.
 
-### 3. Piston em Docker (necessário pra rodar código)
+### 3. SAEP teórico — matriz + banco de questões (1ª fatia)
+- Migration `0019`: matriz **por curso** (`competency_matrices` → `competencies`
+  C1-C8 + `knowledge_objects` A-T), banco de questões formato SAEP
+  (`quiz_questions` + `quiz_options` A-E com correta e justificativa), simulados,
+  tentativas e respostas.
+- `lib/saep/actions.ts` (matriz, questão manual, simulado, tentativa) e
+  `lib/saep/ai.ts` (gera questão no formato SAEP via Gemini — o instrutor revisa).
+- Banco de questões em `/saep/questoes` (lista/nova/editar) com editor de entrada
+  manual + botão "Gerar sugestão". Link **SAEP** na sidebar (professor).
 
-A API pública do Piston (emkc.org) virou whitelist-only em **15/02/2026**. Subimos o nosso:
+### 4. SAEP — simulado dentro da UC (2ª fatia)
+- Página em `turmas/[id]/ucs/[cu]/simulados/[assignmentId]` (chaveada pelo
+  assignment_id; `quiz_simulados` criado na 1ª visita via `obterOuCriarSimulado`).
+- Professor (`_manager`): configura (título/descrição/tempo/mostrar gabarito) e
+  monta selecionando questões do banco.
+- Aluno (`_responder`): inicia → responde (1 alternativa/questão, cronômetro que
+  envia ao zerar) → envio único → resultado (%/acertos) + gabarito/justificativa/
+  resolução se habilitado. **Corretas só são expostas após o envio.**
+- Correção automática + XP de bônus (15 por acerto).
 
-```powershell
-# Docker Desktop precisa estar rodando (baleia verde no tray)
-docker volume create piston_data
-docker run -d --name piston_api --privileged --restart unless-stopped `
-  -v piston_data:/piston -p 2000:2000 ghcr.io/engineer-man/piston:latest
+---
 
-# Instalar dotnet (única vez — fica no volume)
-$body = '{"language":"dotnet","version":"5.0.201"}'
-Invoke-RestMethod -Uri "http://localhost:2000/api/v2/packages" -Method Post `
-  -ContentType "application/json" -Body $body
-```
+## O que falta (backlog priorizado)
 
-Confirma que `csharp.net` aparece em `http://localhost:2000/api/v2/runtimes`.
+| Prioridade | Item | Observação |
+|---|---|---|
+| **Alta** | **Dashboard SAEP por competência** | Agregar acertos por capacidade/objeto ("a turma vai mal em Testes", "Anna domina POO"). Dados já em `quiz_answers` + tags das questões. O usuário enfatizou isso. |
+| Média | **Duelos de quiz (SAEP)** | Adaptar duelos por UC (já existem) pro modo "quem acerta mais". |
+| Média | **SAP prático** | Rubrica/lista de verificação (Unidade→Elemento→Padrão→item Sim/Não/pontos) ligada à entrega. Ver os PDFs do SENAI (lista de verificação). |
+| Média | **Fase 2 do modelo UC** | `class_unit_id` NOT NULL, remover `class_id`, aposentar `/duelos` e `/unity` globais, reclassificar UC "Geral (migrado)". |
+| Baixa | Projeto integrador: drag-and-drop, tempo real (Supabase Realtime), entrega/nota | Polimento do board. |
+| Baixa | Cadastro da matriz de competências por UI | Hoje a action `salvarMatriz` existe, mas falta uma tela amigável para o professor cadastrar a matriz do curso. |
 
-### 4. Subir o app
+---
+
+## Como testar o que foi construído
+
+Pré-requisitos: Supabase + `.env.local` configurados, Piston em Docker rodando
+(ver seção "Setup do zero" mais abaixo, se for outra máquina).
+
 ```powershell
 cd web
-npm install
+npx supabase db push   # garante as migrations 0015-0019 aplicadas
 npm run dev
 ```
 
-Abre http://localhost:3000 — cria conta como Professor, depois outra como Aluno (navegador anônimo), e testa o fluxo completo (turma + lista + resolver exercício).
+Fluxos para clicar (logado como **professor**):
+1. **Curso → UC → Turma**: vincule uma UC a uma turma (`turmas/[id]/ucs`).
+2. **Atividades na UC**: abra "Atividades" da UC e crie uma lista, um duelo, um
+   projeto integrador e um simulado SAEP.
+3. **Projeto integrador**: configure, crie sprints, monte grupos (em
+   `turmas/[id]/grupos`) e veja os boards.
+4. **SAEP**: em **SAEP → Banco de questões**, crie uma questão (manual e/ou
+   "Gerar sugestão" com IA). Depois abra o simulado da UC, configure e selecione
+   as questões.
+5. Logado como **aluno** (navegador anônimo): responda o simulado e veja o resultado.
 
----
-
-## O que vem depois — Fase 4 (próxima)
-
-Gamificação completa:
-
-- **XP automático via trigger no DB** — hoje o XP é dado manualmente pelo Server Action `submitSolution`. Migrar pra trigger PostgreSQL em `submissions` aprovadas, multiplicando por dificuldade (fácil=1x, médio=1.5x, difícil=2x, desafio=3x).
-- **Distribuição automática de badges** — quando um aluno bate uma condição (primeira aprovada, 7 dias seguidos, 10 exercícios sem paste, etc.), insere em `user_badges` automaticamente.
-- **Ranking da turma + ranking global** — view ou query agregada por XP.
-- **Notificação ao aluno** quando ganha badge novo (toast no painel).
-
-**Arquivos esperados:**
-- `supabase/migrations/0002_xp_trigger.sql` (trigger + função)
-- `web/src/app/(app)/ranking/page.tsx` (ranking global)
-- `web/src/app/(app)/turmas/[id]/ranking/page.tsx` (ranking da turma)
-- `web/src/lib/badges/check.ts` (lógica de verificação de condições)
-- Refatorar `submitSolution` pra remover o `update profiles set xp = ...` manual
-
-### Fases 5+ — Antifraude, IA, X1, Unity, Polimento
-Roteiro completo em [PLANO.md](PLANO.md).
-
----
-
-## Como invocar a próxima sessão
-
-Quando reabrir o Claude Code aqui, manda algo como:
-
-> "Continuando o projeto. Fases 1, 2 e 3 estão prontas e rodando. Bora pra Fase 4: gamificação (trigger automático de XP, badges, ranking)."
+> **Ainda não foi rodado na app.** Se algo quebrar em runtime, é esperado — a
+> validação até agora foi só `tsc --noEmit`, `eslint .` e `supabase db push`.
 
 ---
 
 ## Comandos úteis
 
 ```powershell
-# Dev server
-cd web; npm run dev
+cd web; npm run dev              # dev server
+cd web; npx tsc --noEmit        # type-check
+cd web; npm run lint            # lint
+cd web; npm run build           # build de produção
+cd web; npx supabase db push    # aplicar migrations
 
-# Dev server com Turbopack, se a maquina tiver memoria sobrando
-cd web; npm run dev:turbo
+docker ps --filter name=piston_api   # Piston rodando?
+docker start piston_api              # se parado
 
-# Type-check (sem build)
-cd web; npx tsc --noEmit
-
-# Lint
-cd web; npm run lint
-
-# Build de produção
-cd web; npm run build
-
-# Piston container
-docker ps --filter name=piston_api          # ver se está rodando
-docker start piston_api                     # se estiver parado
-docker logs piston_api --tail 30            # se quebrou
-
-# Git
 git status
-git log --oneline
+git log --oneline main..HEAD         # commits da branch atual
 ```
 
 ---
 
-## Estrutura atual de pastas
+## Setup do zero (só se for outra máquina)
 
-```
-SistemaProgramacaoJogos/
-├── README.md
-├── .gitignore
-├── docs/
-│   ├── PLANO.md              # Roteiro das 9 fases
-│   ├── SETUP.md              # Configurar do zero (Supabase + Docker)
-│   ├── STATUS.md             # Snapshot atual
-│   └── CONTINUAR.md          # Este arquivo
-├── supabase/
-│   ├── migrations/
-│   │   └── 0001_init.sql     # 11 tabelas + RLS + seed badges
-│   └── seed/
-│       └── 0001_exercises.sql # 3 exercícios C# públicos
-└── web/                       # Next.js 16
-    ├── package.json
-    ├── proxy.ts               # Proteção global de rotas
-    ├── .env.example
-    └── src/
-        ├── app/
-        │   ├── layout.tsx
-        │   ├── page.tsx                       # Landing pública
-        │   ├── (auth)/
-        │   │   ├── entrar/                    # Login
-        │   │   └── cadastrar/                 # Cadastro (aluno/professor)
-        │   ├── (app)/                         # Rotas autenticadas
-        │   │   ├── layout.tsx                 # Header + nav + logout
-        │   │   ├── painel/                    # Dashboard
-        │   │   ├── exercicios/                # ← FASE 2
-        │   │   │   ├── page.tsx               # Lista
-        │   │   │   └── [id]/
-        │   │   │       ├── page.tsx           # Server: busca exercício + testes visíveis
-        │   │   │       ├── _workbench.tsx     # Client: Monaco + Testar/Enviar
-        │   │   │       └── actions.ts         # submitSolution
-        │   │   └── turmas/                    # ← FASE 3
-        │   │       ├── page.tsx               # Lista de turmas
-        │   │       ├── nova/                  # Criar turma (professor)
-        │   │       ├── entrar/                # Entrar com código (aluno)
-        │   │       └── [id]/
-        │   │           ├── page.tsx           # Detalhe: membros, listas, convite
-        │   │           ├── editar/            # Editar turma
-        │   │           └── listas/
-        │   │               ├── nova/          # Criar lista
-        │   │               └── [lid]/         # Progresso: alunos × exercícios
-        │   └── api/
-        │       └── run/                       # ← FASE 2: POST → Piston
-        ├── components/
-        │   ├── logo.tsx
-        │   ├── confirm-form.tsx               # Wrapper de confirm() client-side
-        │   └── ui/
-        │       ├── button.tsx
-        │       └── input.tsx
-        └── lib/
-            ├── auth/
-            │   ├── actions.ts                 # login, signup, logout
-            │   └── dal.ts                     # verifySession, getProfile, isProfessor
-            ├── exercises/                     # ← FASE 2
-            │   ├── types.ts
-            │   ├── judge.ts                   # compareOutputs (normaliza \r\n e trailing ws)
-            │   └── piston.ts                  # cliente Piston (csharp.net)
-            ├── turmas/
-            │   └── actions.ts                 # 7 server actions
-            └── supabase/
-                ├── client.ts
-                ├── server.ts
-                ├── middleware.ts
-                └── admin.ts                   # cliente service_role (server-only)
-```
+Se você está no PC onde já fez tudo, pula esta seção.
+
+1. **Supabase**: cria projeto, roda as migrations de `supabase/migrations/` em
+   ordem (`npx supabase db push`), habilita Email Provider (Confirm email OFF),
+   copia URL + chaves.
+2. **`.env.local` em `web/`** (formato novo `sb_publishable_` / `sb_secret_`):
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
+   SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+   GEMINI_API_KEY=AIza...
+   GEMINI_MODEL=gemini-flash-latest
+   PISTON_API_URL=http://localhost:2000/api/v2
+   ```
+3. **Piston em Docker** (a API pública emkc.org virou whitelist-only em 15/02/2026):
+   ```powershell
+   docker volume create piston_data
+   docker run -d --name piston_api --privileged --restart unless-stopped `
+     -v piston_data:/piston -p 2000:2000 ghcr.io/engineer-man/piston:latest
+   $body = '{"language":"dotnet","version":"5.0.201"}'
+   Invoke-RestMethod -Uri "http://localhost:2000/api/v2/packages" -Method Post `
+     -ContentType "application/json" -Body $body
+   ```
+4. **App**: `cd web; npm install; npm run dev` → http://localhost:3000
+
+---
+
+## Como invocar a próxima sessão
+
+> "Continuando o projeto, branch `refactor/atividades-na-uc`. SAEP teórico está
+> com banco de questões + simulado (montar/responder) prontos. Bora pro
+> **dashboard SAEP por competência** — agregar acertos por capacidade/objeto."
+
+Ou, se preferir validar antes: "Roda a app e me mostra o fluxo do simulado SAEP
+funcionando (professor monta → aluno responde → resultado)."
