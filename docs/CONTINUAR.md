@@ -1,7 +1,7 @@
 # Como continuar o projeto
 
 > **Documento de retomada. Leia isto primeiro ao voltar a trabalhar.**
-> **Última sessão:** 2026-06-01
+> **Última sessão:** 2026-06-02
 > **Branch atual:** `refactor/atividades-na-uc` (ainda **não** mergeada em `main`)
 > **Repositório:** https://github.com/andrensaraiva/SistemaProgramacaoJogos
 
@@ -24,6 +24,11 @@ mergeado nem rodado na app** (só validado com `tsc`, `eslint` e `supabase db pu
 2. **SAP prático** (rubrica/lista de verificação Unidade→Elemento→item Sim/Não/pontos,
    conforme os PDFs do SENAI) — último item grande do SAEP/SAP.
 3. Quando estável, **merge da branch em `main`**.
+
+> **Modularidade**: o projeto é organizado por features desacopladas. Antes de
+> adicionar/remover uma, leia [MODULOS.md](MODULOS.md). Há testes (Vitest):
+> `npm run test`. Ao criar regra de cálculo/correção, extraia a parte pura num
+> módulo e teste-a (padrão: `lib/saep/scoring.ts`, `lib/dashboard/bands.ts`).
 
 ---
 
@@ -130,7 +135,8 @@ Fluxos para clicar (logado como **professor**):
 cd web; npm run dev              # dev server
 cd web; npx tsc --noEmit        # type-check
 cd web; npm run lint            # lint
-cd web; npm run build           # build de produção
+cd web; npm run test            # testes (Vitest, logica pura)
+cd web; npm run verify          # typecheck + lint + test + build
 cd web; npx supabase db push    # aplicar migrations
 
 docker ps --filter name=piston_api   # Piston rodando?

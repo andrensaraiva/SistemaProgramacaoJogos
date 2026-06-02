@@ -1,5 +1,23 @@
 # Status do projeto
 
+## Atualizacao 2026-06-02 — Modularidade (registro de features + testes)
+
+Sem novas features de produto; foco em tornar o projeto mais modular/testavel.
+- docs/MODULOS.md: arquitetura modular (features desacopladas em lib/; como
+  add/remover; pontos de juncao compartilhados; o que ainda nao e modular).
+- lib/features.ts: registro central da navegacao lateral (flag enabled liga/desliga
+  feature num lugar so; professorOnly). app-sidebar.tsx consome getNavGroups().
+- Vitest instalado (npm run test / test:watch; verify agora roda test). Logica pura
+  extraida das actions para modulos testaveis:
+  - lib/saep/scoring.ts (elo, countCorrect, scorePercent, decideDuelWinner) usada
+    por lib/saep/duelo.ts.
+  - lib/dashboard/bands.ts (performanceBand) usada no dashboard SAEP.
+  20 testes verdes (ELO, correcao, vencedor de duelo, faixas, registro de nav).
+
+Confirmado na auditoria: nenhuma feature em lib/ importa outra feature (so auth/
+supabase/ui/features). Ainda NAO ha hot-plug nem e2e; tronco compartilhado
+(assignment_kind, class_units) e intencional.
+
 ## Atualizacao 2026-06-01 (parte 6) — Duelo de quiz (SAEP)
 
 Modo gamificado do SAEP: X1 de questoes teoricas na UC. Dois alunos respondem o
