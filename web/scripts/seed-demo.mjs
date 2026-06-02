@@ -329,8 +329,16 @@ async function resetDemoData(supabase) {
     await must(supabase.from("classes").delete().in("id", classIds));
   }
 
-  // Curso demo (cascateia módulos/UCs/planos/blocos; class_units/attendance já
-  // foram removidos junto com a turma acima).
+  // Banco de questões SAEP do professor demo (não cascateia por turma; é por
+  // autor). quiz_simulados/quiz_attempts e sap_assessments já caíram via cascade
+  // dos assignments removidos acima.
+  const demoTeacher = await findUserByEmail(supabase, USERS[0].email);
+  if (demoTeacher) {
+    await must(supabase.from("quiz_questions").delete().eq("author_id", demoTeacher.id));
+  }
+
+  // Curso demo (cascateia módulos/UCs/planos/blocos + matriz de competências;
+  // class_units/attendance já foram removidos junto com a turma acima).
   await must(supabase.from("courses").delete().eq("name", COURSE.name));
 
   // Exercícios de trabalho (não-código) criados por seedTrabalhos.
@@ -487,11 +495,24 @@ async function seedDemo(supabase) {
   });
   if (subError) throw subError;
 
-  // ---- Camada curricular: curso + plano de ensino demo + frequência ----
-  await seedCurriculo(supabase, { teacherId, classId: classroom.id, studentIds });
+  // ---- Camada curricular: curso + matriz + plano de ensino demo + frequência ----
+  const { classUnitId, matrix } = await seedCurriculo(supabase, {
+    teacherId,
+    classId: classroom.id,
+    studentIds,
+  });
 
   // ---- Trabalhos não-código: apresentação + modelo de resposta + grupo ----
   await seedTrabalhos(supabase, { teacherId, classId: classroom.id, studentIds });
+
+  // ---- SAEP (simulado teórico) + SAP (prático) na UC ----
+  await seedSaepSap(supabase, {
+    teacherId,
+    classId: classroom.id,
+    classUnitId,
+    studentIds,
+    matrix,
+  });
 }
 
 // Exercícios que NÃO são de código (apresentação por link e modelo de resposta),
@@ -613,6 +634,10 @@ async function seedCurriculo(supabase, { teacherId, classId, studentIds }) {
     .select("id")
     .single();
   if (courseErr) throw courseErr;
+
+  // Matriz de competências do curso (SAEP/SAP): capacidades + objetos de
+  // conhecimento, baseados na matriz oficial do Técnico em Jogos Digitais.
+  const matrix = await seedMatriz(supabase, course.id);
 
   let codificacaoUcId = null;
 
@@ -804,6 +829,421 @@ async function seedCurriculo(supabase, { teacherId, classId, studentIds }) {
   await must(supabase.from("attendance_marks").insert(marks));
 
   console.log("Plano de ensino demo + frequência por aula (2 dias x 4) criados.");
+
+  return { classUnitId: classUnit.id, matrix };
+}
+
+// Cria a matriz de competências do curso e devolve os ids por código, para que
+// as questões (SAEP) e os itens da rubrica (SAP) possam mapear às competências.
+async function seedMatriz(supabase, courseId) {
+  const COMPETENCIES = [
+    { code: "C3", description: "Aplicar lógica de programação na resolução de problemas inerentes a jogos digitais." },
+    { code: "C4", description: "Diferenciar metodologias de desenvolvimento de projetos." },
+    { code: "C6", description: "Desenvolver jogos digitais por meio de linguagem de programação." },
+    { code: "C7", description: "Selecionar procedimentos de teste que assegurem a aderência aos requisitos." },
+  ];
+  const OBJECTS = [
+    { code: "F", name: "Algoritmos e lógica computacional" },
+    { code: "G", name: "Elementos e técnicas de programação" },
+    { code: "I", name: "Metodologias de desenvolvimento tradicionais e ágeis" },
+    { code: "S", name: "Tipos, níveis e técnicas de teste" },
+    { code: "E", name: "Princípios de UI e UX" },
+  ];
+
+  const { data: matrixRow } = await supabase
+    .from("competency_matrices")
+    .insert({ course_id: courseId, version: "1 — Itinerário 2021 (demo)" })
+    .select("id")
+    .single()
+    .throwOnError();
+
+  const { data: comps } = await supabase
+    .from("competencies")
+    .insert(COMPETENCIES.map((c, i) => ({ matrix_id: matrixRow.id, code: c.code, description: c.description, ord: i })))
+    .select("id, code")
+    .throwOnError();
+  const { data: objs } = await supabase
+    .from("knowledge_objects")
+    .insert(OBJECTS.map((o, i) => ({ matrix_id: matrixRow.id, code: o.code, name: o.name, ord: i })))
+    .select("id, code")
+    .throwOnError();
+
+  const comp = Object.fromEntries((comps ?? []).map((c) => [c.code, c.id]));
+  const obj = Object.fromEntries((objs ?? []).map((o) => [o.code, o.id]));
+  console.log("Matriz de competências (demo) criada.");
+  return { id: matrixRow.id, comp, obj };
+}
+
+// SAEP teórico (banco + simulado com 1 tentativa enviada) e SAP prático (rubrica
+// + 1 entrega + 1 avaliação preenchida) na UC de Codificação da Turma Demo.
+// Questões e itens são reais (extraídos dos PDFs do SENAI) e mapeiam à matriz,
+// para o dashboard por competência já ter dados.
+async function seedSaepSap(supabase, { teacherId, classId, classUnitId, studentIds, matrix }) {
+  if (!classUnitId) {
+    console.log("SAEP/SAP demo pulado (sem class_unit).");
+    return;
+  }
+  const { comp, obj } = matrix;
+
+  // -------- 1. Banco de questões (formato Contexto/Comando/A-E) --------
+  const QUESTIONS = [
+    {
+      contexto:
+        "Uma empresa de desenvolvimento de software está implementando uma série de testes para garantir a qualidade de seu produto. O objetivo é verificar o comportamento do sistema sem conhecer sua estrutura interna.",
+      comando: "Qual tipo de teste é indicado para verificar o comportamento sem acessar o código-fonte?",
+      difficulty: "medio",
+      competency_id: comp.C7,
+      knowledge_object_id: obj.S,
+      resolucao:
+        "Teste de caixa-preta avalia entradas e saídas sem acesso ao código. Caixa-branca seria o oposto.",
+      options: [
+        { label: "A", text: "Teste de unidade", is_correct: false, justification: "Foca em módulos isolados, geralmente com acesso ao código." },
+        { label: "B", text: "Teste de integração", is_correct: false, justification: "Verifica a interação entre módulos." },
+        { label: "C", text: "Teste de aceitação", is_correct: false, justification: "Valida requisitos com o cliente, não a ausência de acesso ao código." },
+        { label: "D", text: "Teste de caixa branca", is_correct: false, justification: "Exige conhecer a estrutura interna do código." },
+        { label: "E", text: "Teste de caixa preta", is_correct: true, justification: "Avalia o comportamento por entradas/saídas, sem acessar o código-fonte." },
+      ],
+    },
+    {
+      contexto:
+        "Durante o desenvolvimento de uma aplicação, um desenvolvedor precisa organizar melhor seu código usando herança para aproveitar métodos e propriedades de uma classe base em outras classes derivadas.",
+      comando: "Qual conceito da Programação Orientada a Objetos descreve essa técnica de reutilização?",
+      difficulty: "facil",
+      competency_id: comp.C6,
+      knowledge_object_id: obj.G,
+      resolucao: "Herança permite que classes derivadas reaproveitem membros de uma classe base.",
+      options: [
+        { label: "A", text: "Encapsulamento", is_correct: false, justification: "Refere-se a ocultar detalhes internos, não à reutilização por hierarquia." },
+        { label: "B", text: "Herança", is_correct: true, justification: "É exatamente a reutilização de membros de uma classe base por classes derivadas." },
+        { label: "C", text: "Polimorfismo", is_correct: false, justification: "Permite tratar objetos de forma uniforme, não a reutilização em si." },
+        { label: "D", text: "Interface", is_correct: false, justification: "Define um contrato, não a herança de implementação." },
+        { label: "E", text: "Abstração", is_correct: false, justification: "Foca em expor só o essencial." },
+      ],
+    },
+    {
+      contexto:
+        "Uma equipe de desenvolvimento utiliza uma metodologia ágil e realiza reuniões diárias de 15 minutos para sincronizar o trabalho.",
+      comando: "Como é chamada essa reunião diária e qual metodologia a utiliza?",
+      difficulty: "facil",
+      competency_id: comp.C4,
+      knowledge_object_id: obj.I,
+      resolucao: "A Daily Scrum é a reunião diária do Scrum, com timebox de 15 minutos.",
+      options: [
+        { label: "A", text: "Retrospectiva", is_correct: false, justification: "Ocorre ao fim da sprint, não diariamente." },
+        { label: "B", text: "Planejamento de Sprint", is_correct: false, justification: "Planeja a sprint, não é a reunião diária." },
+        { label: "C", text: "Daily Scrum", is_correct: true, justification: "É a reunião diária de 15 minutos do Scrum." },
+        { label: "D", text: "15 minutos de Cascata", is_correct: false, justification: "Cascata não é ágil nem tem reunião diária." },
+        { label: "E", text: "Kanban", is_correct: false, justification: "É um método de fluxo, não a reunião descrita." },
+      ],
+    },
+    {
+      contexto:
+        "Uma aplicação de catálogo de filmes permite buscar um filme pelo nome percorrendo uma lista até encontrar o título.",
+      comando: "Qual algoritmo de busca é mais apropriado para encontrar um nome específico em uma lista não ordenada?",
+      difficulty: "medio",
+      competency_id: comp.C3,
+      knowledge_object_id: obj.F,
+      resolucao: "Em lista não ordenada, a busca linear percorre elemento a elemento. Binária exige ordenação.",
+      options: [
+        { label: "A", text: "Ordenação por inserção", is_correct: false, justification: "É um algoritmo de ordenação, não de busca." },
+        { label: "B", text: "Busca binária", is_correct: false, justification: "Requer a lista ordenada." },
+        { label: "C", text: "Busca linear", is_correct: true, justification: "Percorre a lista item a item; serve para listas não ordenadas." },
+        { label: "D", text: "Ordenação rápida", is_correct: false, justification: "É ordenação (quicksort), não busca." },
+        { label: "E", text: "Busca por profundidade", is_correct: false, justification: "Aplica-se a grafos/árvores, não a uma lista simples." },
+      ],
+    },
+    {
+      contexto:
+        "Um designer de interface quer adicionar um efeito sonoro quando o usuário clica em um botão, para melhorar a experiência.",
+      comando: "Qual princípio de UX é aplicado ao incluir um som quando um botão é pressionado?",
+      difficulty: "facil",
+      competency_id: comp.C3,
+      knowledge_object_id: obj.E,
+      resolucao: "Dar retorno imediato a uma ação do usuário é o princípio de Feedback.",
+      options: [
+        { label: "A", text: "Visibilidade do sistema", is_correct: false, justification: "Refere-se a manter o usuário informado do estado, de forma mais ampla." },
+        { label: "B", text: "Prevenção de erros", is_correct: false, justification: "Trata de evitar que erros ocorram." },
+        { label: "C", text: "Feedback", is_correct: true, justification: "É o retorno imediato (sonoro) a uma ação do usuário." },
+        { label: "D", text: "Consistência e padrões", is_correct: false, justification: "Trata de manter padrões na interface." },
+        { label: "E", text: "Reconhecimento em vez de memorização", is_correct: false, justification: "Trata de reduzir a carga de memória do usuário." },
+      ],
+    },
+  ];
+
+  const questionIds = [];
+  for (const q of QUESTIONS) {
+    const { data: qRow } = await supabase
+      .from("quiz_questions")
+      .insert({
+        author_id: teacherId,
+        course_id: null,
+        competency_id: q.competency_id ?? null,
+        knowledge_object_id: q.knowledge_object_id ?? null,
+        contexto: q.contexto,
+        comando: q.comando,
+        resolucao: q.resolucao,
+        difficulty: q.difficulty,
+        is_public: true,
+      })
+      .select("id")
+      .single()
+      .throwOnError();
+    await must(
+      supabase.from("quiz_options").insert(
+        q.options.map((o, i) => ({
+          question_id: qRow.id,
+          label: o.label,
+          text: o.text,
+          is_correct: o.is_correct,
+          justification: o.justification,
+          ord: i,
+        })),
+      ),
+    );
+    questionIds.push(qRow.id);
+  }
+  console.log(`Banco de questões SAEP (demo): ${questionIds.length} questões.`);
+
+  // -------- 2. Simulado (atividade + quiz_simulados + questões) --------
+  const { data: simAssign } = await supabase
+    .from("assignments")
+    .insert({ class_id: classId, class_unit_id: classUnitId, title: "Simulado SAEP — Demo", kind: "saep_simulado" })
+    .select("id")
+    .single()
+    .throwOnError();
+  const { data: simulado } = await supabase
+    .from("quiz_simulados")
+    .insert({
+      assignment_id: simAssign.id,
+      class_unit_id: classUnitId,
+      title: "Simulado SAEP — Demo",
+      description: "Simulado teórico de demonstração (5 questões, formato SAEP).",
+      time_limit_min: 30,
+      show_feedback: true,
+    })
+    .select("id")
+    .single()
+    .throwOnError();
+  await must(
+    supabase.from("quiz_simulado_questions").insert(
+      questionIds.map((qid, i) => ({ simulado_id: simulado.id, question_id: qid, ord: i })),
+    ),
+  );
+
+  // Tentativa do Aluno 1 JÁ ENVIADA (acerta 4 de 5) — dá dados ao dashboard.
+  // Busca as opções corretas e, para errar a última, escolhe uma incorreta.
+  const { data: opts } = await supabase
+    .from("quiz_options")
+    .select("id, question_id, is_correct")
+    .in("question_id", questionIds)
+    .throwOnError();
+  const chosen = questionIds.map((qid, idx) => {
+    const ofQ = (opts ?? []).filter((o) => o.question_id === qid);
+    const correct = ofQ.find((o) => o.is_correct);
+    const wrong = ofQ.find((o) => !o.is_correct);
+    // erra de propósito a última questão
+    const pick = idx === questionIds.length - 1 ? wrong : correct;
+    return { question_id: qid, option_id: pick?.id ?? null, is_correct: Boolean(pick?.is_correct) };
+  });
+  const correctCount = chosen.filter((c) => c.is_correct).length;
+  const { data: attempt } = await supabase
+    .from("quiz_attempts")
+    .insert({
+      simulado_id: simulado.id,
+      student_id: studentIds[0],
+      submitted_at: new Date().toISOString(),
+      total_questions: questionIds.length,
+      correct_count: correctCount,
+      score: Math.round((correctCount / questionIds.length) * 100),
+    })
+    .select("id")
+    .single()
+    .throwOnError();
+  await must(
+    supabase.from("quiz_answers").insert(
+      chosen.map((c) => ({
+        attempt_id: attempt.id,
+        question_id: c.question_id,
+        selected_option_id: c.option_id,
+        is_correct: c.is_correct,
+      })),
+    ),
+  );
+  console.log(`Simulado SAEP (demo) criado; Aluno 1 enviou (${correctCount}/${questionIds.length}).`);
+
+  // -------- 3. SAP prático (assessment + rubrica + entrega + avaliação) --------
+  const { data: sapAssign } = await supabase
+    .from("assignments")
+    .insert({ class_id: classId, class_unit_id: classUnitId, title: "SAP — Protótipo de Jogo (Demo)", kind: "sap_pratico" })
+    .select("id")
+    .single()
+    .throwOnError();
+  const { data: assessment } = await supabase
+    .from("sap_assessments")
+    .insert({
+      assignment_id: sapAssign.id,
+      class_unit_id: classUnitId,
+      title: "SAP — Protótipo de Jogo (Demo)",
+      description:
+        "Reconstrua o protótipo do jogo conforme o caderno de prova: telas, gameplay, HUD, fim de jogo e plano de testes.",
+      max_score: 10,
+    })
+    .select("id")
+    .single()
+    .throwOnError();
+
+  // Rubrica (Unidade → Elemento → Critério → Item Sim/Não, com pontos e competência).
+  const RUBRIC = [
+    {
+      code: "1",
+      title: "Produzir elementos multimídia para jogos digitais",
+      elements: [
+        {
+          code: "1.2",
+          title: "Criar elementos multimídia para atender o escopo do projeto",
+          criteria: [
+            {
+              code: "1.2.1",
+              description: "Seguindo métodos, ferramentas e técnicas para criação de elementos 2D",
+              items: [
+                { code: "1.2.1.1", description: "Criou a Tela de Menu Principal (logo, fundo, botões Jogar/Controles/Sair).", points: 1, competency_id: comp.C3, knowledge_object_id: obj.E },
+                { code: "1.2.1.2", description: "Criou a Tela de Gameplay com informações de jogador, inimigo e distância.", points: 1, competency_id: comp.C3, knowledge_object_id: obj.E },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      code: "2",
+      title: "Desenvolver sistemas de jogos digitais",
+      elements: [
+        {
+          code: "2.2",
+          title: "Codificar sistemas de jogos digitais para atender o escopo do projeto",
+          criteria: [
+            {
+              code: "2.2.1",
+              description: "Utilizando linguagens de programação para desenvolvimento de jogos",
+              items: [
+                { code: "2.2.1.1", description: "Implementou o controle de vida do jogador.", points: 2, competency_id: comp.C6, knowledge_object_id: obj.G },
+                { code: "2.2.1.2", description: "Implementou a movimentação do jogador.", points: 2, competency_id: comp.C6, knowledge_object_id: obj.G },
+                { code: "2.2.1.3", description: "Implementou a condição de vitória e derrota.", points: 2, competency_id: comp.C6, knowledge_object_id: obj.F },
+              ],
+            },
+          ],
+        },
+        {
+          code: "2.3",
+          title: "Testar jogos digitais para garantia da qualidade da entrega",
+          criteria: [
+            {
+              code: "2.3.3",
+              description: "Aplicando métodos e procedimentos de teste",
+              items: [
+                { code: "2.3.3.1", description: "Entregou plano de testes com ao menos três procedimentos executáveis.", points: 2, competency_id: comp.C7, knowledge_object_id: obj.S },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const itemByCode = {};
+  for (let ui = 0; ui < RUBRIC.length; ui++) {
+    const u = RUBRIC[ui];
+    const { data: unitRow } = await supabase
+      .from("sap_units")
+      .insert({ assessment_id: assessment.id, code: u.code, title: u.title, ord: ui })
+      .select("id")
+      .single()
+      .throwOnError();
+    for (let ei = 0; ei < u.elements.length; ei++) {
+      const e = u.elements[ei];
+      const { data: elRow } = await supabase
+        .from("sap_elements")
+        .insert({ unit_id: unitRow.id, code: e.code, title: e.title, ord: ei })
+        .select("id")
+        .single()
+        .throwOnError();
+      for (let ci = 0; ci < e.criteria.length; ci++) {
+        const c = e.criteria[ci];
+        const { data: crRow } = await supabase
+          .from("sap_criteria")
+          .insert({ element_id: elRow.id, code: c.code, description: c.description, ord: ci })
+          .select("id")
+          .single()
+          .throwOnError();
+        const { data: itemRows } = await supabase
+          .from("sap_items")
+          .insert(
+            c.items.map((it, ii) => ({
+              criterion_id: crRow.id,
+              code: it.code,
+              description: it.description,
+              points: it.points,
+              competency_id: it.competency_id ?? null,
+              knowledge_object_id: it.knowledge_object_id ?? null,
+              ord: ii,
+            })),
+          )
+          .select("id, code")
+          .throwOnError();
+        for (const r of itemRows ?? []) itemByCode[r.code] = r.id;
+      }
+    }
+  }
+
+  // Aluno 1: entregou e foi avaliado (atende quase tudo, menos um item).
+  const naoAtende = new Set(["2.3.3.1"]); // não entregou o plano de testes
+  const allItems = Object.entries(itemByCode); // [code, id]
+  const totalPoints = RUBRIC.flatMap((u) => u.elements)
+    .flatMap((e) => e.criteria)
+    .flatMap((c) => c.items)
+    .reduce((s, it) => s + it.points, 0);
+  const pointsByCode = Object.fromEntries(
+    RUBRIC.flatMap((u) => u.elements).flatMap((e) => e.criteria).flatMap((c) => c.items).map((it) => [it.code, it.points]),
+  );
+  const score = allItems.reduce((s, [code]) => s + (naoAtende.has(code) ? 0 : pointsByCode[code]), 0);
+
+  const { data: evaluation } = await supabase
+    .from("sap_evaluations")
+    .insert({
+      assessment_id: assessment.id,
+      student_id: studentIds[0],
+      submission_link: "https://aluno-demo.itch.io/prototipo-saep",
+      submitted_at: new Date().toISOString(),
+      score,
+      max_score: totalPoints,
+      feedback: "Bom protótipo! Faltou entregar o plano de testes — revise QA para a próxima.",
+      evaluated_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single()
+    .throwOnError();
+  await must(
+    supabase.from("sap_item_marks").insert(
+      allItems.map(([code, id]) => ({
+        evaluation_id: evaluation.id,
+        item_id: id,
+        met: !naoAtende.has(code),
+        justification: naoAtende.has(code) ? "Plano de testes não foi entregue." : null,
+      })),
+    ),
+  );
+
+  // Aluno 2: só entregou (ainda não avaliado) — para testar a fila do professor.
+  await must(
+    supabase.from("sap_evaluations").insert({
+      assessment_id: assessment.id,
+      student_id: studentIds[1],
+      submission_link: "https://aluno-demo2.itch.io/prototipo-saep",
+      submitted_at: new Date().toISOString(),
+    }),
+  );
+
+  console.log(`SAP prático (demo) criado; Aluno 1 avaliado (${score}/${totalPoints}), Aluno 2 só entregou.`);
 }
 
 async function main() {
