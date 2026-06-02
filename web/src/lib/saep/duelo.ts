@@ -4,21 +4,16 @@ import { revalidatePath } from "next/cache";
 
 import { verifySession } from "@/lib/auth/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { countCorrect, decideDuelWinner, elo } from "@/lib/saep/scoring";
 
 // -----------------------------------------------------------------------------
 // Duelo de quiz (SAEP) — X1 de questões teóricas dentro da UC. Vence quem acerta
 // mais (desempate por tempo). ELO contextual reusa duel_ratings (por UC), o mesmo
 // ranking dos duelos de código. Posse verificada no código (admin client).
+// Regras puras (ELO, correção, vencedor) ficam em ./scoring (testadas).
 // -----------------------------------------------------------------------------
 
 export type DueloResult = { ok: true; id?: string } | { ok: false; message: string };
-
-const ELO_K = 32;
-function elo(winnerRating: number, loserRating: number) {
-  const expected = 1 / (1 + Math.pow(10, (loserRating - winnerRating) / 400));
-  const delta = Math.round(ELO_K * (1 - expected));
-  return { winnerDelta: delta, loserDelta: -delta };
-}
 
 async function isMember(classUnitId: string, userId: string) {
   const admin = createAdminClient();
@@ -166,20 +161,16 @@ export async function responderDueloQuiz(
   const { data: opts } = optionIds.length
     ? await admin.from("quiz_options").select("id, is_correct").in("id", optionIds)
     : { data: [] };
-  const correctById = new Map((opts ?? []).map((o) => [o.id, o.is_correct]));
+  const correctById = new Map((opts ?? []).map((o) => [o.id, Boolean(o.is_correct)]));
 
-  let correct = 0;
-  const rows = answers.map((a) => {
-    const isCorrect = a.option_id ? Boolean(correctById.get(a.option_id)) : false;
-    if (isCorrect) correct += 1;
-    return {
-      duel_id: duelId,
-      player_id: user.id,
-      question_id: a.question_id,
-      selected_option_id: a.option_id || null,
-      is_correct: isCorrect,
-    };
-  });
+  const correct = countCorrect(answers, correctById);
+  const rows = answers.map((a) => ({
+    duel_id: duelId,
+    player_id: user.id,
+    question_id: a.question_id,
+    selected_option_id: a.option_id || null,
+    is_correct: a.option_id ? correctById.get(a.option_id) === true : false,
+  }));
   if (rows.length) await admin.from("quiz_duel_answers").insert(rows);
   await admin.from("quiz_duel_finishes").insert({
     duel_id: duelId,
@@ -223,14 +214,12 @@ async function resolverDuelo(
   if (!ch || !op) return;
 
   // Vencedor: mais acertos; desempate por menor tempo; senão empate (sem ELO).
-  let winnerId: string | null = null;
-  if (ch.correct_count !== op.correct_count) {
-    winnerId = ch.correct_count > op.correct_count ? d.challenger_id : d.opponent_id;
-  } else {
-    const ct = ch.total_ms ?? Number.MAX_SAFE_INTEGER;
-    const ot = op.total_ms ?? Number.MAX_SAFE_INTEGER;
-    if (ct !== ot) winnerId = ct < ot ? d.challenger_id : d.opponent_id;
-  }
+  const decision = decideDuelWinner(
+    { correct: ch.correct_count, ms: ch.total_ms },
+    { correct: op.correct_count, ms: op.total_ms },
+  );
+  const winnerId: string | null =
+    decision === "a" ? d.challenger_id : decision === "b" ? d.opponent_id : null;
 
   let ratingDelta: number | null = null;
   if (winnerId) {

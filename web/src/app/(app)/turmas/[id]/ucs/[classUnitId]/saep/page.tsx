@@ -8,24 +8,18 @@ import { EmptyState } from "@/components/ui/states";
 import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import { getSaepDashboard, type TagStat } from "@/lib/saep/dashboard";
+import { performanceBand } from "@/lib/dashboard/bands";
 
 // Dashboard SAEP da UC: desempenho por competência e por objeto de conhecimento
 // (o que reforçar), além da visão por aluno. Só o dono da turma acessa.
 type Params = Promise<{ id: string; classUnitId: string }>;
 
-// % baixo = vermelho (reforçar), médio = amarelo, alto = verde.
-function tone(pct: number | null): BarItem["tone"] {
-  if (pct == null) return "muted";
-  if (pct < 50) return "danger";
-  if (pct < 70) return "warning";
-  return "success";
-}
-
+// Faixa de cor por % (pura, testada em lib/dashboard/bands).
 function toBars(stats: TagStat[]): BarItem[] {
   return stats.map((s) => ({
     label: s.label,
     value: s.pct ?? 0,
-    tone: tone(s.pct),
+    tone: performanceBand(s.pct),
   }));
 }
 

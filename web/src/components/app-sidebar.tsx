@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import { Logo } from "@/components/logo";
+import { getNavGroups, type IconKey } from "@/lib/features";
 
 type Item = { href: string; label: string; icon: ReactNode };
 type Group = { title: string; items: Item[] };
@@ -37,28 +38,25 @@ const I = {
   ),
 };
 
+// Mapa de IconKey (registro de features) -> SVG. Ícones são JSX, então ficam
+// aqui; o registro (lib/features.ts) referencia só a chave.
+const ICONS: Record<IconKey, ReactNode> = {
+  painel: I.painel,
+  code: I.code,
+  duelo: I.duelo,
+  trofeu: I.trofeu,
+  turma: I.turma,
+  curso: I.curso,
+  saep: I.saep,
+  unity: I.unity,
+};
+
+// Constrói os grupos do menu a partir do registro central de features.
 function buildGroups(isProf: boolean): Group[] {
-  const groups: Group[] = [
-    {
-      title: "Aprender",
-      items: [
-        { href: "/painel", label: "Painel", icon: I.painel },
-        { href: "/exercicios", label: "Exercícios", icon: I.code },
-        { href: "/duelos", label: "Duelos", icon: I.duelo },
-        { href: "/ranking", label: "Ranking", icon: I.trofeu },
-      ],
-    },
-    {
-      title: "Turmas",
-      items: [
-        { href: "/turmas", label: "Turmas", icon: I.turma },
-        ...(isProf ? [{ href: "/cursos", label: "Cursos", icon: I.curso }] : []),
-        ...(isProf ? [{ href: "/saep/questoes", label: "SAEP", icon: I.saep }] : []),
-        { href: "/unity", label: "Unity", icon: I.unity },
-      ],
-    },
-  ];
-  return groups;
+  return getNavGroups(isProf).map((g) => ({
+    title: g.title,
+    items: g.items.map((f) => ({ href: f.href, label: f.label, icon: ICONS[f.icon] })),
+  }));
 }
 
 function NavLinks({
