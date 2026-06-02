@@ -121,23 +121,33 @@ Pré-requisitos: Supabase + `.env.local` configurados, Piston em Docker rodando
 
 ```powershell
 cd web
-npx supabase db push   # garante as migrations 0015-0019 aplicadas
+npx supabase db push   # garante as migrations 0015-0022 aplicadas
+npm run seed:demo      # popula a Turma Demo (inclui SAEP + SAP prontos)
 npm run dev
 ```
 
-Fluxos para clicar (logado como **professor**):
-1. **Curso → UC → Turma**: vincule uma UC a uma turma (`turmas/[id]/ucs`).
-2. **Atividades na UC**: abra "Atividades" da UC e crie uma lista, um duelo, um
-   projeto integrador e um simulado SAEP.
-3. **Projeto integrador**: configure, crie sprints, monte grupos (em
-   `turmas/[id]/grupos`) e veja os boards.
-4. **SAEP**: em **SAEP → Banco de questões**, crie uma questão (manual e/ou
-   "Gerar sugestão" com IA). Depois abra o simulado da UC, configure e selecione
-   as questões.
-5. Logado como **aluno** (navegador anônimo): responda o simulado e veja o resultado.
+O **seed demo** (`npm run seed:demo`, idempotente) já deixa pronto, na "Turma Demo"
+(código `DEMO2026`):
+- Matriz de competências do curso; banco com 5 questões SAEP.
+- **Simulado SAEP** com o Aluno 1 já tendo enviado (4/5) → o **dashboard SAEP/SAP**
+  já mostra dados por competência.
+- **SAP prático** com rubrica montada; Aluno 1 **avaliado** (8/10) e Aluno 2 só
+  **entregou** (para testar a fila do professor).
+- Logins: `prof.demo@codequest.dev`, `aluno1.demo@codequest.dev`,
+  `aluno2.demo@codequest.dev` — senha `password123`.
 
-> **Ainda não foi rodado na app.** Se algo quebrar em runtime, é esperado — a
-> validação até agora foi só `tsc --noEmit`, `eslint .` e `supabase db push`.
+Fluxos para clicar (logado como **professor**):
+1. **Dashboard SAEP/SAP**: na lista de UCs, botão **SAEP** → veja as barras por
+   competência (já com dados do simulado + SAP).
+2. **SAP prático**: abra a atividade "SAP — Protótipo de Jogo (Demo)" → veja a
+   rubrica e a fila de alunos; avalie o Aluno 2.
+3. **Simulado SAEP**: abra "Simulado SAEP — Demo" → veja a montagem e os envios.
+4. Logado como **aluno** (navegador anônimo): responda um novo simulado / entregue
+   o SAP / inicie um duelo de quiz.
+
+> **Ainda não foi clicado na app.** Se algo quebrar em runtime, é esperado — a
+> validação até agora foi `tsc`, `eslint`, `npm run test`, `supabase db push` e o
+> próprio seed rodando 2x sem erro.
 
 ---
 
