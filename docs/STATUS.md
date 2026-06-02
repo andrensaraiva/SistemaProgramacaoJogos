@@ -1,5 +1,21 @@
 # Status do projeto
 
+## Atualizacao 2026-06-01 (parte 6) — Duelo de quiz (SAEP)
+
+Modo gamificado do SAEP: X1 de questoes teoricas na UC. Dois alunos respondem o
+mesmo conjunto sorteado; vence quem acerta mais (desempate por tempo). ELO reusa
+duel_ratings (mesmo ranking dos duelos de codigo por UC).
+- Migration 0020: quiz_duels + quiz_duel_questions (snapshot) + quiz_duel_answers
+  + quiz_duel_finishes. RLS: participantes/dono leem; challenger cria (membro da UC).
+- lib/saep/duelo.ts: criarDueloQuiz (sorteia 3-10 questoes), entrarNoDueloQuiz
+  (codigo), responderDueloQuiz (corrige + apura vencedor + ELO quando ambos
+  terminam), cancelarDueloQuiz.
+- Pagina turmas/[id]/ucs/[cu]/duelos-quiz (lobby criar/entrar + lista + ranking) e
+  [duelId] (responder com tempo / resultado com placar + gabarito apos finalizar).
+  Links cruzados com os duelos de codigo.
+
+Pendente do SAEP/SAP: SAP pratico (rubrica/lista de verificacao).
+
 ## Atualizacao 2026-06-01 (parte 5) — Dashboard SAEP por competencia
 
 3a fatia do SAEP: o dashboard que orienta o reforco.

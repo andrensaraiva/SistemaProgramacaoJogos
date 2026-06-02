@@ -21,8 +21,8 @@ mergeado nem rodado na app** (só validado com `tsc`, `eslint` e `supabase db pu
 
 1. **Rodar a app e validar visualmente** o que foi construído (ver "Como testar" abaixo).
    Nada foi clicado num navegador ainda.
-2. **Duelos de quiz** (modo SAEP nos duelos por UC) e **SAP prático**
-   (rubrica/lista de verificação Unidade→Elemento→item Sim/Não/pontos).
+2. **SAP prático** (rubrica/lista de verificação Unidade→Elemento→item Sim/Não/pontos,
+   conforme os PDFs do SENAI) — último item grande do SAEP/SAP.
 3. Quando estável, **merge da branch em `main`**.
 
 ---
@@ -77,14 +77,20 @@ projeto integrador, simulado SAEP) é uma `assignment` ligada a um `class_unit`
   reforçar" (3 competências de menor acerto), barras por competência/objeto e tabela
   por aluno. Link na lista de UCs e na página do simulado.
 
+### 6. SAEP — duelo de quiz (4ª fatia)
+- Migration `0020` + `lib/saep/duelo.ts`: X1 onde dois alunos respondem o mesmo
+  conjunto sorteado de questões da UC; vence quem acerta mais (desempate por tempo).
+  ELO reusa `duel_ratings` (mesmo ranking dos duelos de código).
+- Página `turmas/[id]/ucs/[cu]/duelos-quiz` (lobby criar/entrar + lista + ranking) e
+  `[duelId]` (responder/resultado). Links cruzados com os duelos de código.
+
 ---
 
 ## O que falta (backlog priorizado)
 
 | Prioridade | Item | Observação |
 |---|---|---|
-| Média | **Duelos de quiz (SAEP)** | Adaptar duelos por UC (já existem) pro modo "quem acerta mais". |
-| Média | **SAP prático** | Rubrica/lista de verificação (Unidade→Elemento→Padrão→item Sim/Não/pontos) ligada à entrega. Ver os PDFs do SENAI (lista de verificação). |
+| Média | **SAP prático** | Rubrica/lista de verificação (Unidade→Elemento→Padrão→item Sim/Não/pontos) ligada à entrega. Ver os PDFs do SENAI (lista de verificação). Último item grande do SAEP/SAP. |
 | Média | **Fase 2 do modelo UC** | `class_unit_id` NOT NULL, remover `class_id`, aposentar `/duelos` e `/unity` globais, reclassificar UC "Geral (migrado)". |
 | Baixa | Projeto integrador: drag-and-drop, tempo real (Supabase Realtime), entrega/nota | Polimento do board. |
 | Baixa | Cadastro da matriz de competências por UI | Hoje a action `salvarMatriz` existe, mas falta uma tela amigável para o professor cadastrar a matriz do curso. |
@@ -168,8 +174,8 @@ Se você está no PC onde já fez tudo, pula esta seção.
 ## Como invocar a próxima sessão
 
 > "Continuando o projeto, branch `refactor/atividades-na-uc`. SAEP teórico está
-> completo (banco de questões + simulado + dashboard por competência). Bora pros
-> **duelos de quiz** (modo SAEP) ou pro **SAP prático** (rubrica/lista de verificação)."
+> completo (banco + simulado + dashboard + duelo de quiz). Bora pro **SAP prático**
+> (rubrica/lista de verificação Unidade→Elemento→item Sim/Não/pontos)."
 
 Ou, se preferir validar antes: "Roda a app e me mostra o fluxo do simulado SAEP
 funcionando (professor monta → aluno responde → resultado → dashboard)."
