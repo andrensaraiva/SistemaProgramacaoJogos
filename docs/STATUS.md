@@ -1,5 +1,15 @@
 # Status do projeto
 
+## Atualizacao 2026-06-02 (parte 3) — Dashboard combina SAEP + SAP
+
+Follow-up: o dashboard por competencia/objeto agora agrega as DUAS avaliacoes.
+- getSaepDashboard soma, alem das respostas do SAEP teorico (quiz_answers), os
+  itens do SAP pratico (sap_item_marks das avaliacoes fechadas; item "Sim" =
+  acerto). overall e as barras por competencia/objeto refletem teorico + pratico.
+  Tabela por aluno segue focada no teorico. Novos campos totalSapAssessments/
+  totalSapEvaluations; cards e legendas atualizados; empty states consideram SAP.
+- 25 testes verdes. Frente SAEP/SAP totalmente fechada.
+
 ## Atualizacao 2026-06-02 (parte 2) — SAP pratico (rubrica/lista de verificacao)
 
 Fecha a frente SAEP/SAP. SAP = prova PRATICA: aluno entrega artefato e o avaliador

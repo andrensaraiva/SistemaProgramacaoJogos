@@ -23,9 +23,9 @@ mergeado nem rodado na app** (só validado com `tsc`, `eslint` e `supabase db pu
    Nada foi clicado num navegador ainda.
 2. **Merge da branch em `main`** — a frente SAEP/SAP está completa (teórico +
    prático). Bom momento para estabilizar.
-3. Follow-ups menores: somar o **SAP ao dashboard por competência** (os itens já
-   têm vínculo à matriz; falta agregar junto com o teórico); drag-and-drop/realtime
-   no board do projeto integrador; Fase 2 do modelo UC (remover `class_id`).
+3. Follow-ups menores: drag-and-drop/realtime no board do projeto integrador;
+   Fase 2 do modelo UC (remover `class_id`). (O SAP já entra no dashboard por
+   competência — feito.)
 
 > **Modularidade**: o projeto é organizado por features desacopladas. Antes de
 > adicionar/remover uma, leia [MODULOS.md](MODULOS.md). Há testes (Vitest):
@@ -79,7 +79,8 @@ projeto integrador, simulado SAEP) é uma `assignment` ligada a um `class_unit`
 
 ### 5. SAEP — dashboard por competência (3ª fatia)
 - `lib/saep/dashboard.ts` (`getSaepDashboard`): % de acerto por competência, objeto
-  de conhecimento e aluno numa UC.
+  de conhecimento e aluno numa UC. **Combina SAEP teórico + SAP prático** nas barras
+  por competência/objeto (quiz_answers + sap_item_marks); tabela por aluno é teórica.
 - Página `turmas/[id]/ucs/[cu]/saep` (só o dono): cards de resumo, "pontos a
   reforçar" (3 competências de menor acerto), barras por competência/objeto e tabela
   por aluno. Link na lista de UCs e na página do simulado.
@@ -105,7 +106,8 @@ projeto integrador, simulado SAEP) é uma `assignment` ligada a um `class_unit`
 
 | Prioridade | Item | Observação |
 |---|---|---|
-| Baixa | **SAP no dashboard por competência** | Os itens do SAP já têm vínculo à matriz; falta agregá-los junto com o teórico em `lib/saep/dashboard.ts`. |
+| Baixa | **Drag-and-drop / realtime** no board do projeto integrador | Hoje move card por botão; sem tempo real. |
+| Baixa | **Fase 2 do modelo UC** | Tornar `class_unit_id` NOT NULL, remover `class_id`, aposentar rotas globais `/duelos` e `/unity`. |
 | Média | **Fase 2 do modelo UC** | `class_unit_id` NOT NULL, remover `class_id`, aposentar `/duelos` e `/unity` globais, reclassificar UC "Geral (migrado)". |
 | Baixa | Projeto integrador: drag-and-drop, tempo real (Supabase Realtime), entrega/nota | Polimento do board. |
 | Baixa | Cadastro da matriz de competências por UI | Hoje a action `salvarMatriz` existe, mas falta uma tela amigável para o professor cadastrar a matriz do curso. |
