@@ -1,5 +1,22 @@
 # Status do projeto
 
+## Atualizacao 2026-06-01 (parte 4) — SAEP simulado (montar + responder)
+
+2a fatia do SAEP: fecha o ciclo teorico para o aluno.
+- Simulado e atividade kind=saep_simulado na UC; pagina chaveada pelo assignment_id
+  em turmas/[id]/ucs/[cu]/simulados/[assignmentId]. quiz_simulados resolvido/criado
+  pelo professor na 1a visita (obterOuCriarSimulado).
+- Professor (_manager): configura (titulo/descricao/tempo/mostrar gabarito) e monta
+  selecionando questoes do banco; resumo de envios.
+- Aluno (_responder): iniciar -> responder (1 alternativa/questao, cronometro que
+  envia ao zerar) -> envio unico -> resultado (%/acertos) + gabarito/justificativa/
+  resolucao se habilitado. Corretas so expostas apos envio.
+- Actions novas: obterOuCriarSimulado, atualizarSimulado. Correcao automatica + XP
+  ja vinham da 1a fatia.
+
+Pendente do SAEP/SAP: dashboard por competencia (dados ja existem), duelos de quiz,
+e o SAP pratico (rubrica/lista de verificacao).
+
 ## Atualizacao 2026-06-01 (parte 3) — SAEP teorico (1a fatia)
 
 SAEP = prova TEORICA do SENAI (multipla escolha). SAP = prova PRATICA. O instrutor
