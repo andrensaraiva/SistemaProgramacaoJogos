@@ -33,7 +33,16 @@ const ListaSchema = z.object({
 const AtividadeSchema = z.object({
   title: z.string().min(3, { error: "Titulo deve ter pelo menos 3 caracteres" }).trim(),
   kind: z
-    .enum(["lista", "desafio", "prova", "duelo", "unity", "projeto_integrador"])
+    .enum([
+      "lista",
+      "desafio",
+      "prova",
+      "duelo",
+      "unity",
+      "projeto_integrador",
+      "saep_simulado",
+      "sap_pratico",
+    ])
     .default("lista"),
   due_at: z.string().trim().optional(),
   teaching_plan_block_id: z.string().uuid().optional().or(z.literal("")),

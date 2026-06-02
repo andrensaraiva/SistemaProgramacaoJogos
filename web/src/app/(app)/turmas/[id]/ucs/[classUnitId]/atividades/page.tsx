@@ -18,6 +18,8 @@ const KIND_LABEL: Record<string, string> = {
   duelo: "Duelo",
   unity: "Unity",
   projeto_integrador: "Projeto integrador",
+  saep_simulado: "Simulado SAEP",
+  sap_pratico: "SAP prático",
 };
 
 const KIND_TONE: Record<
@@ -30,6 +32,8 @@ const KIND_TONE: Record<
   duelo: "primary",
   unity: "accent",
   projeto_integrador: "success",
+  saep_simulado: "primary",
+  sap_pratico: "warning",
 };
 
 export default async function AtividadesUcPage({ params }: { params: Params }) {
@@ -106,7 +110,9 @@ export default async function AtividadesUcPage({ params }: { params: Params }) {
                   ? `/turmas/${id}/ucs/${classUnitId}/projetos/${a.id}`
                   : a.kind === "saep_simulado"
                     ? `/turmas/${id}/ucs/${classUnitId}/simulados/${a.id}`
-                    : `/turmas/${id}/listas/${a.id}`
+                    : a.kind === "sap_pratico"
+                      ? `/turmas/${id}/ucs/${classUnitId}/sap/${a.id}`
+                      : `/turmas/${id}/listas/${a.id}`
               }
               className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-primary/40"
             >

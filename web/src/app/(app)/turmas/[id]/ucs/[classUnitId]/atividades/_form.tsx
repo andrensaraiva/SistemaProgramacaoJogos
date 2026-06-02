@@ -44,6 +44,8 @@ export function NovaAtividadeForm({
           <option value="duelo">Duelo (X1)</option>
           <option value="unity">Unity (GitHub Classroom)</option>
           <option value="projeto_integrador">Projeto integrador</option>
+          <option value="saep_simulado">Simulado SAEP (teórico)</option>
+          <option value="sap_pratico">SAP prático (lista de verificação)</option>
         </select>
       </Field>
 
