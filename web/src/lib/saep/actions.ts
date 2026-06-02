@@ -308,6 +308,85 @@ export async function criarSimulado(
   return { ok: true, id: sim.id };
 }
 
+// Resolve o simulado (quiz_simulados) de uma atividade saep_simulado, criando-o
+// na primeira visita do professor. Permite que o simulado nasça tanto pelo hub
+// genérico de atividades quanto por um botão dedicado. Retorna o id do simulado.
+export async function obterOuCriarSimulado(assignmentId: string): Promise<ActionResult> {
+  let user;
+  try {
+    user = await requireProfessor();
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Sem permissão." };
+  }
+
+  const admin = createAdminClient();
+  const { data: assignment } = await admin
+    .from("assignments")
+    .select("id, title, kind, class_id, class_unit_id")
+    .eq("id", assignmentId)
+    .single();
+  if (!assignment || assignment.kind !== "saep_simulado" || !assignment.class_unit_id)
+    return { ok: false, message: "Atividade de simulado inválida." };
+  if (!(await ownsClassUnit(assignment.class_unit_id, user.id)))
+    return { ok: false, message: "Você não é dono desta turma." };
+
+  const { data: existing } = await admin
+    .from("quiz_simulados")
+    .select("id")
+    .eq("assignment_id", assignmentId)
+    .maybeSingle();
+  if (existing) return { ok: true, id: existing.id };
+
+  const { data: sim, error } = await admin
+    .from("quiz_simulados")
+    .insert({
+      assignment_id: assignmentId,
+      class_unit_id: assignment.class_unit_id,
+      title: assignment.title,
+    })
+    .select("id")
+    .single();
+  if (error || !sim) return { ok: false, message: "Erro ao criar o simulado." };
+  return { ok: true, id: sim.id };
+}
+
+// Atualiza a configuração do simulado (título, descrição, tempo, feedback).
+export async function atualizarSimulado(simuladoId: string, input: unknown): Promise<ActionResult> {
+  let user;
+  try {
+    user = await requireProfessor();
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Sem permissão." };
+  }
+  const parsed = SimuladoSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Dados do simulado inválidos." };
+
+  const admin = createAdminClient();
+  const { data: sim } = await admin
+    .from("quiz_simulados")
+    .select("class_unit_id, class_unit:class_units!class_unit_id(class_id)")
+    .eq("id", simuladoId)
+    .single();
+  if (!sim || !(await ownsClassUnit(sim.class_unit_id, user.id)))
+    return { ok: false, message: "Sem permissão neste simulado." };
+
+  const { error } = await admin
+    .from("quiz_simulados")
+    .update({
+      title: parsed.data.title,
+      description: parsed.data.description || null,
+      time_limit_min: parsed.data.time_limit_min || null,
+      show_feedback: parsed.data.show_feedback,
+    })
+    .eq("id", simuladoId);
+  if (error) return { ok: false, message: `Erro: ${error.message}` };
+
+  const classId = (sim.class_unit as unknown as { class_id: string } | undefined)?.class_id;
+  if (classId)
+    revalidatePath(`/turmas/${classId}/ucs/${sim.class_unit_id}/simulados/${simuladoId}`);
+  return { ok: true, id: simuladoId };
+}
+
 // Define as questões do simulado (lista de question_ids, na ordem).
 export async function definirQuestoesDoSimulado(
   simuladoId: string,

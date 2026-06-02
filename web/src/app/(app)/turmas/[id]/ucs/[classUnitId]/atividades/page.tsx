@@ -104,7 +104,9 @@ export default async function AtividadesUcPage({ params }: { params: Params }) {
               href={
                 a.kind === "projeto_integrador"
                   ? `/turmas/${id}/ucs/${classUnitId}/projetos/${a.id}`
-                  : `/turmas/${id}/listas/${a.id}`
+                  : a.kind === "saep_simulado"
+                    ? `/turmas/${id}/ucs/${classUnitId}/simulados/${a.id}`
+                    : `/turmas/${id}/listas/${a.id}`
               }
               className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-primary/40"
             >
