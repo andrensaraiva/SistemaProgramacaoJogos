@@ -108,11 +108,16 @@ export default async function DuelosUcPage({ params }: { params: Params }) {
         ]}
       />
 
-      <div>
-        <h1 className="text-2xl font-bold">Duelos · {uc?.title ?? "UC"}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          ELO e ranking contam apenas dentro desta unidade curricular.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Duelos de código · {uc?.title ?? "UC"}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            ELO e ranking contam apenas dentro desta unidade curricular.
+          </p>
+        </div>
+        <Link href={`/turmas/${id}/ucs/${classUnitId}/duelos-quiz`}>
+          <Button variant="secondary">Duelo de quiz (SAEP) →</Button>
+        </Link>
       </div>
 
       <section className="grid gap-3 sm:grid-cols-3">
