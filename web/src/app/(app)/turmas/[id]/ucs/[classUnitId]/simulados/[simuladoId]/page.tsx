@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Button } from "@/components/ui/button";
 import { getProfile } from "@/lib/auth/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -89,6 +91,11 @@ export default async function SimuladoPage({ params }: { params: Params }) {
     return (
       <div className="flex flex-col gap-6">
         <Breadcrumbs items={crumbs} />
+        <div>
+          <Link href={`/turmas/${id}/ucs/${classUnitId}/saep`}>
+            <Button variant="secondary">Ver dashboard SAEP da UC</Button>
+          </Link>
+        </div>
         <SimuladoManager
           assignmentId={assignmentId}
           assignmentTitle={assignment.title}

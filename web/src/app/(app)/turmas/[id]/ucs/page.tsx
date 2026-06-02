@@ -118,6 +118,9 @@ export default async function TurmaUcsPage({
                   <Link href={`/turmas/${id}/ucs/${cu.id}/dashboard`}>
                     <Button variant="secondary">Dashboard</Button>
                   </Link>
+                  <Link href={`/turmas/${id}/ucs/${cu.id}/saep`}>
+                    <Button variant="secondary">SAEP</Button>
+                  </Link>
                   <Link href={`/turmas/${id}/ucs/${cu.id}/frequencia`}>
                     <Button variant="secondary">Frequência</Button>
                   </Link>
