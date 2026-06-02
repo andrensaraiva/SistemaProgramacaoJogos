@@ -50,35 +50,35 @@ export default async function SaepDashboardPage({ params }: { params: Params }) 
     { label: "Dashboard SAEP" },
   ];
 
-  // Sem simulados ainda.
-  if (stats.totalSimulados === 0) {
+  // Sem nenhuma avaliação (nem simulado teórico nem SAP prático).
+  if (stats.totalSimulados === 0 && stats.totalSapAssessments === 0) {
     return (
       <div className="flex flex-col gap-6">
         <Breadcrumbs items={crumbs} />
         <PageHeader
-          title="Dashboard SAEP"
+          title="Dashboard SAEP/SAP"
           description={`${stats.uc?.title ?? "UC"} · Turma ${stats.turma.name}`}
         />
         <EmptyState
-          title="Nenhum simulado nesta UC"
-          description="Crie um simulado SAEP nas atividades da UC para começar a coletar desempenho por competência."
+          title="Nenhuma avaliação nesta UC"
+          description="Crie um simulado SAEP ou um SAP prático nas atividades da UC para começar a coletar desempenho por competência."
         />
       </div>
     );
   }
 
-  // Sem respostas enviadas ainda.
+  // Há atividades, mas ainda sem dados (sem envios e sem avaliações fechadas).
   if (stats.overall.total === 0) {
     return (
       <div className="flex flex-col gap-6">
         <Breadcrumbs items={crumbs} />
         <PageHeader
-          title="Dashboard SAEP"
+          title="Dashboard SAEP/SAP"
           description={`${stats.uc?.title ?? "UC"} · Turma ${stats.turma.name}`}
         />
         <EmptyState
-          title="Ainda sem envios"
-          description={`${stats.totalSimulados} simulado(s) criado(s), mas nenhum aluno enviou respostas ainda.`}
+          title="Ainda sem dados"
+          description={`${stats.totalSimulados} simulado(s) e ${stats.totalSapAssessments} SAP prático(s), mas nenhuma resposta enviada nem avaliação fechada ainda.`}
         />
       </div>
     );
@@ -94,7 +94,7 @@ export default async function SaepDashboardPage({ params }: { params: Params }) 
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={crumbs} />
       <PageHeader
-        title="Dashboard SAEP"
+        title="Dashboard SAEP/SAP"
         description={`${stats.uc?.title ?? "UC"} · Turma ${stats.turma.name}`}
       />
 
@@ -105,12 +105,20 @@ export default async function SaepDashboardPage({ params }: { params: Params }) 
           tone={
             stats.overall.pct != null && stats.overall.pct < 60 ? "danger" : "success"
           }
-          hint={`${stats.overall.correct}/${stats.overall.total} respostas`}
+          hint={`${stats.overall.correct}/${stats.overall.total} sinais (teórico + prático)`}
         />
-        <StatCard title="Simulados" value={stats.totalSimulados} />
-        <StatCard title="Envios" value={stats.totalSubmittedAttempts} />
         <StatCard
-          title="Alunos avaliados"
+          title="Teórico (SAEP)"
+          value={stats.totalSimulados}
+          hint={`${stats.totalSubmittedAttempts} envio(s)`}
+        />
+        <StatCard
+          title="Prático (SAP)"
+          value={stats.totalSapAssessments}
+          hint={`${stats.totalSapEvaluations} avaliação(ões)`}
+        />
+        <StatCard
+          title="Alunos avaliados (teórico)"
           value={stats.students.filter((s) => s.answered > 0).length}
         />
       </div>
@@ -132,33 +140,42 @@ export default async function SaepDashboardPage({ params }: { params: Params }) 
         </section>
       )}
 
-      {/* Por competência */}
+      {/* Por competência (teórico + prático combinados) */}
       <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-3 text-lg font-semibold">Acerto por competência</h2>
+        <h2 className="text-lg font-semibold">Acerto por competência</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Combina respostas do SAEP teórico e itens &quot;Sim&quot; do SAP prático.
+        </p>
         {stats.byCompetency.length ? (
           <BarChart items={toBars(stats.byCompetency)} unit="%" max={100} />
         ) : (
           <p className="text-sm text-muted-foreground">
-            As questões respondidas não estão classificadas por competência.
+            Os itens avaliados não estão classificados por competência.
           </p>
         )}
       </section>
 
-      {/* Por objeto de conhecimento */}
+      {/* Por objeto de conhecimento (teórico + prático combinados) */}
       <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-3 text-lg font-semibold">Acerto por objeto de conhecimento</h2>
+        <h2 className="text-lg font-semibold">Acerto por objeto de conhecimento</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Combina respostas do SAEP teórico e itens &quot;Sim&quot; do SAP prático.
+        </p>
         {stats.byKnowledgeObject.length ? (
           <BarChart items={toBars(stats.byKnowledgeObject)} unit="%" max={100} />
         ) : (
           <p className="text-sm text-muted-foreground">
-            As questões respondidas não estão classificadas por objeto de conhecimento.
+            Os itens avaliados não estão classificados por objeto de conhecimento.
           </p>
         )}
       </section>
 
-      {/* Por aluno */}
+      {/* Por aluno (somente teórico) */}
       <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-3 text-lg font-semibold">Desempenho por aluno</h2>
+        <h2 className="text-lg font-semibold">Desempenho por aluno (teórico)</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Acerto nos simulados SAEP. A nota do SAP prático fica na própria atividade.
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
