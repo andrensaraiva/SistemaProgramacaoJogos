@@ -1,5 +1,25 @@
 # Status do projeto
 
+## Atualizacao 2026-06-02 (parte 2) — SAP pratico (rubrica/lista de verificacao)
+
+Fecha a frente SAEP/SAP. SAP = prova PRATICA: aluno entrega artefato e o avaliador
+preenche uma lista de verificacao. A rubrica VARIA POR DESAFIO -> vive na atividade
+(kind='sap_pratico').
+- Migrations 0021/0022: sap_assessments -> units -> elements -> criteria -> items
+  (Sim/Nao, points, vinculo opcional a competencia/objeto da matriz);
+  sap_evaluations (link de entrega + nota + feedback) + sap_item_marks. RLS
+  encadeada ate o assessment.
+- lib/sap/scoring.ts computeSapScore (nota = soma dos pontos dos itens "Sim"),
+  testado (5 testes). Usada no servidor e no avaliador (nota ao vivo).
+- lib/sap/actions.ts: obterOuCriarSap, atualizarSap, salvarRubrica, entregarSap,
+  carregarMarcacoes, avaliarSap.
+- UI turmas/[id]/ucs/[cu]/sap/[assignmentId]: professor monta rubrica + avalia
+  aluno a aluno; aluno entrega link e ve nota + checklist ✓/✗ + justificativa.
+  kind sap_pratico roteado no hub; form de atividade ganhou saep_simulado/sap_pratico.
+
+25 testes verdes (20 + 5 SAP). Follow-up: somar o SAP ao dashboard por competencia
+(itens ja tem vinculo; falta agregar junto com o teorico).
+
 ## Atualizacao 2026-06-02 — Modularidade (registro de features + testes)
 
 Sem novas features de produto; foco em tornar o projeto mais modular/testavel.

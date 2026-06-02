@@ -21,9 +21,11 @@ mergeado nem rodado na app** (só validado com `tsc`, `eslint` e `supabase db pu
 
 1. **Rodar a app e validar visualmente** o que foi construído (ver "Como testar" abaixo).
    Nada foi clicado num navegador ainda.
-2. **SAP prático** (rubrica/lista de verificação Unidade→Elemento→item Sim/Não/pontos,
-   conforme os PDFs do SENAI) — último item grande do SAEP/SAP.
-3. Quando estável, **merge da branch em `main`**.
+2. **Merge da branch em `main`** — a frente SAEP/SAP está completa (teórico +
+   prático). Bom momento para estabilizar.
+3. Follow-ups menores: somar o **SAP ao dashboard por competência** (os itens já
+   têm vínculo à matriz; falta agregar junto com o teórico); drag-and-drop/realtime
+   no board do projeto integrador; Fase 2 do modelo UC (remover `class_id`).
 
 > **Modularidade**: o projeto é organizado por features desacopladas. Antes de
 > adicionar/remover uma, leia [MODULOS.md](MODULOS.md). Há testes (Vitest):
@@ -89,13 +91,21 @@ projeto integrador, simulado SAEP) é uma `assignment` ligada a um `class_unit`
 - Página `turmas/[id]/ucs/[cu]/duelos-quiz` (lobby criar/entrar + lista + ranking) e
   `[duelId]` (responder/resultado). Links cruzados com os duelos de código.
 
+### 7. SAP prático — rubrica/lista de verificação
+- Migrations `0021`/`0022` + `lib/sap/`: a rubrica varia por desafio, vive na
+  atividade `kind='sap_pratico'`. `sap_assessments`→units→elements→criteria→items
+  (Sim/Não, pontos, vínculo à competência) + `sap_evaluations`/`sap_item_marks`.
+  Nota = soma dos pontos dos itens "Sim" (`lib/sap/scoring.ts`, testado).
+- Página `turmas/[id]/ucs/[cu]/sap/[assignmentId]`: professor monta rubrica + avalia
+  aluno a aluno; aluno entrega link e vê nota + checklist ✓/✗.
+
 ---
 
 ## O que falta (backlog priorizado)
 
 | Prioridade | Item | Observação |
 |---|---|---|
-| Média | **SAP prático** | Rubrica/lista de verificação (Unidade→Elemento→Padrão→item Sim/Não/pontos) ligada à entrega. Ver os PDFs do SENAI (lista de verificação). Último item grande do SAEP/SAP. |
+| Baixa | **SAP no dashboard por competência** | Os itens do SAP já têm vínculo à matriz; falta agregá-los junto com o teórico em `lib/saep/dashboard.ts`. |
 | Média | **Fase 2 do modelo UC** | `class_unit_id` NOT NULL, remover `class_id`, aposentar `/duelos` e `/unity` globais, reclassificar UC "Geral (migrado)". |
 | Baixa | Projeto integrador: drag-and-drop, tempo real (Supabase Realtime), entrega/nota | Polimento do board. |
 | Baixa | Cadastro da matriz de competências por UI | Hoje a action `salvarMatriz` existe, mas falta uma tela amigável para o professor cadastrar a matriz do curso. |
@@ -179,9 +189,9 @@ Se você está no PC onde já fez tudo, pula esta seção.
 
 ## Como invocar a próxima sessão
 
-> "Continuando o projeto, branch `refactor/atividades-na-uc`. SAEP teórico está
-> completo (banco + simulado + dashboard + duelo de quiz). Bora pro **SAP prático**
-> (rubrica/lista de verificação Unidade→Elemento→item Sim/Não/pontos)."
+> "Continuando o projeto, branch `refactor/atividades-na-uc`. A frente SAEP/SAP
+> está completa (teórico + SAP prático). Quero validar na app e depois fazer o
+> merge em `main`."
 
 Ou, se preferir validar antes: "Roda a app e me mostra o fluxo do simulado SAEP
 funcionando (professor monta → aluno responde → resultado → dashboard)."

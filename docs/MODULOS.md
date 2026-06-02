@@ -96,5 +96,6 @@ CURSO → UC → TURMA. Mexer neles afeta várias features:
 | Unity | (em `app/unity`) | 0017 | `/turmas/.../ucs/.../unity` |
 | Projeto integrador | `projects` | 0018 | `/turmas/.../ucs/.../projetos` |
 | SAEP (teórico) | `saep` | 0019, 0020 | `/saep/questoes`, `/turmas/.../ucs/.../simulados`, `.../saep`, `.../duelos-quiz` |
+| SAP (prático) | `sap` | 0021, 0022 | `/turmas/.../ucs/.../sap/[assignmentId]` |
 | Dashboard UC | `dashboard` | — | `/turmas/.../ucs/.../dashboard` |
 | IA | `ai` | 0003 | usada por exercícios e SAEP |
