@@ -21,10 +21,9 @@ mergeado nem rodado na app** (só validado com `tsc`, `eslint` e `supabase db pu
 
 1. **Rodar a app e validar visualmente** o que foi construído (ver "Como testar" abaixo).
    Nada foi clicado num navegador ainda.
-2. **Dashboard SAEP por competência** (o usuário enfatizou) — os dados já existem,
-   falta a tela de agregação.
-3. **Duelos de quiz** (modo SAEP) e **SAP prático** (rubrica/lista de verificação).
-4. Quando estável, **merge da branch em `main`**.
+2. **Duelos de quiz** (modo SAEP nos duelos por UC) e **SAP prático**
+   (rubrica/lista de verificação Unidade→Elemento→item Sim/Não/pontos).
+3. Quando estável, **merge da branch em `main`**.
 
 ---
 
@@ -71,13 +70,19 @@ projeto integrador, simulado SAEP) é uma `assignment` ligada a um `class_unit`
   resolução se habilitado. **Corretas só são expostas após o envio.**
 - Correção automática + XP de bônus (15 por acerto).
 
+### 5. SAEP — dashboard por competência (3ª fatia)
+- `lib/saep/dashboard.ts` (`getSaepDashboard`): % de acerto por competência, objeto
+  de conhecimento e aluno numa UC.
+- Página `turmas/[id]/ucs/[cu]/saep` (só o dono): cards de resumo, "pontos a
+  reforçar" (3 competências de menor acerto), barras por competência/objeto e tabela
+  por aluno. Link na lista de UCs e na página do simulado.
+
 ---
 
 ## O que falta (backlog priorizado)
 
 | Prioridade | Item | Observação |
 |---|---|---|
-| **Alta** | **Dashboard SAEP por competência** | Agregar acertos por capacidade/objeto ("a turma vai mal em Testes", "Anna domina POO"). Dados já em `quiz_answers` + tags das questões. O usuário enfatizou isso. |
 | Média | **Duelos de quiz (SAEP)** | Adaptar duelos por UC (já existem) pro modo "quem acerta mais". |
 | Média | **SAP prático** | Rubrica/lista de verificação (Unidade→Elemento→Padrão→item Sim/Não/pontos) ligada à entrega. Ver os PDFs do SENAI (lista de verificação). |
 | Média | **Fase 2 do modelo UC** | `class_unit_id` NOT NULL, remover `class_id`, aposentar `/duelos` e `/unity` globais, reclassificar UC "Geral (migrado)". |
@@ -163,8 +168,8 @@ Se você está no PC onde já fez tudo, pula esta seção.
 ## Como invocar a próxima sessão
 
 > "Continuando o projeto, branch `refactor/atividades-na-uc`. SAEP teórico está
-> com banco de questões + simulado (montar/responder) prontos. Bora pro
-> **dashboard SAEP por competência** — agregar acertos por capacidade/objeto."
+> completo (banco de questões + simulado + dashboard por competência). Bora pros
+> **duelos de quiz** (modo SAEP) ou pro **SAP prático** (rubrica/lista de verificação)."
 
 Ou, se preferir validar antes: "Roda a app e me mostra o fluxo do simulado SAEP
-funcionando (professor monta → aluno responde → resultado)."
+funcionando (professor monta → aluno responde → resultado → dashboard)."

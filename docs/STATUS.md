@@ -1,5 +1,18 @@
 # Status do projeto
 
+## Atualizacao 2026-06-01 (parte 5) — Dashboard SAEP por competencia
+
+3a fatia do SAEP: o dashboard que orienta o reforco.
+- lib/saep/dashboard.ts (getSaepDashboard): agrega % de acerto por COMPETENCIA e
+  por OBJETO DE CONHECIMENTO (da matriz) e por aluno, percorrendo simulados ->
+  tentativas enviadas -> respostas -> questoes (tags). Reusa o padrao de uc-stats.
+- Pagina turmas/[id]/ucs/[cu]/saep (so dono): cards de resumo, "pontos a reforcar"
+  (3 competencias de menor acerto), barras por competencia/objeto (cor por faixa:
+  <50 vermelho, <70 amarelo, senao verde) e tabela por aluno. Estados vazios.
+- Links: botao SAEP na lista de UCs e atalho na pagina do simulado.
+
+Pendente do SAEP/SAP: duelos de quiz e o SAP pratico (rubrica/lista de verificacao).
+
 ## Atualizacao 2026-06-01 (parte 4) — SAEP simulado (montar + responder)
 
 2a fatia do SAEP: fecha o ciclo teorico para o aluno.
