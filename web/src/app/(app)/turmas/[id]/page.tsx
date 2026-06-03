@@ -40,9 +40,23 @@ export default async function TurmaPage({ params }: { params: Params }) {
 
   const { data: listas } = await supabase
     .from("assignments")
-    .select("id, title, kind, due_at, created_at")
+    .select("id, title, kind, due_at, created_at, class_unit_id")
     .eq("class_id", id)
     .order("created_at", { ascending: false });
+
+  // Cada tipo de atividade tem sua tela. Lista/desafio/prova vão para a tela de
+  // lista; os tipos especiais têm páginas dedicadas dentro da UC.
+  const activityHref = (a: {
+    id: string;
+    kind: string;
+    class_unit_id: string | null;
+  }) => {
+    const cu = a.class_unit_id;
+    if (cu && a.kind === "saep_simulado") return `/turmas/${id}/ucs/${cu}/simulados/${a.id}`;
+    if (cu && a.kind === "sap_pratico") return `/turmas/${id}/ucs/${cu}/sap/${a.id}`;
+    if (cu && a.kind === "projeto_integrador") return `/turmas/${id}/ucs/${cu}/projetos/${a.id}`;
+    return `/turmas/${id}/listas/${a.id}`;
+  };
 
   const owner = turma.owner as unknown as { display_name: string } | null;
 
@@ -144,7 +158,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
           {listas?.map((lista) => (
             <Link
               key={lista.id}
-              href={`/turmas/${id}/listas/${lista.id}`}
+              href={activityHref(lista)}
               className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 hover:border-primary/40 transition-colors"
             >
               <div>
