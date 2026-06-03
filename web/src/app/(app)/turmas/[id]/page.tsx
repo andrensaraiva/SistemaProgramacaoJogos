@@ -44,6 +44,16 @@ export default async function TurmaPage({ params }: { params: Params }) {
     .eq("class_id", id)
     .order("created_at", { ascending: false });
 
+  // UCs vinculadas a esta turma — para atalhos diretos de Dashboard/SAEP/Atividades.
+  const { data: classUnits } = await supabase
+    .from("class_units")
+    .select("id, uc:curricular_units!uc_id(title)")
+    .eq("class_id", id);
+  const ucList = (classUnits ?? []).map((cu) => ({
+    id: cu.id as string,
+    title: (cu.uc as unknown as { title: string } | null)?.title ?? "UC",
+  }));
+
   // Cada tipo de atividade tem sua tela. Lista/desafio/prova vão para a tela de
   // lista; os tipos especiais têm páginas dedicadas dentro da UC.
   const activityHref = (a: {
@@ -177,7 +187,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
         </div>
       </section>
 
-      {/* Unidades curriculares + frequência (professor only) */}
+      {/* Unidades curriculares + dashboards (professor only) */}
       {isOwner && (
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -186,11 +196,35 @@ export default async function TurmaPage({ params }: { params: Params }) {
               <Button variant="secondary">Gerenciar UCs e frequência</Button>
             </Link>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Vincule as unidades curriculares que você leciona nesta turma,
-            escolha o plano de ensino e controle a frequência (presença, falta e
-            atraso) por aula.
-          </p>
+
+          {ucList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma UC vinculada ainda. Use &quot;Gerenciar UCs e frequência&quot;
+              para vincular as unidades que você leciona.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {ucList.map((cu) => (
+                <div
+                  key={cu.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4"
+                >
+                  <span className="font-medium">{cu.title}</span>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/turmas/${id}/ucs/${cu.id}/atividades`}>
+                      <Button variant="secondary">Atividades</Button>
+                    </Link>
+                    <Link href={`/turmas/${id}/ucs/${cu.id}/dashboard`}>
+                      <Button variant="secondary">Dashboard</Button>
+                    </Link>
+                    <Link href={`/turmas/${id}/ucs/${cu.id}/saep`}>
+                      <Button>Dashboard SAEP/SAP</Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
