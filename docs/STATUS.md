@@ -1,5 +1,177 @@
 # Status do projeto
 
+## Atualizacao 2026-06-02 (parte 3) — Dashboard combina SAEP + SAP
+
+Follow-up: o dashboard por competencia/objeto agora agrega as DUAS avaliacoes.
+- getSaepDashboard soma, alem das respostas do SAEP teorico (quiz_answers), os
+  itens do SAP pratico (sap_item_marks das avaliacoes fechadas; item "Sim" =
+  acerto). overall e as barras por competencia/objeto refletem teorico + pratico.
+  Tabela por aluno segue focada no teorico. Novos campos totalSapAssessments/
+  totalSapEvaluations; cards e legendas atualizados; empty states consideram SAP.
+- 25 testes verdes. Frente SAEP/SAP totalmente fechada.
+
+## Atualizacao 2026-06-02 (parte 2) — SAP pratico (rubrica/lista de verificacao)
+
+Fecha a frente SAEP/SAP. SAP = prova PRATICA: aluno entrega artefato e o avaliador
+preenche uma lista de verificacao. A rubrica VARIA POR DESAFIO -> vive na atividade
+(kind='sap_pratico').
+- Migrations 0021/0022: sap_assessments -> units -> elements -> criteria -> items
+  (Sim/Nao, points, vinculo opcional a competencia/objeto da matriz);
+  sap_evaluations (link de entrega + nota + feedback) + sap_item_marks. RLS
+  encadeada ate o assessment.
+- lib/sap/scoring.ts computeSapScore (nota = soma dos pontos dos itens "Sim"),
+  testado (5 testes). Usada no servidor e no avaliador (nota ao vivo).
+- lib/sap/actions.ts: obterOuCriarSap, atualizarSap, salvarRubrica, entregarSap,
+  carregarMarcacoes, avaliarSap.
+- UI turmas/[id]/ucs/[cu]/sap/[assignmentId]: professor monta rubrica + avalia
+  aluno a aluno; aluno entrega link e ve nota + checklist ✓/✗ + justificativa.
+  kind sap_pratico roteado no hub; form de atividade ganhou saep_simulado/sap_pratico.
+
+25 testes verdes (20 + 5 SAP). Follow-up: somar o SAP ao dashboard por competencia
+(itens ja tem vinculo; falta agregar junto com o teorico).
+
+## Atualizacao 2026-06-02 — Modularidade (registro de features + testes)
+
+Sem novas features de produto; foco em tornar o projeto mais modular/testavel.
+- docs/MODULOS.md: arquitetura modular (features desacopladas em lib/; como
+  add/remover; pontos de juncao compartilhados; o que ainda nao e modular).
+- lib/features.ts: registro central da navegacao lateral (flag enabled liga/desliga
+  feature num lugar so; professorOnly). app-sidebar.tsx consome getNavGroups().
+- Vitest instalado (npm run test / test:watch; verify agora roda test). Logica pura
+  extraida das actions para modulos testaveis:
+  - lib/saep/scoring.ts (elo, countCorrect, scorePercent, decideDuelWinner) usada
+    por lib/saep/duelo.ts.
+  - lib/dashboard/bands.ts (performanceBand) usada no dashboard SAEP.
+  20 testes verdes (ELO, correcao, vencedor de duelo, faixas, registro de nav).
+
+Confirmado na auditoria: nenhuma feature em lib/ importa outra feature (so auth/
+supabase/ui/features). Ainda NAO ha hot-plug nem e2e; tronco compartilhado
+(assignment_kind, class_units) e intencional.
+
+## Atualizacao 2026-06-01 (parte 6) — Duelo de quiz (SAEP)
+
+Modo gamificado do SAEP: X1 de questoes teoricas na UC. Dois alunos respondem o
+mesmo conjunto sorteado; vence quem acerta mais (desempate por tempo). ELO reusa
+duel_ratings (mesmo ranking dos duelos de codigo por UC).
+- Migration 0020: quiz_duels + quiz_duel_questions (snapshot) + quiz_duel_answers
+  + quiz_duel_finishes. RLS: participantes/dono leem; challenger cria (membro da UC).
+- lib/saep/duelo.ts: criarDueloQuiz (sorteia 3-10 questoes), entrarNoDueloQuiz
+  (codigo), responderDueloQuiz (corrige + apura vencedor + ELO quando ambos
+  terminam), cancelarDueloQuiz.
+- Pagina turmas/[id]/ucs/[cu]/duelos-quiz (lobby criar/entrar + lista + ranking) e
+  [duelId] (responder com tempo / resultado com placar + gabarito apos finalizar).
+  Links cruzados com os duelos de codigo.
+
+Pendente do SAEP/SAP: SAP pratico (rubrica/lista de verificacao).
+
+## Atualizacao 2026-06-01 (parte 5) — Dashboard SAEP por competencia
+
+3a fatia do SAEP: o dashboard que orienta o reforco.
+- lib/saep/dashboard.ts (getSaepDashboard): agrega % de acerto por COMPETENCIA e
+  por OBJETO DE CONHECIMENTO (da matriz) e por aluno, percorrendo simulados ->
+  tentativas enviadas -> respostas -> questoes (tags). Reusa o padrao de uc-stats.
+- Pagina turmas/[id]/ucs/[cu]/saep (so dono): cards de resumo, "pontos a reforcar"
+  (3 competencias de menor acerto), barras por competencia/objeto (cor por faixa:
+  <50 vermelho, <70 amarelo, senao verde) e tabela por aluno. Estados vazios.
+- Links: botao SAEP na lista de UCs e atalho na pagina do simulado.
+
+Pendente do SAEP/SAP: duelos de quiz e o SAP pratico (rubrica/lista de verificacao).
+
+## Atualizacao 2026-06-01 (parte 4) — SAEP simulado (montar + responder)
+
+2a fatia do SAEP: fecha o ciclo teorico para o aluno.
+- Simulado e atividade kind=saep_simulado na UC; pagina chaveada pelo assignment_id
+  em turmas/[id]/ucs/[cu]/simulados/[assignmentId]. quiz_simulados resolvido/criado
+  pelo professor na 1a visita (obterOuCriarSimulado).
+- Professor (_manager): configura (titulo/descricao/tempo/mostrar gabarito) e monta
+  selecionando questoes do banco; resumo de envios.
+- Aluno (_responder): iniciar -> responder (1 alternativa/questao, cronometro que
+  envia ao zerar) -> envio unico -> resultado (%/acertos) + gabarito/justificativa/
+  resolucao se habilitado. Corretas so expostas apos envio.
+- Actions novas: obterOuCriarSimulado, atualizarSimulado. Correcao automatica + XP
+  ja vinham da 1a fatia.
+
+Pendente do SAEP/SAP: dashboard por competencia (dados ja existem), duelos de quiz,
+e o SAP pratico (rubrica/lista de verificacao).
+
+## Atualizacao 2026-06-01 (parte 3) — SAEP teorico (1a fatia)
+
+SAEP = prova TEORICA do SENAI (multipla escolha). SAP = prova PRATICA. O instrutor
+prepara os alunos com simulados. O instrutor e o dono: entrada manual de questoes
+e o caminho principal; a IA so sugere (ele revisa).
+
+Migration `0019_saep_teorico.sql` (aditiva, aplicada):
+- Matriz POR CURSO: competency_matrices -> competencies (C1-C8) + knowledge_objects
+  (A-T). A matriz e DADO (multi-curso); questoes mapeiam a esses codigos.
+- Banco: quiz_questions (contexto/comando/resolucao + tags) + quiz_options (A-E,
+  correta, justificativa por alternativa). Formato oficial Contexto+Comando.
+- Simulado = atividade kind='saep_simulado' (1:1 quiz_simulados) +
+  quiz_simulado_questions; quiz_attempts/quiz_answers (correcao automatica + XP).
+
+App:
+- lib/saep/actions.ts (matriz, questao manual, simulado, tentativa) e lib/saep/ai.ts
+  (gera questao no formato SAEP via Gemini, revisada pelo instrutor).
+- Banco de questoes em /saep/questoes (lista/nova/editar) com editor manual +
+  botao "Gerar sugestao". Link SAEP na sidebar (professor).
+
+**Feito so a 1a fatia.** Pendente: UI do simulado dentro da UC (montar/responder),
+**dashboard SAEP por competencia** (enfatizado pelo usuario), duelos de quiz, e o
+**SAP pratico** (rubrica/lista de verificacao Unidade->Elemento->item Sim/Nao/pontos).
+
+## Atualizacao 2026-06-01 (parte 2) — Projeto Integrador (TCC)
+
+Projeto integrador (TCC do SENAI) como **atividade da UC** (kind=projeto_integrador),
+que o professor inicia quando quiser (cedo ou no fim do curso).
+
+Migration `0018_projeto_integrador.sql` (aditiva, aplicada):
+- `projects` (1:1 com a atividade) -> `project_sprints` -> `project_tasks` (cards)
+  por grupo, com `task_status` (a_fazer/fazendo/concluido), responsavel, sprint, ord.
+- RLS: professor dono da UC gerencia tudo e ve todos os boards; membros do grupo
+  (`is_group_member`) gerenciam os cards do proprio board.
+
+App:
+- `lib/projects/actions.ts`: criarOuObterProjeto, criar/excluirSprint,
+  criar/mover/excluirCard (mover por botao, **sem drag** por ora).
+- Pagina `.../ucs/[cu]/projetos/[assignmentId]`: setup (professor) + sprints +
+  board estilo Trello por grupo (3 colunas). Aluno ve so o board do seu grupo.
+
+**Pendente nesta feature:** drag-and-drop (hoje move por botao); tempo real
+(Supabase Realtime) para edicao simultanea; entrega/nota do projeto.
+
+## Atualizacao 2026-06-01
+
+**Reorientacao do modelo: atividades dentro da UC (turma x UC)**. A plataforma
+deixou de ser "Duolingo" (exercicios soltos, atribuicoes por turma) e passou a
+ser orientada a CURSO -> UC -> TURMA. Toda atividade (lista, prova, desafio,
+duelo, Unity, projeto integrador) agora vive num `class_unit`.
+
+Branch: `refactor/atividades-na-uc` (ainda nao mergeada em `main`).
+
+Migrations (aditivas, idempotentes, com backfill conservador — ja aplicadas):
+- `0015_assignments_na_uc.sql`: `assignments.class_unit_id` +
+  `teaching_plan_block_id`; novos `assignment_kind` (duelo/unity/projeto_integrador);
+  helpers `owns_class_unit`/`member_of_class_unit`; RLS aceita os dois caminhos.
+  Backfill: turma com UC unica usa ela; senao cria UC "Geral (migrado)".
+- `0016_duelos_na_uc.sql`: `duels.class_unit_id` + tabela `duel_ratings` (ELO
+  contextual por UC). `profiles.duel_rating/_wins/_losses` ficam por compat.
+- `0017_unity_na_uc.sql`: `github_classroom_repos.class_unit_id` + `assignment_id`.
+
+App:
+- `criarAtividadeNaUc` (em `lib/turmas/actions.ts`) e hub em
+  `turmas/[id]/ucs/[classUnitId]/atividades`.
+- Duelos por UC: `createDuelNaUc`, `finishDuel/cancelDuel` gravam `duel_ratings`
+  quando ha UC; pagina `.../ucs/[cu]/duelos` com ranking contextual.
+- Unity por UC: `syncGithubRepo` aceita `class_unit_id`; pagina `.../ucs/[cu]/unity`.
+- Links Atividades/Duelos/Unity na lista de UCs da turma.
+
+**Fase 2 pendente** (apos UI 100% migrada e dados conferidos): tornar
+`class_unit_id` NOT NULL e remover `class_id` de assignments/duels/repos; mover ou
+aposentar as rotas globais `/duelos` e `/unity`; reclassificar atividades que
+cairam na UC "Geral (migrado)".
+
+**Proximo na fila do usuario**: SAEP (provas praticas+objetivas por curso) e
+projeto integrador — viram novos tipos de atividade da UC.
+
 ## Atualizacao 2026-06-01 (deploy iniciado)
 
 Deploy de producao iniciado. Host do Piston escolhido: **Oracle Cloud Always
@@ -15,16 +187,13 @@ Proximo passo do usuario: criar conta/VM na Oracle e rodar o script. Depois:
 Supabase (migrations) + Vercel (import `web/` + env vars). Reforco de seguranca
 pendente (opcional): header secreto entre plataforma e Nginx.
 
-## Atualizacao 2026-06-01
+## Atualizacao 2026-06-01 (deploy — correcao de guia)
 
 Correcao no guia de deploy (`docs/DEPLOY.md`):
 - `GEMINI_MODEL` ajustado de `gemini-1.5-flash` (aposentado) para
   `gemini-flash-latest`, alinhado ao resto do projeto.
 - Removida referencia ao `web/.env.production.example` (inexistente); agora o
   guia aponta para o `web/.env.example` real como referencia das variaveis.
-
-Deploy ainda nao realizado. Bloqueio pratico principal: hospedar o Piston fora
-da Vercel (Fly.io/Railway/VPS) antes do deploy de producao.
 
 ## Atualizacao 2026-05-31
 

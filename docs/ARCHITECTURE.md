@@ -37,21 +37,43 @@ mesmos poderes na UI (`isProfessor()` cobre ambos). Não há painel admin dedica
 - `teaching_plans` (privado, clonável) → `teaching_plan_blocks`.
 - `class_units` liga turma↔UC↔plano. `attendance_sessions` (aulas, com `period` = aula do dia) → `attendance_marks` (presente/atraso/falta).
 
+**Atividades dentro da UC** (modelo CURSO → UC → TURMA)
+- Toda atividade é uma `assignment` ligada a um `class_unit` (turma × UC) via
+  `assignments.class_unit_id` — não mais solta por turma. `assignment_kind` ∈
+  `lista | desafio | prova | duelo | unity | projeto_integrador | saep_simulado`.
+- `class_id` ainda existe nas tabelas por compat (Fase 2 remove). Hub de atividades
+  em `turmas/[id]/ucs/[classUnitId]/atividades`.
+
 **Exercícios e entregas**
+- `exercises` é **banco reutilizável** (do autor, clonável); só a atribuição vincula à UC.
 - `exercises.exercise_type` ∈ `codigo | apresentacao | modelo_resposta`; `is_group`; `response_template`.
-- `assignments` (listas da turma) ↔ `assignment_exercises` ↔ `exercises`.
+- `assignments` ↔ `assignment_exercises` ↔ `exercises`.
 - `submissions`: código (`code`, testado pelo Piston) **ou** entrega não-código
   (`submission_link`, `response_text`), com `group_id` para entrega de grupo.
   Status: `rodando|aprovado|reprovado|erro|entregue`. Nota manual em `manual_grade`/`manual_feedback`.
 
+**Duelos** (`duels.class_unit_id`) e **Unity** (`github_classroom_repos.class_unit_id`)
+acontecem dentro da UC. ELO de duelo é **contextual** por UC (`duel_ratings`), não global.
+
+**Projeto integrador (TCC)**: `projects` (1:1 com a atividade `projeto_integrador`)
+→ `project_sprints` → `project_tasks` (board estilo Trello por grupo, `class_groups`).
+
+**SAEP (prova teórica)**: matriz **por curso** (`competency_matrices` →
+`competencies` C1-C8 + `knowledge_objects` A-T). Banco `quiz_questions` +
+`quiz_options` (A-E, correta, justificativa). Simulado = atividade `saep_simulado`
+(`quiz_simulados` + `quiz_simulado_questions`); `quiz_attempts`/`quiz_answers` com
+correção automática. Geração de questão por IA em `lib/saep/ai.ts` (instrutor revisa).
+
 **Gamificação**: trigger `handle_approved_submission_rewards` dá XP/badges **só para
 código aprovado** (guarda por `exercise_type`). Entregas não-código têm nota manual.
+Simulado SAEP dá XP por acerto (na action `enviarTentativa`).
 
 ## RLS — padrão obrigatório (sem recursão)
 Policies **nunca** consultam outra tabela com RLS diretamente — isso causa
 recursão infinita (`stack depth limit exceeded`). Em vez disso, use as funções
 `SECURITY DEFINER` (leem sem reavaliar RLS):
-`is_professor`, `is_class_owner`, `is_class_member`, `is_group_member`, `teaches_student`, `owns_course`.
+`is_professor`, `is_class_owner`, `is_class_member`, `is_group_member`,
+`teaches_student`, `owns_course`, `owns_class_unit`, `member_of_class_unit`.
 
 Exemplo:
 ```sql

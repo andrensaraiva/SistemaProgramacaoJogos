@@ -40,11 +40,35 @@ export default async function TurmaPage({ params }: { params: Params }) {
 
   const { data: listas } = await supabase
     .from("assignments")
-    .select("id, title, kind, due_at, created_at")
+    .select("id, title, kind, due_at, created_at, class_unit_id")
     .eq("class_id", id)
     .order("created_at", { ascending: false });
 
-  const owner = turma.owner as unknown as { display_name: string };
+  // UCs vinculadas a esta turma — para atalhos diretos de Dashboard/SAEP/Atividades.
+  const { data: classUnits } = await supabase
+    .from("class_units")
+    .select("id, uc:curricular_units!uc_id(title)")
+    .eq("class_id", id);
+  const ucList = (classUnits ?? []).map((cu) => ({
+    id: cu.id as string,
+    title: (cu.uc as unknown as { title: string } | null)?.title ?? "UC",
+  }));
+
+  // Cada tipo de atividade tem sua tela. Lista/desafio/prova vão para a tela de
+  // lista; os tipos especiais têm páginas dedicadas dentro da UC.
+  const activityHref = (a: {
+    id: string;
+    kind: string;
+    class_unit_id: string | null;
+  }) => {
+    const cu = a.class_unit_id;
+    if (cu && a.kind === "saep_simulado") return `/turmas/${id}/ucs/${cu}/simulados/${a.id}`;
+    if (cu && a.kind === "sap_pratico") return `/turmas/${id}/ucs/${cu}/sap/${a.id}`;
+    if (cu && a.kind === "projeto_integrador") return `/turmas/${id}/ucs/${cu}/projetos/${a.id}`;
+    return `/turmas/${id}/listas/${a.id}`;
+  };
+
+  const owner = turma.owner as unknown as { display_name: string } | null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -63,7 +87,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
               {turma.description}
             </p>
           )}
-          {!isOwner && (
+          {!isOwner && owner && (
             <p className="mt-1 text-xs text-muted-foreground">
               Prof. {owner.display_name}
             </p>
@@ -144,7 +168,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
           {listas?.map((lista) => (
             <Link
               key={lista.id}
-              href={`/turmas/${id}/listas/${lista.id}`}
+              href={activityHref(lista)}
               className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 hover:border-primary/40 transition-colors"
             >
               <div>
@@ -163,7 +187,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
         </div>
       </section>
 
-      {/* Unidades curriculares + frequência (professor only) */}
+      {/* Unidades curriculares + dashboards (professor only) */}
       {isOwner && (
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -172,11 +196,35 @@ export default async function TurmaPage({ params }: { params: Params }) {
               <Button variant="secondary">Gerenciar UCs e frequência</Button>
             </Link>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Vincule as unidades curriculares que você leciona nesta turma,
-            escolha o plano de ensino e controle a frequência (presença, falta e
-            atraso) por aula.
-          </p>
+
+          {ucList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma UC vinculada ainda. Use &quot;Gerenciar UCs e frequência&quot;
+              para vincular as unidades que você leciona.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {ucList.map((cu) => (
+                <div
+                  key={cu.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4"
+                >
+                  <span className="font-medium">{cu.title}</span>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/turmas/${id}/ucs/${cu.id}/atividades`}>
+                      <Button variant="secondary">Atividades</Button>
+                    </Link>
+                    <Link href={`/turmas/${id}/ucs/${cu.id}/dashboard`}>
+                      <Button variant="secondary">Dashboard</Button>
+                    </Link>
+                    <Link href={`/turmas/${id}/ucs/${cu.id}/saep`}>
+                      <Button>Dashboard SAEP/SAP</Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

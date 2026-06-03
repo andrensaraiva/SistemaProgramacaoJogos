@@ -27,6 +27,27 @@ const ListaSchema = z.object({
   due_at: z.string().trim().optional(),
 });
 
+// Atividades agora nascem DENTRO de uma UC (turma × UC). Os tipos extras
+// (duelo/unity/projeto_integrador) entraram no enum assignment_kind na migration
+// 0015. A leitura de membros/posse é resolvida via o class_unit.
+const AtividadeSchema = z.object({
+  title: z.string().min(3, { error: "Titulo deve ter pelo menos 3 caracteres" }).trim(),
+  kind: z
+    .enum([
+      "lista",
+      "desafio",
+      "prova",
+      "duelo",
+      "unity",
+      "projeto_integrador",
+      "saep_simulado",
+      "sap_pratico",
+    ])
+    .default("lista"),
+  due_at: z.string().trim().optional(),
+  teaching_plan_block_id: z.string().uuid().optional().or(z.literal("")),
+});
+
 export async function criarTurma(
   _prev: TurmaFormState,
   formData: FormData,
@@ -230,4 +251,64 @@ export async function excluirLista(formData: FormData): Promise<void> {
   await supabase.from("assignments").delete().eq("id", id);
   revalidatePath(`/turmas/${classId}`);
   redirect(`/turmas/${classId}`);
+}
+
+// -----------------------------------------------------------------------------
+// Atividades dentro da UC (turma × UC) — novo modelo orientado a curso/UC.
+// O class_unit_id resolve a turma e a posse; gravamos também class_id por
+// compat com as telas/queries antigas enquanto a coluna não é removida.
+// -----------------------------------------------------------------------------
+export async function criarAtividadeNaUc(
+  classId: string,
+  classUnitId: string,
+  _prev: TurmaFormState,
+  formData: FormData,
+): Promise<TurmaFormState> {
+  const { user } = await verifySession();
+  const parsed = AtividadeSchema.safeParse({
+    title: formData.get("title"),
+    kind: formData.get("kind") || "lista",
+    due_at: formData.get("due_at") || undefined,
+    teaching_plan_block_id: formData.get("teaching_plan_block_id") || "",
+  });
+
+  if (!parsed.success) {
+    return { errors: z.flattenError(parsed.error).fieldErrors };
+  }
+
+  const admin = createAdminClient();
+
+  // Posse: a turma do class_unit precisa ser do professor atual.
+  const { data: cu } = await admin
+    .from("class_units")
+    .select("id, class_id, class:classes!class_id(owner_id)")
+    .eq("id", classUnitId)
+    .single();
+  const owner = (cu?.class as unknown as { owner_id: string } | undefined)?.owner_id;
+  if (!cu || cu.class_id !== classId) {
+    return { message: "Unidade curricular invalida para esta turma." };
+  }
+  if (owner !== user.id) {
+    return { message: "Voce nao e dono desta turma." };
+  }
+
+  const { data, error } = await admin
+    .from("assignments")
+    .insert({
+      class_id: classId,
+      class_unit_id: classUnitId,
+      title: parsed.data.title,
+      kind: parsed.data.kind,
+      due_at: parsed.data.due_at || null,
+      teaching_plan_block_id: parsed.data.teaching_plan_block_id || null,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return { message: "Erro ao criar atividade. Tente novamente." };
+  }
+
+  revalidatePath(`/turmas/${classId}/ucs/${classUnitId}`);
+  redirect(`/turmas/${classId}/listas/${data.id}`);
 }

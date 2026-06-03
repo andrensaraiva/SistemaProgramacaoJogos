@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import { Logo } from "@/components/logo";
+import { getNavGroups, type IconKey } from "@/lib/features";
 
 type Item = { href: string; label: string; icon: ReactNode };
 type Group = { title: string; items: Item[] };
@@ -32,29 +33,30 @@ const I = {
   unity: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>
   ),
+  saep: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+  ),
 };
 
+// Mapa de IconKey (registro de features) -> SVG. Ícones são JSX, então ficam
+// aqui; o registro (lib/features.ts) referencia só a chave.
+const ICONS: Record<IconKey, ReactNode> = {
+  painel: I.painel,
+  code: I.code,
+  duelo: I.duelo,
+  trofeu: I.trofeu,
+  turma: I.turma,
+  curso: I.curso,
+  saep: I.saep,
+  unity: I.unity,
+};
+
+// Constrói os grupos do menu a partir do registro central de features.
 function buildGroups(isProf: boolean): Group[] {
-  const groups: Group[] = [
-    {
-      title: "Aprender",
-      items: [
-        { href: "/painel", label: "Painel", icon: I.painel },
-        { href: "/exercicios", label: "Exercícios", icon: I.code },
-        { href: "/duelos", label: "Duelos", icon: I.duelo },
-        { href: "/ranking", label: "Ranking", icon: I.trofeu },
-      ],
-    },
-    {
-      title: "Turmas",
-      items: [
-        { href: "/turmas", label: "Turmas", icon: I.turma },
-        ...(isProf ? [{ href: "/cursos", label: "Cursos", icon: I.curso }] : []),
-        { href: "/unity", label: "Unity", icon: I.unity },
-      ],
-    },
-  ];
-  return groups;
+  return getNavGroups(isProf).map((g) => ({
+    title: g.title,
+    items: g.items.map((f) => ({ href: f.href, label: f.label, icon: ICONS[f.icon] })),
+  }));
 }
 
 function NavLinks({

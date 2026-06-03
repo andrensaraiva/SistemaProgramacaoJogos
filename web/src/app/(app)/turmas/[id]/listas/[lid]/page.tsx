@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ConfirmForm } from "@/components/confirm-form";
 import { Button } from "@/components/ui/button";
@@ -73,13 +73,22 @@ export default async function ListaProgressoPage({ params }: { params: Params })
   const { data: lista } = await supabase
     .from("assignments")
     .select(
-      "id, title, kind, due_at, class_id, class:classes!class_id(id, name, owner_id)",
+      "id, title, kind, due_at, class_id, class_unit_id, class:classes!class_id(id, name, owner_id)",
     )
     .eq("id", lid)
     .eq("class_id", id)
     .single();
 
   if (!lista) notFound();
+
+  // Atividades de tipo especial têm telas dedicadas (não são lista de exercícios).
+  // Redireciona para a página certa (rede de segurança para qualquer link antigo).
+  if (lista.class_unit_id) {
+    const cuBase = `/turmas/${id}/ucs/${lista.class_unit_id}`;
+    if (lista.kind === "saep_simulado") redirect(`${cuBase}/simulados/${lista.id}`);
+    if (lista.kind === "sap_pratico") redirect(`${cuBase}/sap/${lista.id}`);
+    if (lista.kind === "projeto_integrador") redirect(`${cuBase}/projetos/${lista.id}`);
+  }
 
   const cls = lista.class as unknown as {
     id: string;
