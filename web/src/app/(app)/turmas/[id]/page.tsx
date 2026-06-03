@@ -44,7 +44,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
     .eq("class_id", id)
     .order("created_at", { ascending: false });
 
-  const owner = turma.owner as unknown as { display_name: string };
+  const owner = turma.owner as unknown as { display_name: string } | null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -63,7 +63,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
               {turma.description}
             </p>
           )}
-          {!isOwner && (
+          {!isOwner && owner && (
             <p className="mt-1 text-xs text-muted-foreground">
               Prof. {owner.display_name}
             </p>
