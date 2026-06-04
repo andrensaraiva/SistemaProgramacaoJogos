@@ -29,6 +29,13 @@ describe("registro de features (navegação)", () => {
     }
   });
 
+  it("só admin vê features adminOnly", () => {
+    const profIds = getNavGroups(true, false).flatMap((g) => g.items.map((i) => i.id));
+    expect(profIds).not.toContain("admin");
+    const adminIds = getNavGroups(true, true).flatMap((g) => g.items.map((i) => i.id));
+    expect(adminIds).toContain("admin");
+  });
+
   it("não retorna grupos vazios", () => {
     for (const g of getNavGroups(false)) {
       expect(g.items.length).toBeGreaterThan(0);

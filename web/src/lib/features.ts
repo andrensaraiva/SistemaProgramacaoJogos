@@ -18,7 +18,8 @@ export type IconKey =
   | "turma"
   | "curso"
   | "saep"
-  | "unity";
+  | "unity"
+  | "admin";
 
 export type FeatureNavItem = {
   /** id estável da feature (para testes/telemetria). */
@@ -27,9 +28,11 @@ export type FeatureNavItem = {
   label: string;
   icon: IconKey;
   /** Em qual grupo do menu aparece. */
-  group: "Aprender" | "Turmas";
+  group: "Aprender" | "Turmas" | "Administração";
   /** Só professores/admin veem? */
   professorOnly?: boolean;
+  /** Só admin vê? */
+  adminOnly?: boolean;
   /** Liga/desliga a feature no menu. */
   enabled: boolean;
 };
@@ -45,18 +48,24 @@ export const FEATURES: FeatureNavItem[] = [
   { id: "cursos", href: "/cursos", label: "Cursos", icon: "curso", group: "Turmas", professorOnly: true, enabled: true },
   { id: "saep", href: "/saep/questoes", label: "SAEP", icon: "saep", group: "Turmas", professorOnly: true, enabled: true },
   { id: "unity", href: "/unity", label: "Unity", icon: "unity", group: "Turmas", enabled: true },
+
+  { id: "admin", href: "/admin", label: "Administração", icon: "admin", group: "Administração", adminOnly: true, enabled: true },
 ];
 
 export type NavGroup = { title: string; items: FeatureNavItem[] };
 
 /** Monta os grupos visíveis para o papel atual, respeitando `enabled`. */
-export function getNavGroups(isProf: boolean): NavGroup[] {
-  const titles: NavGroup["title"][] = ["Aprender", "Turmas"];
+export function getNavGroups(isProf: boolean, isAdmin = false): NavGroup[] {
+  const titles: NavGroup["title"][] = ["Aprender", "Turmas", "Administração"];
   return titles
     .map((title) => ({
       title,
       items: FEATURES.filter(
-        (f) => f.enabled && f.group === title && (!f.professorOnly || isProf),
+        (f) =>
+          f.enabled &&
+          f.group === title &&
+          (!f.professorOnly || isProf) &&
+          (!f.adminOnly || isAdmin),
       ),
     }))
     .filter((g) => g.items.length > 0);

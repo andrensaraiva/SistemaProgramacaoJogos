@@ -14,7 +14,7 @@ export function LoginForm({ proximo }: { proximo: string }) {
       <input type="hidden" name="proximo" value={proximo} />
 
       <Field
-        label="E-mail"
+        label="E-mail (institucional ou pessoal)"
         htmlFor="email"
         error={state?.errors?.email?.[0]}
       >

@@ -1,15 +1,22 @@
 import { AppSidebar } from "@/components/app-sidebar";
+import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { XpBar } from "@/components/xp-bar";
 import { logout } from "@/lib/auth/actions";
 import { getProfile } from "@/lib/auth/dal";
+import { listarNotificacoes } from "@/lib/notifications/actions";
 
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const profile = await getProfile();
   const isProf = profile?.role === "professor" || profile?.role === "admin";
+  const isAdmin = profile?.role === "admin";
+  const roleLabel = isAdmin ? "Administrador" : isProf ? "Professor" : "Aluno";
+
+  const notifications = profile ? await listarNotificacoes() : [];
+  const unread = notifications.filter((n) => !n.read_at).length;
 
   const sidebarFooter = profile ? (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-3">
@@ -22,7 +29,7 @@ export default async function AppLayout({
             {profile.display_name}
           </div>
           <div className="text-xs leading-tight text-muted-foreground">
-            {isProf ? "Professor" : "Aluno"}
+            {roleLabel}
           </div>
         </div>
       </div>
@@ -40,10 +47,17 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <AppSidebar isProf={isProf} footer={sidebarFooter} />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 sm:px-8">
-        {children}
-      </main>
+      <AppSidebar isProf={isProf} isAdmin={isAdmin} footer={sidebarFooter} />
+      <div className="flex w-full flex-1 flex-col">
+        {profile && (
+          <div className="flex items-center justify-end border-b border-border px-5 py-2 sm:px-8">
+            <NotificationBell notifications={notifications} unread={unread} />
+          </div>
+        )}
+        <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 sm:px-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

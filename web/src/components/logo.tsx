@@ -16,11 +16,11 @@ export function Logo({
           background: "linear-gradient(135deg, var(--primary), var(--accent))",
         }}
       >
-        {"</>"}
+        {"✦"}
       </span>
       {!compact && (
         <span className="text-base">
-          Sistema <span className="text-gradient">Jogos</span>
+          Celeste <span className="text-gradient">Academy</span>
         </span>
       )}
     </span>

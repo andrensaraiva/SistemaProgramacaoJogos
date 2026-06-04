@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/", "/entrar", "/cadastrar", "/auth"];
+const PUBLIC_ROUTES = ["/", "/entrar", "/esqueci-senha", "/auth"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -45,7 +45,28 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && (path === "/entrar" || path === "/cadastrar")) {
+  // Usuário logado que precisa de primeiro acesso (trocar senha / completar
+  // perfil) é mantido em /primeiro-acesso até concluir. Logout e callbacks de
+  // auth ficam de fora para não criar laço.
+  if (user) {
+    const isPrimeiroAcesso = path === "/primeiro-acesso";
+    const isAuthFlow = path.startsWith("/auth");
+    if (!isPrimeiroAcesso && !isAuthFlow) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("must_change_password, profile_completed")
+        .eq("id", user.id)
+        .single();
+      if (profile && (profile.must_change_password || !profile.profile_completed)) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/primeiro-acesso";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
+  if (user && path === "/entrar") {
     const url = request.nextUrl.clone();
     url.pathname = "/painel";
     return NextResponse.redirect(url);

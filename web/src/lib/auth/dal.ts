@@ -32,7 +32,9 @@ export const getProfile = cache(async () => {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses")
+    .select(
+      "id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses, personal_email, institutional_email, must_change_password, profile_completed",
+    )
     .eq("id", user.id)
     .single();
 
@@ -57,7 +59,9 @@ export const getProfile = cache(async () => {
       },
       { onConflict: "id" },
     )
-    .select("id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses")
+    .select(
+      "id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses, personal_email, institutional_email, must_change_password, profile_completed",
+    )
     .single();
 
   if (repairError || !repairedProfile) return null;
@@ -67,4 +71,21 @@ export const getProfile = cache(async () => {
 export const isProfessor = cache(async () => {
   const profile = await getProfile();
   return profile?.role === "professor" || profile?.role === "admin";
+});
+
+export const isAdmin = cache(async () => {
+  const profile = await getProfile();
+  return profile?.role === "admin";
+});
+
+/** Quantidade de notificações não lidas do usuário atual (para o sino). */
+export const contarNaoLidas = cache(async () => {
+  const { user } = await verifySession();
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_id", user.id)
+    .is("read_at", null);
+  return count ?? 0;
 });

@@ -36,6 +36,9 @@ const I = {
   saep: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
   ),
+  admin: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>
+  ),
 };
 
 // Mapa de IconKey (registro de features) -> SVG. Ícones são JSX, então ficam
@@ -49,11 +52,12 @@ const ICONS: Record<IconKey, ReactNode> = {
   curso: I.curso,
   saep: I.saep,
   unity: I.unity,
+  admin: I.admin,
 };
 
 // Constrói os grupos do menu a partir do registro central de features.
-function buildGroups(isProf: boolean): Group[] {
-  return getNavGroups(isProf).map((g) => ({
+function buildGroups(isProf: boolean, isAdmin: boolean): Group[] {
+  return getNavGroups(isProf, isAdmin).map((g) => ({
     title: g.title,
     items: g.items.map((f) => ({ href: f.href, label: f.label, icon: ICONS[f.icon] })),
   }));
@@ -102,14 +106,16 @@ function NavLinks({
 
 export function AppSidebar({
   isProf,
+  isAdmin = false,
   footer,
 }: {
   isProf: boolean;
+  isAdmin?: boolean;
   footer: ReactNode;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const groups = buildGroups(isProf);
+  const groups = buildGroups(isProf, isAdmin);
 
   return (
     <>

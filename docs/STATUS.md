@@ -1,5 +1,40 @@
 # Status do projeto
 
+## Atualizacao 2026-06-03 — Gestao de identidades (Celeste Academy)
+
+Virada de modelo: acabou o cadastro aberto. A plataforma virou institucional
+(SENAI) e passou a se chamar **Celeste Academy**. A tela inicial agora e o login.
+
+Migration `0024_gestao_identidades.sql` (aditiva, idempotente, aplicada 2x):
+- profiles ganha personal_email/institutional_email (indices unicos por lower()),
+  must_change_password, profile_completed, created_by. handle_new_user propaga
+  esses campos do metadata. Backfill: institutional_email <- email do Auth;
+  contas existentes ficam profile_completed=true / must_change_password=false.
+- is_admin() SECURITY DEFINER + policies (admin le/altera todos; professor altera
+  alunos que ensina). Tabelas password_reset_requests e notifications com RLS.
+
+App:
+- **Sem cadastro aberto**: pagina /cadastrar e action signup publica removidas.
+  / redireciona para /entrar. Login rebrandado "Celeste Academy".
+- **Hierarquia**: admin cria professor (1 a 1, /admin). Professor cria aluno
+  (/turmas/[id]/alunos): 1 a 1, colar/CSV e formulario dinamico (+linhas). Cada
+  conta nasce com senha temporaria mostrada uma vez para repassar.
+- **2 emails por aluno** (pessoal + institucional, min. 1): AMBOS logam. O
+  institucional e o canonico no Auth; o login resolve o pessoal para o canonico
+  (lib/identidades/service.ts resolveCanonicalEmail).
+- **1o acesso** (/primeiro-acesso): forca trocar senha + completar perfil
+  (confirmar emails). Middleware mantem o usuario la ate concluir.
+- **Esqueci senha** (/esqueci-senha): aluno -> notifica professor(es) + admin;
+  professor -> so admin. Aprovar gera senha temporaria (sem SMTP). Resposta neutra.
+- **Notificacoes in-app**: tabela notifications + sino no layout (contador +
+  lista, marcar lida). lib/notifications/actions.ts.
+- lib/identidades/parse.ts (parse CSV/colar, validacao, email canonico, senha
+  temporaria) — **logica pura testada** (14 testes). Total: 40 testes verdes.
+
+Verificado: npm run test (40), build, tsc, lint, supabase db push (2x). **Ainda
+nao clicado na app.** Pendente: fluxo de email (SMTP) fica para depois; edicao
+em lote de professores; UI de perfil para trocar emails depois do 1o acesso.
+
 ## Atualizacao 2026-06-02 (parte 3) — Dashboard combina SAEP + SAP
 
 Follow-up: o dashboard por competencia/objeto agora agrega as DUAS avaliacoes.
