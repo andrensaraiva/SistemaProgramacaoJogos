@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { criarTurma } from "@/lib/turmas/actions";
 
-export function NovaTurmaForm() {
+export function NovaTurmaForm({
+  professores = [],
+}: {
+  professores?: { id: string; display_name: string }[];
+}) {
   const [state, action, pending] = useActionState(criarTurma, undefined);
 
   return (
@@ -19,6 +23,28 @@ export function NovaTurmaForm() {
           required
         />
       </Field>
+
+      {/* Gestão (coordenador/admin) escolhe o professor dono da turma. */}
+      {professores.length > 0 && (
+        <Field label="Professor responsável (dono)" htmlFor="owner_id">
+          <select
+            id="owner_id"
+            name="owner_id"
+            required
+            defaultValue=""
+            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+          >
+            <option value="" disabled>
+              Selecione o professor…
+            </option>
+            {professores.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.display_name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
 
       <Field
         label="Descrição (opcional)"

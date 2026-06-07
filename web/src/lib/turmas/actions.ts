@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as z from "zod";
 
-import { verifySession } from "@/lib/auth/dal";
+import { getProfile, verifySession } from "@/lib/auth/dal";
+import { pode } from "@/lib/auth/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import type { Role } from "@/lib/features";
 
 export type TurmaFormState =
   | { errors?: Record<string, string[]>; message?: string }
@@ -52,7 +54,10 @@ export async function criarTurma(
   _prev: TurmaFormState,
   formData: FormData,
 ): Promise<TurmaFormState> {
-  const { user } = await verifySession();
+  const profile = await getProfile();
+  if (!profile || !pode(profile.role as Role, "gerenciar_turma")) {
+    return { message: "Você não tem permissão para criar turmas." };
+  }
   const parsed = TurmaSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description") || undefined,
@@ -62,12 +67,34 @@ export async function criarTurma(
     return { errors: z.flattenError(parsed.error).fieldErrors };
   }
 
-  const supabase = await createClient();
+  // Gestão (coordenador/admin) pode escolher o professor dono; professor comum
+  // é sempre o próprio dono.
+  const ehGestao = profile.role === "coordenador" || profile.role === "admin";
+  const escolhido = String(formData.get("owner_id") ?? "").trim();
+  let ownerId = profile.id;
+
+  if (ehGestao && escolhido) {
+    const admin = createAdminClient();
+    const { data: dono } = await admin
+      .from("profiles")
+      .select("role")
+      .eq("id", escolhido)
+      .maybeSingle();
+    if (!dono || dono.role !== "professor") {
+      return { message: "Selecione um professor válido como responsável." };
+    }
+    ownerId = escolhido;
+  }
+
   let data: { id: string } | null = null;
   try {
-    const result = await supabase
+    // Quando o dono é o próprio criador, o cliente RLS basta. Quando a gestão
+    // define outro dono, a policy "dono gerencia classes" (auth.uid()=owner_id)
+    // bloquearia → usa service-role (a permissão já foi validada acima).
+    const db = ownerId === profile.id ? await createClient() : createAdminClient();
+    const result = await db
       .from("classes")
-      .insert({ owner_id: user.id, ...parsed.data })
+      .insert({ owner_id: ownerId, ...parsed.data })
       .select("id")
       .single();
     if (result.error || !result.data) {

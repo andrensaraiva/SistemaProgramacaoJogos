@@ -5,8 +5,12 @@ import { ConfirmForm } from "@/components/confirm-form";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getProfile } from "@/lib/auth/dal";
+import { getAcessoTurma } from "@/lib/turmas/access";
 import { createClient } from "@/lib/supabase/server";
 import { excluirLista } from "@/lib/turmas/actions";
+import { CreativeSubmission } from "@/components/editores/CreativeSubmission";
+import { isCreativeKind } from "@/lib/canvas/tools";
+import { DEFAULT_CONFIG, type CreativeKind, type CreativeProject } from "@/lib/canvas/types";
 
 import { AnexarExercicios } from "./_anexar";
 import { EntregaForm } from "./_entrega";
@@ -20,6 +24,7 @@ type ExerciseRow = {
   exercise_type?: string;
   is_group?: boolean;
   response_template?: string | null;
+  canvas_config?: { width: number; height: number; palette?: string[] } | null;
 };
 type StudentRow = { id: string; display_name: string };
 type SubmissionRow = {
@@ -96,11 +101,14 @@ export default async function ListaProgressoPage({ params }: { params: Params })
     owner_id: string;
   };
 
-  const isOwner = cls.owner_id === profile?.id;
+  // "Gerenciar a lista" = gerenciar a turma (dono/co-docente/coordenador/admin).
+  const isOwner = profile
+    ? (await getAcessoTurma(id, profile, cls.owner_id)).podeGerenciar
+    : false;
 
   const { data: assignmentExercises } = await supabase
     .from("assignment_exercises")
-    .select("ord, exercise:exercises!exercise_id(id, title, exercise_type, is_group, response_template)")
+    .select("ord, exercise:exercises!exercise_id(id, title, exercise_type, is_group, response_template, canvas_config)")
     .eq("assignment_id", lid)
     .order("ord");
 
@@ -111,6 +119,7 @@ export default async function ListaProgressoPage({ params }: { params: Params })
       exercise_type?: string;
       is_group?: boolean;
       response_template?: string | null;
+      canvas_config?: { width: number; height: number; palette?: string[] } | null;
     };
     return {
       id: ex.id,
@@ -119,6 +128,7 @@ export default async function ListaProgressoPage({ params }: { params: Params })
       exercise_type: ex.exercise_type ?? "codigo",
       is_group: ex.is_group ?? false,
       response_template: ex.response_template ?? null,
+      canvas_config: ex.canvas_config ?? null,
     };
   });
 
@@ -316,7 +326,7 @@ export default async function ListaProgressoPage({ params }: { params: Params })
   const { data: mySubs } = await supabase
     .from("submissions")
     .select(
-      "exercise_id, status, passed_count, total_count, created_at, manual_grade, manual_feedback, submission_link, response_text",
+      "exercise_id, status, passed_count, total_count, created_at, manual_grade, manual_feedback, submission_link, response_text, submission_project",
     )
     .eq("assignment_id", lid)
     .eq("student_id", profile.id)
@@ -349,7 +359,9 @@ export default async function ListaProgressoPage({ params }: { params: Params })
       <div className="flex flex-col gap-2">
         {exercises.map((exercise) => {
           const sub = mySubMap.get(exercise.id);
-          const isCode = (exercise.exercise_type ?? "codigo") === "codigo";
+          const tipoEx = exercise.exercise_type ?? "codigo";
+          const isCode = tipoEx === "codigo";
+          const isCreative = isCreativeKind(tipoEx);
           const style = sub
             ? STATUS_ICON[sub.status] ?? {
                 icon: "?",
@@ -399,8 +411,22 @@ export default async function ListaProgressoPage({ params }: { params: Params })
                 </div>
               </div>
 
-              {/* Entrega para exercícios não-código */}
-              {!isCode && (
+              {/* Entrega de arte (pixel/vetor/arte digital) — editor embutido */}
+              {isCreative && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <CreativeSubmission
+                    kind={tipoEx as CreativeKind}
+                    classId={id}
+                    exerciseId={exercise.id}
+                    assignmentId={lid}
+                    config={exercise.canvas_config ?? DEFAULT_CONFIG[tipoEx as CreativeKind]}
+                    initialProject={(sub?.submission_project as CreativeProject | null) ?? null}
+                  />
+                </div>
+              )}
+
+              {/* Entrega para apresentação / modelo de resposta */}
+              {!isCode && !isCreative && (
                 <EntregaForm
                   classId={id}
                   assignmentId={lid}

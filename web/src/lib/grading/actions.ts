@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
-import { verifySession } from "@/lib/auth/dal";
+import { getProfile } from "@/lib/auth/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAcessoTurma } from "@/lib/turmas/access";
 
 export type GradeState =
   | { ok: true; message: string }
@@ -34,7 +35,8 @@ export async function gradeSubmission(
   _prev: GradeState,
   formData: FormData,
 ): Promise<GradeState> {
-  const { user } = await verifySession();
+  const profile = await getProfile();
+  if (!profile) return { ok: false, message: "Sessão inválida." };
 
   const parsed = GradeSchema.safeParse({
     submission_id: formData.get("submission_id"),
@@ -71,8 +73,14 @@ export async function gradeSubmission(
     class: { owner_id: string };
   };
 
+  // Gerencia a turma? (dono, co-docente, coordenador ou admin)
+  const { podeGerenciar } = await getAcessoTurma(
+    assignment.class_id,
+    profile,
+    assignment.class.owner_id,
+  );
   if (
-    assignment?.class?.owner_id !== user.id ||
+    !podeGerenciar ||
     assignment?.class_id !== classId ||
     sub.assignment_id !== assignmentId
   ) {
@@ -85,7 +93,7 @@ export async function gradeSubmission(
     .update({
       manual_grade: parsed.data.grade === null ? null : Number(parsed.data.grade),
       manual_feedback: parsed.data.feedback || null,
-      graded_by: user.id,
+      graded_by: profile.id,
       graded_at: new Date().toISOString(),
     })
     .eq("id", parsed.data.submission_id);

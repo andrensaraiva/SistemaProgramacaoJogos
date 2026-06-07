@@ -11,9 +11,15 @@ export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const profile = await getProfile();
-  const isProf = profile?.role === "professor" || profile?.role === "admin";
-  const isAdmin = profile?.role === "admin";
-  const roleLabel = isAdmin ? "Administrador" : isProf ? "Professor" : "Aluno";
+  const role = (profile?.role ?? "aluno") as "aluno" | "professor" | "admin" | "coordenador";
+  const roleLabel =
+    role === "admin"
+      ? "Administrador"
+      : role === "coordenador"
+        ? "Coordenador"
+        : role === "professor"
+          ? "Professor"
+          : "Aluno";
 
   const notifications = profile ? await listarNotificacoes() : [];
   const unread = notifications.filter((n) => !n.read_at).length;
@@ -33,7 +39,7 @@ export default async function AppLayout({
           </div>
         </div>
       </div>
-      {!isProf && <XpBar xp={profile.xp} level={profile.level} />}
+      {role === "aluno" && <XpBar xp={profile.xp} level={profile.level} />}
       <div className="flex items-center gap-2">
         <ThemeToggle />
         <form action={logout} className="flex-1">
@@ -47,7 +53,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <AppSidebar isProf={isProf} isAdmin={isAdmin} footer={sidebarFooter} />
+      <AppSidebar role={role} footer={sidebarFooter} />
       <div className="flex w-full flex-1 flex-col">
         {profile && (
           <div className="flex items-center justify-end border-b border-border px-5 py-2 sm:px-8">

@@ -13,6 +13,7 @@ type TeacherClass = {
   name: string;
   description: string | null;
   invite_code: string;
+  owner_id: string;
   members: { count: number }[];
   assignments: { count: number }[];
 };
@@ -39,19 +40,62 @@ export default async function TurmasPage() {
   }
 
   const isProf = profile.role === "professor" || profile.role === "admin";
+  const isCoordenador = profile.role === "coordenador";
   const supabase = await createClient();
   let errorMessage: string | null = null;
   let teacherClasses: TeacherClass[] = [];
   let studentClasses: StudentClassMember[] = [];
 
+  const baseSelect =
+    "id, name, description, invite_code, created_at, owner_id, members:class_members(count), assignments:assignments(count)";
+
+  // Coordenador supervisiona TODAS as turmas.
+  if (isCoordenador) {
+    const { data, error } = await supabase
+      .from("classes")
+      .select(baseSelect)
+      .order("created_at", { ascending: false });
+    if (error) return <ErrorState message={error.message} />;
+    const todas = (data ?? []) as unknown as TeacherClass[];
+    return (
+      <TurmasShell title="Turmas" description="Todas as turmas da instituição. Entre para gerenciar.">
+        {todas.length === 0 && (
+          <EmptyState title="Nenhuma turma" description="Ainda não há turmas cadastradas." />
+        )}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {todas.map((turma) => (
+            <TurmaCard
+              key={turma.id}
+              id={turma.id}
+              name={turma.name}
+              description={turma.description ?? undefined}
+              inviteCode={turma.invite_code}
+              memberCount={turma.members?.[0]?.count ?? 0}
+              listCount={turma.assignments?.[0]?.count ?? 0}
+            />
+          ))}
+        </div>
+      </TurmasShell>
+    );
+  }
+
   if (isProf) {
     try {
+      // Turmas próprias (dono) + turmas em que é co-professor (co-docência).
+      const { data: coRows } = await supabase
+        .from("class_teachers")
+        .select("class_id")
+        .eq("teacher_id", profile.id);
+      const coIds = (coRows ?? []).map((r) => r.class_id);
+
+      const orFilter = coIds.length
+        ? `owner_id.eq.${profile.id},id.in.(${coIds.join(",")})`
+        : `owner_id.eq.${profile.id}`;
+
       const { data, error } = await supabase
         .from("classes")
-        .select(
-          "id, name, description, invite_code, created_at, members:class_members(count), assignments:assignments(count)",
-        )
-        .eq("owner_id", profile.id)
+        .select(baseSelect)
+        .or(orFilter)
         .order("created_at", { ascending: false });
 
       if (error) errorMessage = error.message;
@@ -89,6 +133,7 @@ export default async function TurmasPage() {
               inviteCode={turma.invite_code}
               memberCount={turma.members?.[0]?.count ?? 0}
               listCount={turma.assignments?.[0]?.count ?? 0}
+              coDocente={turma.owner_id !== profile.id}
             />
           ))}
         </div>
@@ -160,8 +205,8 @@ function TurmasShell({
 }: {
   title: string;
   description: string;
-  actionHref: string;
-  actionLabel: string;
+  actionHref?: string;
+  actionLabel?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -170,9 +215,11 @@ function TurmasShell({
         title={title}
         description={description}
         actions={
-          <Link href={actionHref}>
-            <Button>{actionLabel}</Button>
-          </Link>
+          actionHref && actionLabel ? (
+            <Link href={actionHref}>
+              <Button>{actionLabel}</Button>
+            </Link>
+          ) : undefined
         }
       />
       {children}
@@ -188,6 +235,7 @@ function TurmaCard({
   professorName,
   memberCount,
   listCount,
+  coDocente,
 }: {
   id: string;
   name: string;
@@ -196,12 +244,16 @@ function TurmaCard({
   professorName?: string;
   memberCount?: number;
   listCount: number;
+  coDocente?: boolean;
 }) {
   return (
     <Link href={`/turmas/${id}`} className="group">
       <Card className="flex h-full flex-col justify-between gap-4 transition-colors group-hover:border-primary/50">
         <div>
-          <h2 className="text-base font-semibold leading-tight">{name}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold leading-tight">{name}</h2>
+            {coDocente && <Badge tone="accent">Co-docência</Badge>}
+          </div>
           {description && (
             <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
               {description}

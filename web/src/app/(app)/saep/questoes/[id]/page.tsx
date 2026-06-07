@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { getProfile } from "@/lib/auth/dal";
+import { requireCapability } from "@/lib/auth/guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import { QuestaoEditor } from "../_editor";
@@ -30,10 +30,7 @@ export default async function EditarQuestaoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const profile = await getProfile();
-  const isProf = profile?.role === "professor" || profile?.role === "admin";
-  if (!profile) redirect("/entrar");
-  if (!isProf) redirect("/painel");
+  const profile = await requireCapability("gerenciar_curso");
 
   const admin = createAdminClient();
   const { data: q } = await admin

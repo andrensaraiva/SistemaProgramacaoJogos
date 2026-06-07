@@ -5,8 +5,10 @@ import { ConfirmForm } from "@/components/confirm-form";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
+import { getAcessoTurma } from "@/lib/turmas/access";
 import { excluirTurma, sairDaTurma } from "@/lib/turmas/actions";
 import { CopyButton } from "./_copy-button";
+import { ClassTeachersSection } from "./_co-docencia";
 
 type Params = Promise<{ id: string }>;
 
@@ -30,7 +32,13 @@ export default async function TurmaPage({ params }: { params: Params }) {
   }
   if (!turma) notFound();
 
-  const isOwner = turma.owner_id === profile?.id;
+  // Acesso unificado: dono OU co-docente OU coordenador OU admin gerenciam;
+  // só o dono executa ações destrutivas (excluir turma). Ver lib/turmas/access.
+  const acesso = profile
+    ? await getAcessoTurma(id, profile, turma.owner_id)
+    : { ehDono: false, ehCoDocente: false, ehGestao: false, podeGerenciar: false };
+  const isOwner = acesso.ehDono;
+  const canManage = acesso.podeGerenciar;
 
   const { data: membros } = await supabase
     .from("class_members")
@@ -87,7 +95,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
               {turma.description}
             </p>
           )}
-          {!isOwner && owner && (
+          {!canManage && owner && (
             <p className="mt-1 text-xs text-muted-foreground">
               Prof. {owner.display_name}
             </p>
@@ -98,7 +106,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
           <Link href={`/turmas/${id}/ranking`}>
             <Button variant="secondary">Ranking</Button>
           </Link>
-          {!isOwner && (
+          {!canManage && (
             <>
               <Link href={`/turmas/${id}/minhas-notas`}>
                 <Button variant="secondary">Minhas notas</Button>
@@ -108,7 +116,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
               </Link>
             </>
           )}
-          {isOwner && (
+          {canManage && (
             <>
               <Link href={`/turmas/${id}/alunos`}>
                 <Button variant="secondary">Alunos</Button>
@@ -116,6 +124,13 @@ export default async function TurmaPage({ params }: { params: Params }) {
               <Link href={`/turmas/${id}/grupos`}>
                 <Button variant="secondary">Grupos</Button>
               </Link>
+              <Link href={`/turmas/${id}/calendario`}>
+                <Button variant="secondary">Calendário</Button>
+              </Link>
+            </>
+          )}
+          {isOwner && (
+            <>
               <Link href={`/turmas/${id}/editar`}>
                 <Button variant="secondary">Editar</Button>
               </Link>
@@ -128,7 +143,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
               </ConfirmForm>
             </>
           )}
-          {!isOwner && (
+          {!canManage && (
             <ConfirmForm action={sairDaTurma} message="Sair desta turma?">
               <input type="hidden" name="class_id" value={id} />
               <Button type="submit" variant="ghost">Sair da turma</Button>
@@ -137,8 +152,16 @@ export default async function TurmaPage({ params }: { params: Params }) {
         </div>
       </div>
 
-      {/* Invite code (professor only) */}
-      {isOwner && (
+      {/* Gerir professores da turma (quem gerencia) + feedback (aluno) */}
+      <ClassTeachersSection
+        classId={id}
+        canManage={canManage}
+        isStudent={!canManage && profile?.role === "aluno"}
+        ucList={ucList}
+      />
+
+      {/* Invite code (professores da turma) */}
+      {canManage && (
         <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3">
           <div className="text-sm text-muted-foreground">Código de convite:</div>
           <code className="font-mono text-base font-semibold tracking-wider">
@@ -152,7 +175,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Listas de exercícios</h2>
-          {isOwner && (
+          {canManage && (
             <Link href={`/turmas/${id}/listas/nova`}>
               <Button>+ Nova lista</Button>
             </Link>
@@ -161,7 +184,7 @@ export default async function TurmaPage({ params }: { params: Params }) {
 
         {!listas?.length && (
           <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
-            {isOwner
+            {canManage
               ? 'Nenhuma lista ainda. Clique em "+ Nova lista" para criar.'
               : "Nenhuma lista atribuída ainda."}
           </div>
@@ -190,8 +213,8 @@ export default async function TurmaPage({ params }: { params: Params }) {
         </div>
       </section>
 
-      {/* Unidades curriculares + dashboards (professor only) */}
-      {isOwner && (
+      {/* Unidades curriculares + dashboards (professores da turma) */}
+      {canManage && (
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Unidades curriculares</h2>
@@ -231,8 +254,8 @@ export default async function TurmaPage({ params }: { params: Params }) {
         </section>
       )}
 
-      {/* Membros (professor only) */}
-      {isOwner && (
+      {/* Membros (professores da turma) */}
+      {canManage && (
         <section className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">
             Alunos ({membros?.length ?? 0})

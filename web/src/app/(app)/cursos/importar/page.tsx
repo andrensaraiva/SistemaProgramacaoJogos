@@ -1,15 +1,12 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { isProfessor } from "@/lib/auth/dal";
+import { requireCapability } from "@/lib/auth/guard";
 
 import { ImportarPpcForm } from "./_form";
 
 export default async function ImportarPpcPage() {
-  if (!(await isProfessor())) {
-    redirect("/cursos");
-  }
+  await requireCapability("gerenciar_curso");
 
   return (
     <div className="flex flex-col gap-6">

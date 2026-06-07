@@ -1,14 +1,9 @@
-import { redirect } from "next/navigation";
-
-import { getProfile } from "@/lib/auth/dal";
+import { requireCapability } from "@/lib/auth/guard";
 
 import { GenerateExerciseForm } from "./_form";
 
 export default async function GerarExercicioPage() {
-  const profile = await getProfile();
-  const isProfessor = profile?.role === "professor" || profile?.role === "admin";
-
-  if (!isProfessor) redirect("/exercicios");
+  await requireCapability("gerenciar_curso");
 
   return (
     <div className="flex flex-col gap-6">

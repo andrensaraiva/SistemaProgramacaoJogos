@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/lib/auth/dal";
+import { getAcessoTurma } from "@/lib/turmas/access";
 import { createClient } from "@/lib/supabase/server";
 
 import { NovaAtividadeForm } from "./_form";
@@ -60,7 +61,7 @@ export default async function AtividadesUcPage({ params }: { params: Params }) {
   };
   const uc = cu.uc as unknown as { id: string; title: string } | null;
   const plan = cu.plan as unknown as { id: string; title: string } | null;
-  const isOwner = cls.owner_id === profile.id;
+  const { podeGerenciar } = await getAcessoTurma(id, profile, cls.owner_id);
 
   // Atividades desta UC (RLS já filtra: dono vê todas, aluno vê as da sua turma).
   const { data: atividades } = await supabase
@@ -141,7 +142,7 @@ export default async function AtividadesUcPage({ params }: { params: Params }) {
         )}
       </section>
 
-      {isOwner && (
+      {podeGerenciar && (
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 text-lg font-semibold">Nova atividade</h2>
           <NovaAtividadeForm

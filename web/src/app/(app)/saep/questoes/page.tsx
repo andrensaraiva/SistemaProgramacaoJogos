@@ -1,21 +1,17 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { ConfirmForm } from "@/components/confirm-form";
 import { Badge, DIFFICULTY_LABEL, DIFFICULTY_TONE } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/states";
-import { getProfile } from "@/lib/auth/dal";
+import { requireCapability } from "@/lib/auth/guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { excluirQuestao } from "@/lib/saep/actions";
 
 // Banco de questões SAEP do instrutor (suas + públicas). Entrada manual fácil.
 export default async function QuestoesPage() {
-  const profile = await getProfile();
-  const isProf = profile?.role === "professor" || profile?.role === "admin";
-  if (!profile) redirect("/entrar");
-  if (!isProf) redirect("/painel");
+  const profile = await requireCapability("gerenciar_curso");
 
   const admin = createAdminClient();
   const { data: questions } = await admin

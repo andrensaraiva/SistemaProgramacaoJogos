@@ -4,6 +4,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { getProfile } from "@/lib/auth/dal";
 import { getLanguage } from "@/lib/exercises/languages";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAcessoTurma } from "@/lib/turmas/access";
 
 import { GradeForm } from "./_grade-form";
 
@@ -19,22 +20,16 @@ const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
 export default async function CorrigirPage({ params }: { params: Params }) {
   const { id, lid, sid } = await params;
   const profile = await getProfile();
-  const isProf = profile?.role === "professor" || profile?.role === "admin";
-
-  if (!profile || !isProf) {
-    return (
-      <div className="rounded-xl border border-danger/40 bg-danger/10 p-6 text-sm">
-        Apenas professores podem corrigir submissões.
-      </div>
-    );
-  }
+  if (!profile) notFound();
+  // A autorização real (gerenciar a turma) é checada abaixo, após carregar a
+  // submissão — cobre dono, co-docente, coordenador e admin.
 
   const admin = createAdminClient();
 
   const { data: sub } = await admin
     .from("submissions")
     .select(
-      "id, code, submission_link, response_text, status, passed_count, total_count, created_at, manual_grade, manual_feedback, student_id, assignment_id, student:profiles!student_id(display_name), exercise:exercises!exercise_id(title, language, language_id, exercise_type), assignment:assignments!assignment_id(class_id, title, class:classes!class_id(owner_id, name))",
+      "id, code, submission_link, response_text, submission_image_url, status, passed_count, total_count, created_at, manual_grade, manual_feedback, student_id, assignment_id, student:profiles!student_id(display_name), exercise:exercises!exercise_id(title, language, language_id, exercise_type), assignment:assignments!assignment_id(class_id, title, class:classes!class_id(owner_id, name))",
     )
     .eq("id", sid)
     .single();
@@ -54,13 +49,25 @@ export default async function CorrigirPage({ params }: { params: Params }) {
   };
   const student = sub.student as unknown as { display_name: string };
 
-  // Posse: a submissão precisa ser da turma deste professor e da lista certa.
-  if (
-    assignment.class.owner_id !== profile.id ||
-    assignment.class_id !== id ||
-    sub.assignment_id !== lid
-  ) {
+  // Posse: a submissão precisa ser da turma certa e da lista certa, E o usuário
+  // precisa gerenciar a turma (dono, co-docente, coordenador ou admin).
+  const { podeGerenciar } = await getAcessoTurma(
+    assignment.class_id,
+    profile,
+    assignment.class.owner_id,
+  );
+  if (!podeGerenciar || assignment.class_id !== id || sub.assignment_id !== lid) {
     notFound();
+  }
+
+  // Arte entregue: gera URL assinada para visualizar (bucket privado).
+  let artUrl: string | null = null;
+  const imagePath = (sub as { submission_image_url?: string | null }).submission_image_url;
+  if (imagePath) {
+    const { data: signed } = await admin.storage
+      .from("submissoes")
+      .createSignedUrl(imagePath, 60 * 60);
+    artUrl = signed?.signedUrl ?? null;
   }
 
   const langSlug = exercise.language_id ?? exercise.language;
@@ -107,6 +114,19 @@ export default async function CorrigirPage({ params }: { params: Params }) {
           </span>
         </div>
       </div>
+
+      {artUrl && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h2 className="mb-2 text-sm font-semibold">Arte entregue</h2>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={artUrl}
+            alt={`Entrega de ${student.display_name}`}
+            className="max-h-[480px] w-auto rounded-lg border border-border bg-white"
+            style={{ imageRendering: exercise.exercise_type === "pixel_art" ? "pixelated" : "auto" }}
+          />
+        </div>
+      )}
 
       <GradeForm
         classId={id}

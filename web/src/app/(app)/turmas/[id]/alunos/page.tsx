@@ -1,8 +1,8 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { getProfile } from "@/lib/auth/dal";
+import { requireGerenciarTurma } from "@/lib/turmas/access";
 import { createClient } from "@/lib/supabase/server";
 
 import { CadastroAlunos, PedidoResetAluno } from "./_client";
@@ -11,8 +11,8 @@ type Params = Promise<{ id: string }>;
 
 export default async function AlunosPage({ params }: { params: Params }) {
   const { id } = await params;
-  const profile = await getProfile();
-  if (!profile) redirect("/entrar");
+  // Gestão: dono, co-docente, coordenador ou admin. Senão redireciona.
+  await requireGerenciarTurma(id);
 
   const supabase = await createClient();
   const { data: turma } = await supabase
@@ -21,11 +21,6 @@ export default async function AlunosPage({ params }: { params: Params }) {
     .eq("id", id)
     .single();
   if (!turma) notFound();
-
-  const isOwner = turma.owner_id === profile.id || profile.role === "admin";
-  if (!isOwner) {
-    redirect(`/turmas/${id}`);
-  }
 
   const { data: membros } = await supabase
     .from("class_members")

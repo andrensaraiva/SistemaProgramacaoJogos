@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
-import { getProfile } from "@/lib/auth/dal";
+import { requireGerenciarTurma } from "@/lib/turmas/access";
 import { createClient } from "@/lib/supabase/server";
 import { EditarTurmaForm } from "./_form";
 
@@ -9,11 +9,8 @@ type Params = Promise<{ id: string }>;
 
 export default async function EditarTurmaPage({ params }: { params: Params }) {
   const { id } = await params;
-  const profile = await getProfile();
-  const isProf =
-    profile?.role === "professor" || profile?.role === "admin";
-
-  if (!isProf) redirect(`/turmas/${id}`);
+  // Gestão: dono, co-docente, coordenador ou admin editam a turma.
+  await requireGerenciarTurma(id);
 
   const supabase = await createClient();
   const { data: turma } = await supabase
@@ -22,7 +19,7 @@ export default async function EditarTurmaPage({ params }: { params: Params }) {
     .eq("id", id)
     .single();
 
-  if (!turma || turma.owner_id !== profile?.id) notFound();
+  if (!turma) notFound();
 
   return (
     <div className="mx-auto max-w-lg">

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/lib/auth/dal";
+import { getAcessoTurma } from "@/lib/turmas/access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -41,7 +42,7 @@ export default async function DuelosQuizPage({ params }: { params: Params }) {
     .eq("class_id", id)
     .eq("student_id", profile.id)
     .maybeSingle();
-  const isOwner = cls.owner_id === profile.id;
+  const isOwner = (await getAcessoTurma(id, profile, cls.owner_id)).podeGerenciar;
   if (!membership && !isOwner) redirect(`/turmas/${id}`);
 
   const admin = createAdminClient();

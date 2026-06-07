@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { getProfile } from "@/lib/auth/dal";
+import { getAcessoTurma } from "@/lib/turmas/access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -112,7 +113,7 @@ export default async function SapPage({ params }: { params: Params }) {
   if (!cu || cu.class_id !== id) notFound();
   const cls = cu.class as unknown as { id: string; name: string; owner_id: string };
   const uc = cu.uc as unknown as { id: string; title: string } | null;
-  const isOwner = cls.owner_id === profile.id;
+  const isOwner = (await getAcessoTurma(id, profile, cls.owner_id)).podeGerenciar;
 
   const { data: assignment } = await supabase
     .from("assignments")
