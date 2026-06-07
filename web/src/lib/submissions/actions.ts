@@ -130,3 +130,116 @@ export async function entregarTrabalho(
   revalidatePath(`/turmas/${classId}/listas/${parsed.data.assignment_id}`);
   return { ok: true, message: "Entrega registrada!" };
 }
+
+// -----------------------------------------------------------------------------
+// Entrega de arte (pixel/vetor/arte digital): o PNG já foi enviado ao Storage
+// pelo cliente (pasta do próprio aluno); aqui gravamos o caminho + o projeto
+// editável. Reusa as checagens de matrícula/grupo.
+// -----------------------------------------------------------------------------
+
+const ArteSchema = z.object({
+  exercise_id: z.string().uuid(),
+  assignment_id: z.string().uuid(),
+  image_path: z.string().min(1),
+  project: z.string().max(5_000_000), // JSON serializado do projeto editável
+});
+
+export async function entregarArte(
+  classId: string,
+  payloadInput: { exercise_id: string; assignment_id: string; image_path: string; project: string },
+): Promise<EntregaState> {
+  const { user } = await verifySession();
+
+  const parsed = ArteSchema.safeParse(payloadInput);
+  if (!parsed.success) return { ok: false, message: "Dados da entrega inválidos." };
+
+  // Caminho precisa estar na pasta do próprio aluno (defesa extra além do RLS).
+  if (!parsed.data.image_path.startsWith(`${user.id}/`)) {
+    return { ok: false, message: "Caminho de arquivo inválido." };
+  }
+
+  let project: unknown;
+  try {
+    project = JSON.parse(parsed.data.project);
+  } catch {
+    return { ok: false, message: "Projeto inválido." };
+  }
+
+  const admin = createAdminClient();
+
+  const { data: exercise } = await admin
+    .from("exercises")
+    .select("id, exercise_type, is_group")
+    .eq("id", parsed.data.exercise_id)
+    .single();
+  if (!exercise) return { ok: false, message: "Exercício não encontrado." };
+  if (!["pixel_art", "vetor", "arte_digital", "blocos"].includes(exercise.exercise_type)) {
+    return { ok: false, message: "Este exercício não é de arte/blocos." };
+  }
+
+  const { data: assignment } = await admin
+    .from("assignments")
+    .select("id, class_id")
+    .eq("id", parsed.data.assignment_id)
+    .single();
+  if (!assignment || assignment.class_id !== classId) {
+    return { ok: false, message: "Atividade inválida para esta turma." };
+  }
+  const { data: membership } = await admin
+    .from("class_members")
+    .select("student_id")
+    .eq("class_id", classId)
+    .eq("student_id", user.id)
+    .maybeSingle();
+  if (!membership) return { ok: false, message: "Você não está nesta turma." };
+
+  let groupId: string | null = null;
+  if (exercise.is_group) {
+    const { data: g } = await admin
+      .from("class_group_members")
+      .select("group_id, group:class_groups!group_id(class_id)")
+      .eq("student_id", user.id)
+      .maybeSingle();
+    const grp = g?.group as unknown as { class_id: string } | undefined;
+    if (g && grp?.class_id === classId) groupId = g.group_id as string;
+  }
+
+  const { data: existing } = await admin
+    .from("submissions")
+    .select("id")
+    .eq("exercise_id", parsed.data.exercise_id)
+    .eq("assignment_id", parsed.data.assignment_id)
+    .eq("student_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const payload = {
+    exercise_id: parsed.data.exercise_id,
+    assignment_id: parsed.data.assignment_id,
+    student_id: user.id,
+    status: "entregue" as const,
+    submission_image_url: parsed.data.image_path,
+    submission_project: project,
+    group_id: groupId,
+  };
+
+  if (existing) {
+    const { error } = await admin.from("submissions").update(payload).eq("id", existing.id);
+    if (error) return { ok: false, message: `Erro ao salvar: ${error.message}` };
+  } else {
+    const { error } = await admin.from("submissions").insert(payload);
+    if (error) return { ok: false, message: `Erro ao salvar: ${error.message}` };
+  }
+
+  revalidatePath(`/turmas/${classId}/listas/${parsed.data.assignment_id}`);
+  return { ok: true, message: "Arte entregue!" };
+}
+
+// Gera uma URL assinada para visualizar uma arte entregue (correção/aluno).
+export async function urlAssinadaArte(path: string): Promise<string | null> {
+  await verifySession();
+  const admin = createAdminClient();
+  const { data } = await admin.storage.from("submissoes").createSignedUrl(path, 60 * 60);
+  return data?.signedUrl ?? null;
+}

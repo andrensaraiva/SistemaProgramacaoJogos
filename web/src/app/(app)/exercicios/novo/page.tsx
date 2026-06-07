@@ -1,18 +1,25 @@
-import { redirect } from "next/navigation";
-
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { PageHeader } from "@/components/ui/page-header";
-import { getProfile } from "@/lib/auth/dal";
+import { requireCapability } from "@/lib/auth/guard";
 import { getEnabledLanguages } from "@/lib/exercises/languages";
+import { ferramentasHabilitadas } from "@/lib/canvas/tools";
+import { getInstitutionSettings } from "@/lib/reports/settings";
 
 import { NovoExercicioForm } from "./_form";
 
 export default async function NovoExercicioPage() {
-  const profile = await getProfile();
-  const isProfessor = profile?.role === "professor" || profile?.role === "admin";
-  if (!isProfessor) redirect("/exercicios");
+  await requireCapability("gerenciar_curso");
 
-  const langs = await getEnabledLanguages();
+  const [langs, settings] = await Promise.all([
+    getEnabledLanguages(),
+    getInstitutionSettings(),
+  ]);
+  const creativeTools = ferramentasHabilitadas(settings.tools).map((t) => ({
+    kind: t.kind,
+    label: t.label,
+    hint: t.hint,
+    defaultConfig: { width: t.defaultConfig.width, height: t.defaultConfig.height },
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -28,6 +35,7 @@ export default async function NovoExercicioPage() {
       />
       <NovoExercicioForm
         languages={langs.map((l) => ({ id: l.id, label: l.label }))}
+        creativeTools={creativeTools}
       />
     </div>
   );

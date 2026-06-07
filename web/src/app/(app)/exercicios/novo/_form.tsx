@@ -7,7 +7,8 @@ import { Field, Input } from "@/components/ui/input";
 import { criarExercicioManual, type NovoExercicioState } from "./actions";
 
 type Lang = { id: string; label: string };
-type Tipo = "codigo" | "apresentacao" | "modelo_resposta";
+type Tipo = "codigo" | "apresentacao" | "modelo_resposta" | "pixel_art" | "vetor" | "arte_digital" | "blocos";
+type CreativeTool = { kind: string; label: string; hint: string; defaultConfig: { width: number; height: number } };
 
 const taCls =
   "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y";
@@ -20,13 +21,26 @@ const TIPOS: { value: Tipo; label: string; hint: string }[] = [
   { value: "modelo_resposta", label: "Modelo de resposta", hint: "Aluno preenche um texto a partir de um modelo; você corrige." },
 ];
 
-export function NovoExercicioForm({ languages }: { languages: Lang[] }) {
+export function NovoExercicioForm({
+  languages,
+  creativeTools = [],
+}: {
+  languages: Lang[];
+  creativeTools?: CreativeTool[];
+}) {
   const [state, action, pending] = useActionState<NovoExercicioState, FormData>(
     criarExercicioManual,
     undefined,
   );
   const [tipo, setTipo] = useState<Tipo>("codigo");
   const err = state?.errors;
+
+  const tiposDisponiveis = [
+    ...TIPOS,
+    ...creativeTools.map((t) => ({ value: t.kind as Tipo, label: t.label, hint: t.hint })),
+  ];
+  const ehCriativo = creativeTools.some((t) => t.kind === tipo);
+  const cfgAtual = creativeTools.find((t) => t.kind === tipo)?.defaultConfig;
 
   return (
     <form action={action} className="flex max-w-2xl flex-col gap-5">
@@ -46,16 +60,28 @@ export function NovoExercicioForm({ languages }: { languages: Lang[] }) {
           onChange={(e) => setTipo(e.target.value as Tipo)}
           className={selCls}
         >
-          {TIPOS.map((t) => (
+          {tiposDisponiveis.map((t) => (
             <option key={t.value} value={t.value}>
               {t.label}
             </option>
           ))}
         </select>
         <span className="mt-1 text-xs text-muted-foreground">
-          {TIPOS.find((t) => t.value === tipo)?.hint}
+          {tiposDisponiveis.find((t) => t.value === tipo)?.hint}
         </span>
       </Field>
+
+      {/* Campos dos tipos CRIATIVOS (pixel/vetor/arte) — tamanho do canvas */}
+      {ehCriativo && cfgAtual && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Largura do canvas (px)" htmlFor="canvas_width">
+            <Input id="canvas_width" name="canvas_width" type="number" min={8} max={2048} defaultValue={cfgAtual.width} />
+          </Field>
+          <Field label="Altura do canvas (px)" htmlFor="canvas_height">
+            <Input id="canvas_height" name="canvas_height" type="number" min={8} max={2048} defaultValue={cfgAtual.height} />
+          </Field>
+        </div>
+      )}
 
       {/* Campos do tipo CÓDIGO */}
       {tipo === "codigo" && (

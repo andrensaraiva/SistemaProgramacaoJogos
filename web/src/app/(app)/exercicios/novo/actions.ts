@@ -6,14 +6,25 @@ import * as z from "zod";
 import { getProfile } from "@/lib/auth/dal";
 import { getEnabledLanguages } from "@/lib/exercises/languages";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ferramentaHabilitada, isCreativeKind } from "@/lib/canvas/tools";
+import { DEFAULT_CONFIG, type CreativeKind } from "@/lib/canvas/types";
+import { getInstitutionSettings } from "@/lib/reports/settings";
 
-// Criação MANUAL de exercício pelo professor — suporta os três tipos:
-// código (com testes), apresentação (entrega de link) e modelo de resposta.
+// Criação MANUAL de exercício pelo professor — suporta código, apresentação,
+// modelo de resposta e os 3 tipos criativos (pixel/vetor/arte digital).
 
 const NovoSchema = z.object({
   title: z.string().trim().min(3, "Título muito curto").max(200),
   description: z.string().trim().min(5, "Descreva o enunciado").max(8000),
-  exercise_type: z.enum(["codigo", "apresentacao", "modelo_resposta"]),
+  exercise_type: z.enum([
+    "codigo",
+    "apresentacao",
+    "modelo_resposta",
+    "pixel_art",
+    "vetor",
+    "arte_digital",
+    "blocos",
+  ]),
   is_group: z.coerce.boolean().default(false),
   difficulty: z.enum(["facil", "medio", "dificil", "desafio"]),
   xp_reward: z.coerce.number().int().min(0).max(200),
@@ -23,6 +34,9 @@ const NovoSchema = z.object({
   starter_code: z.string().optional().default(""),
   // modelo de resposta
   response_template: z.string().max(8000).optional().default(""),
+  // criativos
+  canvas_width: z.coerce.number().int().min(8).max(2048).optional(),
+  canvas_height: z.coerce.number().int().min(8).max(2048).optional(),
 });
 
 export type NovoExercicioState =
@@ -50,6 +64,8 @@ export async function criarExercicioManual(
     language_id: formData.get("language_id") ?? "",
     starter_code: formData.get("starter_code") ?? "",
     response_template: formData.get("response_template") ?? "",
+    canvas_width: formData.get("canvas_width") ?? undefined,
+    canvas_height: formData.get("canvas_height") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -66,6 +82,21 @@ export async function criarExercicioManual(
       return { errors: { language_id: ["Escolha uma linguagem válida."] } };
     }
     languageId = lang.id;
+  }
+
+  // Governança: tipo criativo só se a ferramenta estiver ligada na instituição.
+  let canvasConfig: { width: number; height: number; palette?: string[] } | null = null;
+  if (isCreativeKind(d.exercise_type)) {
+    const { tools } = await getInstitutionSettings();
+    if (!ferramentaHabilitada(d.exercise_type, tools)) {
+      return { message: "Esta ferramenta está desativada pela administração." };
+    }
+    const base = DEFAULT_CONFIG[d.exercise_type as CreativeKind];
+    canvasConfig = {
+      width: d.canvas_width ?? base.width,
+      height: d.canvas_height ?? base.height,
+      palette: base.palette,
+    };
   }
 
   const admin = createAdminClient();
@@ -85,6 +116,7 @@ export async function criarExercicioManual(
       is_group: d.is_group,
       response_template:
         d.exercise_type === "modelo_resposta" ? d.response_template || null : null,
+      canvas_config: canvasConfig,
     })
     .select("id")
     .single();
