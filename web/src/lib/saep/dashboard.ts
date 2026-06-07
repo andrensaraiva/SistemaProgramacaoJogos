@@ -34,7 +34,16 @@ export type SaepDashboard = {
   totalSubmittedAttempts: number;
   totalSapAssessments: number;
   totalSapEvaluations: number;
-  overall: { total: number; correct: number; pct: number | null };
+  overall: {
+    total: number;
+    correct: number;
+    pct: number | null;
+    // Split por fonte (aditivo): teórico = quiz, prático = SAP.
+    teoricoTotal: number;
+    teoricoCorrect: number;
+    sapTotal: number;
+    sapCorrect: number;
+  };
   byCompetency: TagStat[];
   byKnowledgeObject: TagStat[];
   students: StudentSaepStat[];
@@ -63,6 +72,10 @@ export async function getSaepDashboard(classUnitId: string): Promise<SaepDashboa
   const studentAcc = new Map<string, StudentSaepStat>();
   let overallTotal = 0;
   let overallCorrect = 0;
+  let teoricoTotal = 0;
+  let teoricoCorrect = 0;
+  let sapTotal = 0;
+  let sapCorrect = 0;
 
   function bump(map: Map<string, TagStat>, code: string, label: string, ok: boolean) {
     const cur = map.get(code) ?? { code, label, total: 0, correct: 0, pct: null };
@@ -131,7 +144,11 @@ export async function getSaepDashboard(classUnitId: string): Promise<SaepDashboa
     for (const ans of answers ?? []) {
       const ok = ans.is_correct === true;
       overallTotal += 1;
-      if (ok) overallCorrect += 1;
+      teoricoTotal += 1;
+      if (ok) {
+        overallCorrect += 1;
+        teoricoCorrect += 1;
+      }
       const sid = studentByAttempt.get(ans.attempt_id);
       if (sid) {
         const st = studentAcc.get(sid)!;
@@ -188,7 +205,11 @@ export async function getSaepDashboard(classUnitId: string): Promise<SaepDashboa
       for (const m of marks ?? []) {
         const ok = m.met === true;
         overallTotal += 1;
-        if (ok) overallCorrect += 1;
+        sapTotal += 1;
+        if (ok) {
+          overallCorrect += 1;
+          sapCorrect += 1;
+        }
         tagSignal(itemTag.get(m.item_id), ok);
       }
     }
@@ -204,7 +225,15 @@ export async function getSaepDashboard(classUnitId: string): Promise<SaepDashboa
       totalSubmittedAttempts: 0,
       totalSapAssessments: 0,
       totalSapEvaluations: 0,
-      overall: { total: 0, correct: 0, pct: null },
+      overall: {
+        total: 0,
+        correct: 0,
+        pct: null,
+        teoricoTotal: 0,
+        teoricoCorrect: 0,
+        sapTotal: 0,
+        sapCorrect: 0,
+      },
       byCompetency: [],
       byKnowledgeObject: [],
       students: [],
@@ -247,6 +276,10 @@ export async function getSaepDashboard(classUnitId: string): Promise<SaepDashboa
       total: overallTotal,
       correct: overallCorrect,
       pct: overallTotal > 0 ? Math.round((overallCorrect / overallTotal) * 100) : null,
+      teoricoTotal,
+      teoricoCorrect,
+      sapTotal,
+      sapCorrect,
     },
     byCompetency,
     byKnowledgeObject,
