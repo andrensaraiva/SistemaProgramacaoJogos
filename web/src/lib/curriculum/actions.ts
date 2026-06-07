@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { isProfessor, verifySession } from "@/lib/auth/dal";
+import { isAdmin, isProfessor, verifySession } from "@/lib/auth/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // -----------------------------------------------------------------------------
@@ -146,10 +146,78 @@ export async function excluirCurso(formData: FormData): Promise<void> {
   const user = await requireProfessor();
   const id = formData.get("id") as string;
   const admin = createAdminClient();
-  // Só o autor exclui.
-  await admin.from("courses").delete().eq("id", id).eq("author_id", user.id);
+  // Admin exclui qualquer curso; professor só o próprio.
+  if (await isAdmin()) {
+    await admin.from("courses").delete().eq("id", id);
+  } else {
+    await admin.from("courses").delete().eq("id", id).eq("author_id", user.id);
+  }
   revalidatePath("/cursos");
   redirect("/cursos");
+}
+
+// -----------------------------------------------------------------------------
+// CRUD manual de curso (admin) — criar curso vazio e editar metadados. A árvore
+// (módulos/UCs) é editada na página de detalhe, que já existe.
+// -----------------------------------------------------------------------------
+
+export async function criarCursoManual(
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  let user;
+  try {
+    user = await requireProfessor();
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Sem permissão." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length < 3) return { ok: false, message: "Nome do curso muito curto." };
+  const eixo = String(formData.get("eixo") ?? "").trim() || null;
+  const cargaRaw = String(formData.get("carga_horaria_total") ?? "").trim();
+  const carga = cargaRaw ? Number(cargaRaw) : null;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("courses")
+    .insert({ author_id: user.id, name, eixo, carga_horaria_total: carga, is_public: true })
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false, message: error?.message ?? "Falha ao criar curso." };
+
+  revalidatePath("/cursos");
+  redirect(`/cursos/${data.id}`);
+}
+
+export async function editarCurso(
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    await requireProfessor();
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Sem permissão." };
+  }
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, message: "Curso não informado." };
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length < 3) return { ok: false, message: "Nome do curso muito curto." };
+  const eixo = String(formData.get("eixo") ?? "").trim() || null;
+  const cargaRaw = String(formData.get("carga_horaria_total") ?? "").trim();
+  const carga = cargaRaw ? Number(cargaRaw) : null;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("courses")
+    .update({ name, eixo, carga_horaria_total: carga })
+    .eq("id", id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/cursos");
+  revalidatePath(`/cursos/${id}`);
+  return { ok: true };
 }
 
 /** Cria um plano de ensino vazio do professor atual para uma UC. */

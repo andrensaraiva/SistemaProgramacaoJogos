@@ -33,7 +33,7 @@ export const getProfile = cache(async () => {
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses, personal_email, institutional_email, must_change_password, profile_completed",
+      "id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses, personal_email, institutional_email, must_change_password, profile_completed, is_master",
     )
     .eq("id", user.id)
     .single();
@@ -42,7 +42,10 @@ export const getProfile = cache(async () => {
 
   const metadata = user.user_metadata ?? {};
   const rawRole = metadata.role;
-  const role = rawRole === "professor" || rawRole === "admin" ? rawRole : "aluno";
+  const role =
+    rawRole === "professor" || rawRole === "admin" || rawRole === "coordenador"
+      ? rawRole
+      : "aluno";
   const displayName =
     typeof metadata.display_name === "string" && metadata.display_name.trim()
       ? metadata.display_name.trim()
@@ -60,7 +63,7 @@ export const getProfile = cache(async () => {
       { onConflict: "id" },
     )
     .select(
-      "id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses, personal_email, institutional_email, must_change_password, profile_completed",
+      "id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses, personal_email, institutional_email, must_change_password, profile_completed, is_master",
     )
     .single();
 
@@ -70,12 +73,32 @@ export const getProfile = cache(async () => {
 
 export const isProfessor = cache(async () => {
   const profile = await getProfile();
-  return profile?.role === "professor" || profile?.role === "admin";
+  return (
+    profile?.role === "professor" ||
+    profile?.role === "admin" ||
+    profile?.role === "coordenador"
+  );
 });
 
 export const isAdmin = cache(async () => {
   const profile = await getProfile();
   return profile?.role === "admin";
+});
+
+export const isCoordenador = cache(async () => {
+  const profile = await getProfile();
+  return profile?.role === "coordenador";
+});
+
+/** Quem gerencia turmas como gestão ampla (coordenador ou admin). */
+export const isGestaoTurmas = cache(async () => {
+  const profile = await getProfile();
+  return profile?.role === "coordenador" || profile?.role === "admin";
+});
+
+export const isMasterAdmin = cache(async () => {
+  const profile = await getProfile();
+  return profile?.role === "admin" && profile?.is_master === true;
 });
 
 /** Quantidade de notificações não lidas do usuário atual (para o sino). */

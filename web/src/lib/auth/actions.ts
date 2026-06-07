@@ -63,19 +63,28 @@ export async function login(
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  let isAdminRole = false;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("must_change_password, profile_completed")
+      .select("role, must_change_password, profile_completed, disabled_at")
       .eq("id", user.id)
       .single();
+    if (profile?.disabled_at) {
+      await supabase.auth.signOut();
+      return { message: "Esta conta está suspensa. Procure o administrador." };
+    }
     if (profile && (profile.must_change_password || !profile.profile_completed)) {
       revalidatePath("/", "layout");
       redirect("/primeiro-acesso");
     }
+    isAdminRole = profile?.role === "admin";
   }
 
   revalidatePath("/", "layout");
+  // Admin é administrativo → cai no painel admin. Demais → painel normal (ou o
+  // destino solicitado).
+  if (isAdminRole) redirect("/admin");
   const proximo = (formData.get("proximo") as string) || "/painel";
   redirect(proximo);
 }
@@ -143,38 +152,65 @@ export async function solicitarReset(
   }
 
   // Destinatários: aluno → professores que o ensinam + todos os admins;
-  // professor → só admins.
-  const recipientIds = new Set<string>();
+  // professor → só admins. O LINK aponta para onde cada um pode resolver:
+  // admin → /admin (fila de reset); professor → a turma do aluno (fila lá).
+  const adminIds = new Set<string>();
+  const profByClass = new Map<string, string>(); // ownerId -> classId (para o link)
 
-  const { data: admins } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("role", "admin");
-  for (const a of admins ?? []) recipientIds.add(a.id);
+  const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");
+  for (const a of admins ?? []) adminIds.add(a.id);
 
   if (profile.role === "aluno") {
-    // Professores donos de alguma turma onde o aluno é membro.
+    // Professores (dono ou co-docente) de alguma turma onde o aluno é membro.
     const { data: turmas } = await admin
       .from("class_members")
-      .select("class:classes!class_id(owner_id)")
+      .select("class_id, class:classes!class_id(owner_id)")
       .eq("student_id", profile.id);
     for (const t of turmas ?? []) {
       const ownerId = (t.class as unknown as { owner_id: string } | null)?.owner_id;
-      if (ownerId) recipientIds.add(ownerId);
+      if (ownerId && ownerId !== profile.id) profByClass.set(ownerId, t.class_id as string);
+    }
+    // Co-professores também recebem (na turma onde co-lecionam o aluno).
+    const classIds = (turmas ?? []).map((t) => t.class_id as string);
+    if (classIds.length) {
+      const { data: cos } = await admin
+        .from("class_teachers")
+        .select("teacher_id, class_id")
+        .in("class_id", classIds);
+      for (const c of cos ?? []) {
+        if (c.teacher_id !== profile.id) profByClass.set(c.teacher_id, c.class_id);
+      }
     }
   }
+  adminIds.delete(profile.id);
 
-  recipientIds.delete(profile.id);
+  const rows: {
+    recipient_id: string;
+    type: string;
+    title: string;
+    body: string;
+    link: string;
+    payload: Record<string, unknown>;
+  }[] = [];
+  const payload = { request_id: requestId, requester_id: profile.id, role: profile.role };
+  const title = "Pedido de redefinição de senha";
+  const body = `${profile.display_name} solicitou a redefinição de senha.`;
 
-  if (recipientIds.size > 0 && requestId) {
-    const rows = [...recipientIds].map((rid) => ({
-      recipient_id: rid,
+  for (const aid of adminIds) {
+    rows.push({ recipient_id: aid, type: "reset_senha", title, body, link: "/admin", payload });
+  }
+  for (const [pid, classId] of profByClass) {
+    rows.push({
+      recipient_id: pid,
       type: "reset_senha",
-      title: "Pedido de redefinição de senha",
-      body: `${profile.display_name} solicitou a redefinição de senha.`,
-      link: profile.role === "aluno" ? "/painel" : "/admin",
-      payload: { request_id: requestId, requester_id: profile.id, role: profile.role },
-    }));
+      title,
+      body,
+      link: `/turmas/${classId}/alunos`,
+      payload,
+    });
+  }
+
+  if (rows.length && requestId) {
     await admin.from("notifications").insert(rows);
   }
 
