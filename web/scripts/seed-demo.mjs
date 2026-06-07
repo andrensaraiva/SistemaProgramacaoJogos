@@ -12,20 +12,47 @@ const INVITE_CODE = "DEMO2026";
 const USERS = [
   {
     email: "prof.demo@codequest.dev",
+    personal_email: "prof.demo.pessoal@gmail.com",
     display_name: "Prof Demo",
     role: "professor",
   },
   {
+    email: "prof2.demo@codequest.dev",
+    personal_email: "prof2.demo.pessoal@gmail.com",
+    display_name: "Prof Demo 2 (co-docência)",
+    role: "professor",
+  },
+  {
     email: "aluno1.demo@codequest.dev",
+    personal_email: "aluno1.pessoal@gmail.com",
     display_name: "Aluno Demo 1",
     role: "aluno",
   },
   {
     email: "aluno2.demo@codequest.dev",
+    personal_email: "aluno2.pessoal@gmail.com",
     display_name: "Aluno Demo 2",
     role: "aluno",
   },
 ];
+
+// Admin demo — para entrar no painel administrativo e ver os relatórios.
+const ADMIN_PASSWORD = "Admin@2026";
+const ADMIN_USER = {
+  email: "admin@celeste.academy",
+  display_name: "Admin Master",
+  role: "admin",
+  password: ADMIN_PASSWORD,
+  is_master: true,
+};
+
+const COORD_USER = {
+  email: "coord.demo@celeste.academy",
+  personal_email: "coord.demo.pessoal@gmail.com",
+  display_name: "Coordenador Demo",
+  role: "coordenador",
+  password: DEMO_PASSWORD,
+};
 
 const EXERCISES = [
   {
@@ -259,17 +286,25 @@ async function findUserByEmail(supabase, email) {
 }
 
 async function ensureUser(supabase, user) {
+  // Metadata no formato do modelo de identidades atual: dois emails e contas de
+  // demo JÁ liberadas (sem forçar primeiro acesso), para testar direto.
+  const metadata = {
+    display_name: user.display_name,
+    role: user.role,
+    institutional_email: user.email,
+    personal_email: user.personal_email ?? null,
+    must_change_password: false,
+    profile_completed: true,
+  };
+  const password = user.password ?? DEMO_PASSWORD;
   const existing = await findUserByEmail(supabase, user.email);
 
   if (!existing) {
     const { data, error } = await supabase.auth.admin.createUser({
       email: user.email,
-      password: DEMO_PASSWORD,
+      password,
       email_confirm: true,
-      user_metadata: {
-        display_name: user.display_name,
-        role: user.role,
-      },
+      user_metadata: metadata,
     });
     if (error) throw error;
     await upsertProfile(supabase, data.user.id, user);
@@ -277,11 +312,8 @@ async function ensureUser(supabase, user) {
   }
 
   const { error } = await supabase.auth.admin.updateUserById(existing.id, {
-    password: DEMO_PASSWORD,
-    user_metadata: {
-      display_name: user.display_name,
-      role: user.role,
-    },
+    password,
+    user_metadata: metadata,
   });
   if (error) throw error;
 
@@ -295,6 +327,12 @@ async function upsertProfile(supabase, id, user) {
       id,
       role: user.role,
       display_name: user.display_name,
+      institutional_email: user.email,
+      personal_email: user.personal_email ?? null,
+      must_change_password: false,
+      profile_completed: true,
+      disabled_at: null,
+      is_master: user.is_master ?? false,
       xp: 0,
       level: 1,
     },
@@ -384,10 +422,19 @@ async function must(query) {
 }
 
 async function seedDemo(supabase) {
-  const teacherId = await ensureUser(supabase, USERS[0]);
+  // Admin demo (para o painel administrativo e os relatórios).
+  await ensureUser(supabase, ADMIN_USER);
+
+  // Coordenador demo (supervisiona qualquer turma; painel /coordenador).
+  await ensureUser(supabase, COORD_USER);
+
+  // Referencia por email (robusto a mudanças de ordem em USERS).
+  const byEmail = (e) => USERS.find((u) => u.email === e);
+  const teacherId = await ensureUser(supabase, byEmail("prof.demo@codequest.dev"));
+  const teacher2Id = await ensureUser(supabase, byEmail("prof2.demo@codequest.dev"));
   const studentIds = [
-    await ensureUser(supabase, USERS[1]),
-    await ensureUser(supabase, USERS[2]),
+    await ensureUser(supabase, byEmail("aluno1.demo@codequest.dev")),
+    await ensureUser(supabase, byEmail("aluno2.demo@codequest.dev")),
   ];
 
   const { data: classroom, error: classError } = await supabase
@@ -496,14 +543,18 @@ async function seedDemo(supabase) {
   if (subError) throw subError;
 
   // ---- Camada curricular: curso + matriz + plano de ensino demo + frequência ----
-  const { classUnitId, matrix } = await seedCurriculo(supabase, {
+  const { classUnitId, matrix, classUnits } = await seedCurriculo(supabase, {
     teacherId,
     classId: classroom.id,
     studentIds,
   });
 
   // ---- Trabalhos não-código: apresentação + modelo de resposta + grupo ----
-  await seedTrabalhos(supabase, { teacherId, classId: classroom.id, studentIds });
+  const { groupId } = await seedTrabalhos(supabase, {
+    teacherId,
+    classId: classroom.id,
+    studentIds,
+  });
 
   // ---- SAEP (simulado teórico) + SAP (prático) na UC ----
   await seedSaepSap(supabase, {
@@ -513,6 +564,254 @@ async function seedDemo(supabase) {
     studentIds,
     matrix,
   });
+
+  // ---- Projeto Integrador (board com tarefas) na UC ----
+  await seedProjetoIntegrador(supabase, {
+    classId: classroom.id,
+    classUnitId,
+    groupId,
+    teacherId,
+    studentIds,
+  });
+
+  // ---- Exercícios criativos (pixel / vetor / arte / blocos) ----
+  await seedExerciciosCriativos(supabase, { teacherId, classId: classroom.id });
+
+  // ---- Feriados + calendário do curso (pré-montado) ----
+  await seedCalendario(supabase, { teacherId, classId: classroom.id, classUnits });
+
+  // ---- Co-docência (2º professor + responsável por UC) + feedback anônimo ----
+  await seedCoDocencia(supabase, {
+    classId: classroom.id,
+    teacherId,
+    teacher2Id,
+    classUnitId,
+    studentIds,
+  });
+}
+
+// Adiciona o 2º professor como co-docente, define-o responsável pela UC, e cria
+// alguns feedbacks anônimos de exemplo (hash com FEEDBACK_SECRET, sem autor).
+async function seedCoDocencia(supabase, { classId, teacherId, teacher2Id, classUnitId, studentIds }) {
+  await must(
+    supabase
+      .from("class_teachers")
+      .upsert({ class_id: classId, teacher_id: teacher2Id, added_by: teacherId }, { onConflict: "class_id,teacher_id" }),
+  );
+
+  // 2º professor vira responsável pela UC de codificação (substituição/divisão).
+  if (classUnitId) {
+    await must(supabase.from("class_units").update({ teacher_id: teacher2Id }).eq("id", classUnitId));
+  }
+
+  // Feedbacks anônimos de exemplo. O dedupe_hash usa o MESMO segredo da app.
+  const secret = process.env.FEEDBACK_SECRET;
+  if (!secret) {
+    console.log("Feedback demo pulado (FEEDBACK_SECRET ausente no .env.local).");
+    return;
+  }
+  const { createHmac } = await import("node:crypto");
+  const hash = (studentId, target, alvo) =>
+    createHmac("sha256", secret).update(`${studentId}:${target}:${alvo}`).digest("hex");
+
+  // Limpa feedbacks demo anteriores deste professor (idempotência).
+  await supabase.from("teacher_feedback").delete().eq("teacher_id", teacher2Id);
+
+  const rows = [
+    { student: studentIds[0], rating: 5, comment: "Aulas muito claras e dinâmicas!", alvo: "geral", cu: null },
+    { student: studentIds[1], rating: 4, comment: "Bom ritmo, queria mais exercícios práticos.", alvo: "geral", cu: null },
+    { student: studentIds[0], rating: 5, comment: "Adorei a aula de hoje.", alvo: classUnitId ?? "geral", cu: classUnitId },
+  ].filter((r) => r.student);
+
+  for (const r of rows) {
+    await supabase.from("teacher_feedback").insert({
+      class_id: classId,
+      teacher_id: teacher2Id,
+      class_unit_id: r.cu,
+      session_id: null,
+      rating: r.rating,
+      comment: r.comment,
+      dedupe_hash: hash(r.student, teacher2Id, r.alvo),
+    });
+  }
+
+  console.log("Co-docência demo: 2º professor + responsável por UC + 3 feedbacks anônimos.");
+}
+
+// Cria 4 exercícios criativos e uma lista que os reúne, para testar cada editor.
+async function seedExerciciosCriativos(supabase, { teacherId, classId }) {
+  const criativos = [
+    {
+      title: "Pixel Art — Sprite da Celeste (Demo)",
+      description: "Desenhe um sprite 32×32 da Celeste usando lápis, balde e camadas.",
+      exercise_type: "pixel_art",
+      canvas_config: { width: 32, height: 32 },
+    },
+    {
+      title: "Vetor — Logo do seu jogo (Demo)",
+      description: "Crie um logo simples com formas vetoriais (retângulo, elipse, linha).",
+      exercise_type: "vetor",
+      canvas_config: { width: 640, height: 480 },
+    },
+    {
+      title: "Arte Digital — Cenário (Demo)",
+      description: "Pinte um cenário com pincel, camadas e opacidade.",
+      exercise_type: "arte_digital",
+      canvas_config: { width: 800, height: 600 },
+    },
+    {
+      title: "Blocos — Faça a Celeste contar até 10 (Demo)",
+      description:
+        "Monte um programa com blocos: crie uma variável, use 'repita' e 'falar/imprimir' para contar de 1 a 10.",
+      exercise_type: "blocos",
+      canvas_config: { width: 480, height: 360 },
+    },
+  ];
+
+  const ids = [];
+  for (const ex of criativos) {
+    const { data } = await supabase
+      .from("exercises")
+      .insert({
+        author_id: teacherId,
+        title: ex.title,
+        description: ex.description,
+        starter_code: "",
+        language: "csharp",
+        language_id: null,
+        difficulty: "facil",
+        xp_reward: 0,
+        is_public: true,
+        exercise_type: ex.exercise_type,
+        is_group: false,
+        canvas_config: ex.canvas_config,
+      })
+      .select("id")
+      .single()
+      .throwOnError();
+    ids.push(data.id);
+  }
+
+  const { data: lista } = await supabase
+    .from("assignments")
+    .insert({ class_id: classId, title: "Atividades Criativas (Demo)", kind: "lista" })
+    .select("id")
+    .single()
+    .throwOnError();
+
+  await must(
+    supabase.from("assignment_exercises").insert(
+      ids.map((exercise_id, i) => ({ assignment_id: lista.id, exercise_id, ord: i + 1 })),
+    ),
+  );
+
+  console.log("Exercícios criativos demo (pixel/vetor/arte/blocos) criados.");
+}
+
+// Feriados institucionais + calendário do curso pré-montado para a Turma Demo,
+// com grade gerada (seg-qua), feriados marcados e algumas UCs já alocadas.
+async function seedCalendario(supabase, { classId, classUnits }) {
+  // 1. Feriados de 2026 (idempotente: limpa e recria os do demo).
+  const FERIADOS = [
+    { date: "2026-02-16", name: "Carnaval", kind: "feriado" },
+    { date: "2026-02-17", name: "Carnaval", kind: "feriado" },
+    { date: "2026-02-18", name: "Carnaval", kind: "feriado" },
+    { date: "2026-04-21", name: "Tiradentes", kind: "feriado" },
+    { date: "2026-05-01", name: "Dia do Trabalho", kind: "feriado" },
+    { date: "2026-06-04", name: "Corpus Christi", kind: "feriado" },
+    { date: "2026-07-13", name: "Recesso escolar", kind: "recesso" },
+    { date: "2026-07-14", name: "Recesso escolar", kind: "recesso" },
+    { date: "2026-07-15", name: "Recesso escolar", kind: "recesso" },
+  ];
+  for (const f of FERIADOS) {
+    await supabase.from("institution_holidays").delete().eq("date", f.date).eq("name", f.name);
+  }
+  await must(supabase.from("institution_holidays").insert(FERIADOS));
+
+  // 2. Calendário da turma (seg-qua, 4 aulas/dia), jan–jun/2026.
+  const startsOn = "2026-01-26";
+  const endsOn = "2026-06-30";
+  const weekdays = [1, 2, 3]; // seg, ter, qua
+  const aulasPorDia = 4;
+  const { data: cal } = await supabase
+    .from("course_calendars")
+    .upsert(
+      { class_id: classId, starts_on: startsOn, ends_on: endsOn, weekdays, aulas_por_dia: aulasPorDia },
+      { onConflict: "class_id" },
+    )
+    .select("id")
+    .single()
+    .throwOnError();
+
+  // 3. Metas de CH por UC (todas as UCs vinculadas).
+  await supabase.from("calendar_uc_targets").delete().eq("calendar_id", cal.id);
+  await must(
+    supabase.from("calendar_uc_targets").insert(
+      classUnits.map((u, i) => ({
+        calendar_id: cal.id,
+        class_unit_id: u.classUnitId,
+        ch_presencial: u.ch,
+        ord: i,
+      })),
+    ),
+  );
+
+  // 4. Gera os dias (seg-qua), marca feriados, e aloca as 2 primeiras UCs em
+  //    blocos no início para demonstrar o totalizador andando.
+  const feriadoPorData = new Map(FERIADOS.map((f) => [f.date, f]));
+  const datas = [];
+  {
+    const cur = new Date(Date.UTC(2026, 0, 26));
+    const end = new Date(Date.UTC(2026, 5, 30));
+    while (cur <= end) {
+      const isoDow = cur.getUTCDay() === 0 ? 7 : cur.getUTCDay();
+      if (weekdays.includes(isoDow)) datas.push(cur.toISOString().slice(0, 10));
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+  }
+  const uc0 = classUnits[0]?.classUnitId ?? null; // Codificação
+  const uc1 = classUnits[1]?.classUnitId ?? null;
+  let alocadosUc0 = 0;
+  // Salas demo (idempotente por nome).
+  const SALAS = [
+    { name: "Sala 101", capacity: 35, kind: "sala" },
+    { name: "Lab 1004", capacity: 25, kind: "laboratorio" },
+    { name: "Auditório", capacity: 120, kind: "auditorio" },
+  ];
+  for (const s of SALAS) await supabase.from("rooms").delete().eq("name", s.name);
+  const { data: salasCriadas } = await supabase
+    .from("rooms")
+    .insert(SALAS)
+    .select("id, name")
+    .throwOnError();
+  const sala101 = salasCriadas.find((s) => s.name === "Sala 101")?.id ?? null;
+  const lab1004 = salasCriadas.find((s) => s.name === "Lab 1004")?.id ?? null;
+
+  const rows = datas.map((date) => {
+    const fer = feriadoPorData.get(date);
+    if (fer) return { calendar_id: cal.id, date, class_unit_id: null, marker: fer.kind, note: fer.name, room_id: null };
+    // Aloca as ~10 primeiras aulas úteis à UC0 (Sala 101), as 6 seguintes à UC1 (Lab 1004).
+    let cu = null;
+    let room = null;
+    if (alocadosUc0 < 10 && uc0) {
+      cu = uc0;
+      room = sala101;
+      alocadosUc0++;
+    } else if (alocadosUc0 >= 10 && alocadosUc0 < 16 && uc1) {
+      cu = uc1;
+      room = lab1004;
+      alocadosUc0++;
+    }
+    return { calendar_id: cal.id, date, class_unit_id: cu, marker: null, note: null, room_id: room };
+  });
+  await supabase.from("calendar_days").delete().eq("calendar_id", cal.id);
+  for (let i = 0; i < rows.length; i += 500) {
+    await must(supabase.from("calendar_days").insert(rows.slice(i, i + 500)));
+  }
+
+  console.log(
+    `Calendário do curso demo criado (${datas.length} dias, ${FERIADOS.length} feriados, ${classUnits.length} UCs, ${SALAS.length} salas alocadas).`,
+  );
 }
 
 // Exercícios que NÃO são de código (apresentação por link e modelo de resposta),
@@ -617,6 +916,81 @@ async function seedTrabalhos(supabase, { teacherId, classId, studentIds }) {
   );
 
   console.log("Trabalhos demo (apresentação + modelo + grupo) criados.");
+  return { groupId: grupo.id };
+}
+
+// Projeto Integrador (TCC): atividade kind=projeto_integrador na UC, com sprint e
+// um board de tarefas em status variados (a_fazer/fazendo/concluido) para o grupo
+// — alimenta o relatório de Projetos Integradores do admin (% concluído).
+async function seedProjetoIntegrador(
+  supabase,
+  { classId, classUnitId, groupId, teacherId, studentIds },
+) {
+  if (!classUnitId || !groupId) {
+    console.log("Projeto integrador demo pulado (sem class_unit ou grupo).");
+    return;
+  }
+
+  const { data: assignment } = await supabase
+    .from("assignments")
+    .insert({
+      class_id: classId,
+      class_unit_id: classUnitId,
+      title: "Projeto Integrador — Jogo Autoral (Demo)",
+      kind: "projeto_integrador",
+    })
+    .select("id")
+    .single()
+    .throwOnError();
+
+  const { data: project } = await supabase
+    .from("projects")
+    .insert({
+      assignment_id: assignment.id,
+      class_unit_id: classUnitId,
+      title: "Jogo Autoral — Plataforma 2D",
+      description: "Desenvolver um protótipo jogável com 1 fase completa.",
+    })
+    .select("id")
+    .single()
+    .throwOnError();
+
+  const { data: sprint } = await supabase
+    .from("project_sprints")
+    .insert({
+      project_id: project.id,
+      title: "Sprint 1 — Pré-produção",
+      goal: "GDD, arte conceitual e protótipo de movimentação.",
+      ord: 0,
+    })
+    .select("id")
+    .single()
+    .throwOnError();
+
+  // Tarefas em status variados → progresso ~40% (2 de 5 concluídas).
+  const tasks = [
+    { title: "Escrever o GDD", status: "concluido" },
+    { title: "Arte conceitual do personagem", status: "concluido" },
+    { title: "Protótipo de movimentação", status: "fazendo" },
+    { title: "Design da fase 1", status: "a_fazer" },
+    { title: "Trilha sonora", status: "a_fazer" },
+  ];
+  await must(
+    supabase.from("project_tasks").insert(
+      tasks.map((t, i) => ({
+        project_id: project.id,
+        group_id: groupId,
+        sprint_id: sprint.id,
+        title: t.title,
+        status: t.status,
+        assignee_id: studentIds[i % studentIds.length],
+        created_by: teacherId,
+        ord: i,
+      })),
+    ),
+  );
+
+  console.log("Projeto integrador demo criado (1 sprint, 5 tarefas).");
 }
 
 // Grava o curso técnico, cria um plano de ensino do prof.demo para a UC de
@@ -640,6 +1014,7 @@ async function seedCurriculo(supabase, { teacherId, classId, studentIds }) {
   const matrix = await seedMatriz(supabase, course.id);
 
   let codificacaoUcId = null;
+  const todasUcs = []; // {id, title, ch} de todas as UCs do curso (p/ calendário)
 
   for (const [mi, mod] of COURSE.modules.entries()) {
     const { data: moduleRow } = await supabase
@@ -664,6 +1039,7 @@ async function seedCurriculo(supabase, { teacherId, classId, studentIds }) {
         .throwOnError();
 
       if (unit.title.startsWith("Codificação")) codificacaoUcId = ucRow.id;
+      todasUcs.push({ id: ucRow.id, title: unit.title, ch: unit.carga_horaria_h ?? 0 });
 
       if (unit.capabilities?.length) {
         await must(
@@ -830,7 +1206,22 @@ async function seedCurriculo(supabase, { teacherId, classId, studentIds }) {
 
   console.log("Plano de ensino demo + frequência por aula (2 dias x 4) criados.");
 
-  return { classUnitId: classUnit.id, matrix };
+  // Vincula as DEMAIS UCs do curso à Turma Demo (sem plano), para encher o
+  // calendário com várias UCs e cargas horárias reais.
+  const classUnits = [{ classUnitId: classUnit.id, title: "Codificação de Sistemas de Jogos Digitais", ch: 180 }];
+  for (const uc of todasUcs) {
+    if (uc.id === codificacaoUcId) continue;
+    const { data: cu } = await supabase
+      .from("class_units")
+      .insert({ class_id: classId, uc_id: uc.id, serie: "3ª série" })
+      .select("id")
+      .single()
+      .throwOnError();
+    classUnits.push({ classUnitId: cu.id, title: uc.title, ch: uc.ch });
+  }
+  console.log(`UCs vinculadas à Turma Demo: ${classUnits.length}.`);
+
+  return { classUnitId: classUnit.id, matrix, classUnits };
 }
 
 // Cria a matriz de competências do curso e devolve os ids por código, para que
@@ -1269,11 +1660,34 @@ async function main() {
   await seedDemo(supabase);
 
   console.log("");
-  console.log("Seed demo pronto.");
-  console.log(`Professor: ${USERS[0].email} / ${DEMO_PASSWORD}`);
-  console.log(`Aluno 1:   ${USERS[1].email} / ${DEMO_PASSWORD}`);
-  console.log(`Aluno 2:   ${USERS[2].email} / ${DEMO_PASSWORD}`);
-  console.log(`Codigo da turma: ${INVITE_CODE}`);
+  console.log("=============================================================");
+  console.log(" SEED COMPLETO — pronto para testar tudo");
+  console.log("=============================================================");
+  console.log("");
+  console.log("LOGINS (entre em /entrar):");
+  console.log(`  ADMIN      : ${ADMIN_USER.email} / ${ADMIN_PASSWORD}`);
+  console.log(`  COORDENADOR: ${COORD_USER.email} / ${DEMO_PASSWORD} (ve/gerencia todas as turmas)`);
+  console.log(`  PROFESSOR  : prof.demo@codequest.dev / ${DEMO_PASSWORD} (dono)`);
+  console.log(`  PROFESSOR 2: prof2.demo@codequest.dev / ${DEMO_PASSWORD} (co-docencia)`);
+  console.log(`  ALUNO 1    : aluno1.demo@codequest.dev / ${DEMO_PASSWORD}`);
+  console.log(`               (tambem loga com aluno1.pessoal@gmail.com)`);
+  console.log(`  ALUNO 2    : aluno2.demo@codequest.dev / ${DEMO_PASSWORD}`);
+  console.log("");
+  console.log("COMO ADMIN:");
+  console.log("  - Painel admin: numeros da instituicao + criar professor/admin.");
+  console.log("  - Relatorios: Institucional, Professores (frequencia/plano/execucao),");
+  console.log("    Turmas, Alunos (em risco), SAEP/SAP (por competencia + drill-down),");
+  console.log("    Projetos Integradores (progresso). Exportar CSV + Imprimir/PDF.");
+  console.log("  - Configuracoes: mudar corte de nota/frequencia e ver reclassificar.");
+  console.log("");
+  console.log("COMO PROFESSOR (Turma Demo): frequencia, atividades, SAEP, SAP, projeto.");
+  console.log("COMO ALUNO: responder simulado, entregar SAP, ver notas/frequencia.");
+  console.log("");
+  console.log("NOVOS EXERCICIOS CRIATIVOS (lista 'Atividades Criativas (Demo)'):");
+  console.log("  Pixel Art, Vetor, Arte Digital e Blocos (Celeste). Entre como ALUNO,");
+  console.log("  abra a lista e teste cada editor; entregue; corrija como PROFESSOR.");
+  console.log("");
+  console.log(`Codigo da turma (entrar como aluno novo): ${INVITE_CODE}`);
 }
 
 main().catch((error) => {
