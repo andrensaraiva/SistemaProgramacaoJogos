@@ -5,9 +5,9 @@ import { LoginForm } from "./_form";
 export default async function EntrarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ proximo?: string }>;
+  searchParams: Promise<{ proximo?: string; suspenso?: string }>;
 }) {
-  const { proximo } = await searchParams;
+  const { proximo, suspenso } = await searchParams;
 
   return (
     <div className="flex flex-col gap-6">
@@ -18,6 +18,11 @@ export default async function EntrarPage({
           pessoal) e sua senha. No primeiro acesso, você define uma nova senha.
         </p>
       </div>
+      {suspenso && (
+        <div className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+          Esta conta está suspensa. Procure o administrador.
+        </div>
+      )}
       <LoginForm proximo={proximo ?? "/painel"} />
       <p className="text-center text-sm text-muted-foreground">
         Esqueceu a senha?{" "}

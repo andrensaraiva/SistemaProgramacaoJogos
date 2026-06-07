@@ -6,6 +6,7 @@ import {
   isValidEmail,
   normalizeEmail,
   parseStudentsText,
+  senhaDerivada,
 } from "./parse";
 
 describe("isValidEmail", () => {
@@ -104,5 +105,25 @@ describe("generateTempPassword", () => {
   });
   it("não repete trivialmente (duas chamadas diferem)", () => {
     expect(generateTempPassword()).not.toBe(generateTempPassword());
+  });
+});
+
+describe("senhaDerivada", () => {
+  it("usa o primeiro nome capitalizado + sufixo", () => {
+    expect(senhaDerivada("Maria Souza", "@2026")).toBe("Maria@2026");
+  });
+  it("remove acentos do primeiro nome", () => {
+    expect(senhaDerivada("João da Silva", "@2026")).toBe("Joao@2026");
+  });
+  it("normaliza caixa (tudo maiúsculo → só a inicial)", () => {
+    expect(senhaDerivada("ANA Clara", "@2026")).toBe("Ana@2026");
+  });
+  it("usa o sufixo padrão quando não informado", () => {
+    expect(senhaDerivada("Pedro")).toBe("Pedro@2026");
+  });
+  it("cai em senha aleatória se o nome não tem letras suficientes", () => {
+    const pw = senhaDerivada("J", "@2026");
+    expect(pw).not.toBe("J@2026");
+    expect(pw.length).toBeGreaterThanOrEqual(8);
   });
 });

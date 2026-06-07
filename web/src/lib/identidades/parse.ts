@@ -136,3 +136,22 @@ export function generateTempPassword(length = 10): string {
   }
   return out.join("");
 }
+
+export const SENHA_SUFIXO_PADRAO = "@2026";
+
+/**
+ * Senha inicial DERIVADA do nome: primeiro nome (sem acento, só letras,
+ * capitalizado) + sufixo configurável. Ex.: "João da Silva" + "@2026" →
+ * "Joao@2026". Fácil de comunicar; a troca no 1º acesso é obrigatória.
+ *
+ * Cai numa senha aleatória se o nome não render letras suficientes (≥ 2),
+ * garantindo que a conta sempre tenha senha válida.
+ */
+export function senhaDerivada(displayName: string, sufixo = SENHA_SUFIXO_PADRAO): string {
+  const primeiro = (displayName ?? "").trim().split(/\s+/)[0] ?? "";
+  const semAcento = primeiro.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const soLetras = semAcento.replace(/[^A-Za-z]/g, "");
+  if (soLetras.length < 2) return generateTempPassword();
+  const capitalizado = soLetras.charAt(0).toUpperCase() + soLetras.slice(1).toLowerCase();
+  return `${capitalizado}${sufixo}`;
+}

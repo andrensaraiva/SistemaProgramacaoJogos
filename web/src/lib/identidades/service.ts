@@ -2,7 +2,19 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
-import { canonicalEmail, generateTempPassword, normalizeEmail } from "./parse";
+import {
+  canonicalEmail,
+  normalizeEmail,
+  senhaDerivada,
+  SENHA_SUFIXO_PADRAO,
+} from "./parse";
+
+/** Lê o sufixo de senha configurado (institution_settings). Fallback ao padrão. */
+async function getSenhaSufixo(admin: ReturnType<typeof createAdminClient>): Promise<string> {
+  const { data } = await admin.from("institution_settings").select("senha_sufixo").maybeSingle();
+  const s = data?.senha_sufixo;
+  return typeof s === "string" && s.trim() ? s : SENHA_SUFIXO_PADRAO;
+}
 
 // -----------------------------------------------------------------------------
 // Operações privilegiadas de identidade (service-role). NUNCA importar no client.
@@ -12,7 +24,7 @@ import { canonicalEmail, generateTempPassword, normalizeEmail } from "./parse";
 
 export type CriarContaInput = {
   displayName: string;
-  role: "aluno" | "professor";
+  role: "aluno" | "professor" | "admin" | "coordenador";
   institutionalEmail: string | null;
   personalEmail: string | null;
   createdBy: string;
@@ -34,8 +46,10 @@ export async function criarConta(input: CriarContaInput): Promise<CriarContaResu
 
   const institutional = normalizeEmail(input.institutionalEmail);
   const personal = normalizeEmail(input.personalEmail);
-  const tempPassword = generateTempPassword();
   const admin = createAdminClient();
+  // Senha inicial derivada do nome (ex.: "Joao@2026") — fácil de comunicar; a
+  // troca no 1º acesso é obrigatória.
+  const tempPassword = senhaDerivada(input.displayName, await getSenhaSufixo(admin));
 
   const { data, error } = await admin.auth.admin.createUser({
     email: canonical,
@@ -97,8 +111,14 @@ export async function resolveCanonicalEmail(typed: string): Promise<string | nul
 export async function resetarSenhaTemporaria(
   userId: string,
 ): Promise<{ ok: true; tempPassword: string } | { ok: false; error: string }> {
-  const tempPassword = generateTempPassword();
   const admin = createAdminClient();
+  // Mesma senha derivada do nome (ex.: "Joao@2026"); o usuário troca no acesso.
+  const { data: prof } = await admin
+    .from("profiles")
+    .select("display_name")
+    .eq("id", userId)
+    .maybeSingle();
+  const tempPassword = senhaDerivada(prof?.display_name ?? "", await getSenhaSufixo(admin));
 
   const { error: authError } = await admin.auth.admin.updateUserById(userId, {
     password: tempPassword,
