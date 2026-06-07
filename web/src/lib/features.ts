@@ -57,6 +57,7 @@ export const FEATURES: FeatureNavItem[] = [
   // Duelos e Ranking são da experiência do ALUNO (competição/XP); fora do menu do professor.
   { id: "duelos", href: "/duelos", label: "Duelos", icon: "duelo", group: "Aprender", audience: "aluno", enabled: true },
   { id: "ranking", href: "/ranking", label: "Ranking", icon: "trofeu", group: "Aprender", audience: "aluno", enabled: true },
+  { id: "desempenho", href: "/desempenho", label: "Meu desempenho", icon: "relatorio", group: "Aprender", audience: "aluno", enabled: true },
 
   { id: "turmas", href: "/turmas", label: "Turmas", icon: "turma", group: "Turmas", audience: "professor", enabled: true },
   { id: "cursos", href: "/cursos", label: "Cursos", icon: "curso", group: "Turmas", audience: "professor", enabled: true },
@@ -91,7 +92,7 @@ function seesItem(role: Role, audience: Audience): boolean {
 
 // Rotas que o ADMIN pode acessar (ele é administrativo; o resto da app é de
 // aluno/professor). Usado pelo middleware para bloquear o acesso direto por URL.
-const ADMIN_ALLOWED_PREFIXES = ["/admin", "/cursos", "/salas", "/primeiro-acesso", "/auth"];
+const ADMIN_ALLOWED_PREFIXES = ["/admin", "/cursos", "/salas", "/sem-acesso", "/primeiro-acesso", "/auth"];
 
 export function isAdminAllowedPath(path: string): boolean {
   if (ADMIN_ALLOWED_PREFIXES.some((p) => path === p || path.startsWith(p + "/"))) {
@@ -113,6 +114,7 @@ const COORD_ALLOWED_PREFIXES = [
   "/saep",
   "/unity",
   "/admin/relatorios",
+  "/sem-acesso",
   "/primeiro-acesso",
   "/auth",
 ];

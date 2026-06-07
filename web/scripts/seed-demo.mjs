@@ -728,10 +728,22 @@ async function seedCalendario(supabase, { classId, classUnits }) {
   }
   await must(supabase.from("institution_holidays").insert(FERIADOS));
 
-  // 2. Calendário da turma (seg-qua, 4 aulas/dia), jan–jun/2026.
-  const startsOn = "2026-01-26";
-  const endsOn = "2026-06-30";
-  const weekdays = [1, 2, 3]; // seg, ter, qua
+  // 2. Calendário da turma. Janela RELATIVA a hoje para o painel do professor
+  //    ("Aulas de hoje") aparecer preenchido independentemente de quando o seed
+  //    rodar. Inclui o dia de hoje nos dias letivos.
+  const hojeDate = new Date();
+  const hojeIso = `${hojeDate.getFullYear()}-${String(hojeDate.getMonth() + 1).padStart(2, "0")}-${String(hojeDate.getDate()).padStart(2, "0")}`;
+  const isoWeekdayHoje = hojeDate.getDay() === 0 ? 7 : hojeDate.getDay();
+  const addDiasIso = (base, n) => {
+    const [y, m, d] = base.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + n);
+    return dt.toISOString().slice(0, 10);
+  };
+  const startsOn = addDiasIso(hojeIso, -30);
+  const endsOn = addDiasIso(hojeIso, 120);
+  // Dias letivos: seg-qua + garante o dia da semana de hoje (p/ ter aula hoje).
+  const weekdays = Array.from(new Set([1, 2, 3, isoWeekdayHoje])).sort((a, b) => a - b);
   const aulasPorDia = 4;
   const { data: cal } = await supabase
     .from("course_calendars")
@@ -761,12 +773,15 @@ async function seedCalendario(supabase, { classId, classUnits }) {
   const feriadoPorData = new Map(FERIADOS.map((f) => [f.date, f]));
   const datas = [];
   {
-    const cur = new Date(Date.UTC(2026, 0, 26));
-    const end = new Date(Date.UTC(2026, 5, 30));
-    while (cur <= end) {
-      const isoDow = cur.getUTCDay() === 0 ? 7 : cur.getUTCDay();
-      if (weekdays.includes(isoDow)) datas.push(cur.toISOString().slice(0, 10));
-      cur.setUTCDate(cur.getUTCDate() + 1);
+    let cur = startsOn;
+    let guard = 0;
+    while (cur <= endsOn && guard < 1200) {
+      const [y, m, d] = cur.split("-").map(Number);
+      const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+      const isoDow = dow === 0 ? 7 : dow;
+      if (weekdays.includes(isoDow)) datas.push(cur);
+      cur = addDiasIso(cur, 1);
+      guard += 1;
     }
   }
   const uc0 = classUnits[0]?.classUnitId ?? null; // Codificação
@@ -804,6 +819,16 @@ async function seedCalendario(supabase, { classId, classUnits }) {
     }
     return { calendar_id: cal.id, date, class_unit_id: cu, marker: null, note: null, room_id: room };
   });
+
+  // Garante uma AULA HOJE alocada (UC0 + Sala 101) para o painel do professor.
+  const hojeRow = rows.find((r) => r.date === hojeIso);
+  if (hojeRow && uc0) {
+    hojeRow.marker = null;
+    hojeRow.note = null;
+    hojeRow.class_unit_id = uc0;
+    hojeRow.room_id = sala101;
+  }
+
   await supabase.from("calendar_days").delete().eq("calendar_id", cal.id);
   for (let i = 0; i < rows.length; i += 500) {
     await must(supabase.from("calendar_days").insert(rows.slice(i, i + 500)));

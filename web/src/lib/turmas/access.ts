@@ -3,7 +3,6 @@ import "server-only";
 import { redirect } from "next/navigation";
 
 import { getProfile } from "@/lib/auth/dal";
-import { homeDe } from "@/lib/auth/permissions";
 import type { Role } from "@/lib/features";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -72,6 +71,6 @@ export async function requireGerenciarTurma(classId: string): Promise<{
   const profile = await getProfile();
   if (!profile) redirect("/entrar");
   const acesso = await getAcessoTurma(classId, profile);
-  if (!acesso.podeGerenciar) redirect(homeDe(profile.role as Role));
+  if (!acesso.podeGerenciar) redirect("/sem-acesso");
   return { profile, acesso };
 }
