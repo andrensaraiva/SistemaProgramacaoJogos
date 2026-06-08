@@ -57,6 +57,7 @@ export const FEATURES: FeatureNavItem[] = [
   // Duelos e Ranking são da experiência do ALUNO (competição/XP); fora do menu do professor.
   { id: "duelos", href: "/duelos", label: "Duelos", icon: "duelo", group: "Aprender", audience: "aluno", enabled: true },
   { id: "ranking", href: "/ranking", label: "Ranking", icon: "trofeu", group: "Aprender", audience: "aluno", enabled: true },
+  { id: "aluno-turmas", href: "/turmas", label: "Turmas", icon: "turma", group: "Aprender", audience: "aluno", enabled: true },
   { id: "desempenho", href: "/desempenho", label: "Meu desempenho", icon: "relatorio", group: "Aprender", audience: "aluno", enabled: true },
 
   { id: "turmas", href: "/turmas", label: "Turmas", icon: "turma", group: "Turmas", audience: "professor", enabled: true },

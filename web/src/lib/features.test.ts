@@ -9,6 +9,7 @@ describe("registro de features (navegação)", () => {
     expect(ids).toContain("exercicios");
     expect(ids).toContain("duelos");
     expect(ids).toContain("ranking");
+    expect(ids).toContain("aluno-turmas"); // aluno chega às turmas pelo menu
     expect(ids).not.toContain("prof-exercicios"); // rótulo do professor
     expect(ids).not.toContain("turmas"); // professor
     expect(ids).not.toContain("saep"); // professor

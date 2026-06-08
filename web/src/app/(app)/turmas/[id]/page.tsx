@@ -171,6 +171,30 @@ export default async function TurmaPage({ params }: { params: Params }) {
         </div>
       )}
 
+      {/* Unidades curriculares (aluno): caminho principal para rever conteúdo */}
+      {!canManage && ucList.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold">Unidades curriculares</h2>
+          <p className="-mt-2 text-sm text-muted-foreground">
+            Reveja as aulas e refaça os exercícios de cada UC.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {ucList.map((cu) => (
+              <Link
+                key={cu.id}
+                href={`/turmas/${id}/ucs/${cu.id}`}
+                className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/40"
+              >
+                <span className="font-medium">{cu.title}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Aulas e exercícios →
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Listas de exercícios */}
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">

@@ -28,10 +28,13 @@ export type Pendencia = {
   dueAt: string | null;
 };
 
+export type UcAtalho = { classUnitId: string; classId: string; turma: string; uc: string };
+
 export type StudentDashboard = {
   nivel: ProgressoNivel;
   conquistas: number;
   turmas: { id: string; name: string }[];
+  ucs: UcAtalho[];
   resumo: { aprovado: number; recuperacao: number; reprovado: number; freqMedia: number | null };
   desempenho: DesempenhoUc[];
   pendencias: Pendencia[];
@@ -54,12 +57,28 @@ export async function getStudentDashboard(profile: {
   const turmaNome = new Map(turmas.map((t) => [t.id, t.name]));
   const turmaIds = turmas.map((t) => t.id);
 
-  const [conquistasRes, desempenhoTudo, pendencias] = await Promise.all([
+  const [conquistasRes, desempenhoTudo, pendencias, ucsRes] = await Promise.all([
     admin.from("user_badges").select("id", { count: "exact", head: true }).eq("user_id", profile.id),
     // Relatório institucional → filtra só as linhas DESTE aluno.
     getStudentsReport(),
     carregarPendencias(admin, profile.id, turmaIds, turmaNome),
+    turmaIds.length
+      ? admin
+          .from("class_units")
+          .select("id, class_id, uc:curricular_units!uc_id(title)")
+          .in("class_id", turmaIds)
+      : Promise.resolve({ data: [] as unknown[] }),
   ]);
+
+  const ucs: UcAtalho[] = (ucsRes.data ?? []).map((raw) => {
+    const c = raw as Record<string, unknown>;
+    return {
+      classUnitId: c.id as string,
+      classId: c.class_id as string,
+      turma: turmaNome.get(c.class_id as string) ?? "Turma",
+      uc: (c.uc as unknown as { title: string } | null)?.title ?? "UC",
+    };
+  });
 
   const desempenho: DesempenhoUc[] = desempenhoTudo
     .filter((r) => r.alunoId === profile.id)
@@ -92,6 +111,7 @@ export async function getStudentDashboard(profile: {
     nivel: progressoNivel(profile.xp),
     conquistas: conquistasRes.count ?? 0,
     turmas,
+    ucs,
     resumo,
     desempenho,
     pendencias,

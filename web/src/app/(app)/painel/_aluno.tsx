@@ -104,6 +104,28 @@ export function PainelAluno({
         )}
       </Card>
 
+      {/* Minhas UCs — rever conteúdo e refazer exercícios */}
+      {dash.ucs.length > 0 && (
+        <Card>
+          <CardHeader
+            title="Minhas unidades curriculares"
+            description="Reveja as aulas e refaça os exercícios de cada UC."
+          />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {dash.ucs.map((u) => (
+              <Link
+                key={u.classUnitId}
+                href={`/turmas/${u.classId}/ucs/${u.classUnitId}`}
+                className="rounded-xl border border-border bg-background/40 p-3 transition-colors hover:border-primary/40"
+              >
+                <span className="text-sm font-medium">{u.uc}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">{u.turma} · aulas e exercícios →</span>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Meu desempenho por UC */}
       <Card>
         <CardHeader
