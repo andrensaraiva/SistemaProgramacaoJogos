@@ -9,6 +9,8 @@ import { montarLinhaDoTempo, type Bloco } from "@/lib/dashboard/uc-timeline";
 import { getAcessoTurma } from "@/lib/turmas/access";
 import { createClient } from "@/lib/supabase/server";
 
+import { AulasTimeline } from "./_aulas";
+
 type Params = Promise<{ id: string; classUnitId: string }>;
 
 const KIND_LABEL: Record<string, string> = {
@@ -156,36 +158,7 @@ export default async function UcDoAlunoPage({ params }: { params: Params }) {
           title="Aulas"
           description={plan ? `Conteúdo do plano: ${plan.title}` : "Aulas registradas nesta UC."}
         />
-        {timeline.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Ainda não há aulas registradas nesta UC.</p>
-        ) : (
-          <ol className="flex flex-col gap-3">
-            {timeline.map((aula) => (
-              <li key={aula.key} className="rounded-lg border border-border bg-background/40 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm font-medium">
-                    {aula.sessionNumber != null ? `Aula ${aula.sessionNumber}` : "Aula"}
-                    {aula.bloco ? ` — ${aula.bloco.title}` : aula.label ? ` — ${aula.label}` : ""}
-                  </span>
-                  {aula.date && <span className="text-xs text-muted-foreground">{dataBR(aula.date)}</span>}
-                </div>
-                {aula.bloco?.conteudo && (
-                  <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{aula.bloco.conteudo}</p>
-                )}
-                {aula.bloco?.apresentacaoUrl && (
-                  <a
-                    href={aula.bloco.apresentacaoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs text-primary hover:underline"
-                  >
-                    Abrir apresentação →
-                  </a>
-                )}
-              </li>
-            ))}
-          </ol>
-        )}
+        <AulasTimeline aulas={timeline} />
       </Card>
     </div>
   );

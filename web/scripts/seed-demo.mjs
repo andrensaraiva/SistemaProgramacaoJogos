@@ -1231,20 +1231,64 @@ async function seedCurriculo(supabase, { teacherId, classId, studentIds }) {
 
   console.log("Plano de ensino demo + frequência por aula (2 dias x 4) criados.");
 
-  // Vincula as DEMAIS UCs do curso à Turma Demo (sem plano), para encher o
-  // calendário com várias UCs e cargas horárias reais.
+  // Vincula as DEMAIS UCs do curso à Turma Demo, CADA UMA com um plano de ensino
+  // simples (2 blocos com conteúdo) + 2 aulas registradas, para a linha do tempo
+  // do aluno aparecer cheia e clicável.
   const classUnits = [{ classUnitId: classUnit.id, title: "Codificação de Sistemas de Jogos Digitais", ch: 180 }];
+  const diaSeed = (offset) => {
+    const d = new Date();
+    d.setDate(d.getDate() - offset);
+    return d.toISOString().slice(0, 10);
+  };
   for (const uc of todasUcs) {
     if (uc.id === codificacaoUcId) continue;
-    const { data: cu } = await supabase
-      .from("class_units")
-      .insert({ class_id: classId, uc_id: uc.id, serie: "3ª série" })
+
+    // Plano de ensino da UC com 2 blocos (conteúdo markdown simples).
+    const { data: ucPlan } = await supabase
+      .from("teaching_plans")
+      .insert({ uc_id: uc.id, owner_id: teacherId, title: `Plano de Ensino — ${uc.title}` })
       .select("id")
       .single()
       .throwOnError();
+    await must(
+      supabase.from("teaching_plan_blocks").insert([
+        {
+          plan_id: ucPlan.id,
+          title: "Bloco 01 — Fundamentos",
+          aula_inicio: 1,
+          aula_fim: 2,
+          conteudo: `Introdução à UC "${uc.title}": conceitos iniciais, objetivos e materiais de apoio. Reveja os exemplos vistos em aula e refaça os exercícios propostos.`,
+          ord: 0,
+        },
+        {
+          plan_id: ucPlan.id,
+          title: "Bloco 02 — Prática",
+          aula_inicio: 3,
+          aula_fim: 4,
+          conteudo: `Aplicação prática de "${uc.title}": exercícios guiados e atividade avaliativa. Use o material da aula para revisar antes de entregar.`,
+          ord: 1,
+        },
+      ]),
+    );
+
+    const { data: cu } = await supabase
+      .from("class_units")
+      .insert({ class_id: classId, uc_id: uc.id, teaching_plan_id: ucPlan.id, serie: "3ª série" })
+      .select("id")
+      .single()
+      .throwOnError();
+
+    // 2 aulas registradas (datas recentes) para a linha do tempo do aluno.
+    await must(
+      supabase.from("attendance_sessions").insert([
+        { class_unit_id: cu.id, session_number: 1, period: 1, date: diaSeed(14), label: "Fundamentos" },
+        { class_unit_id: cu.id, session_number: 3, period: 1, date: diaSeed(7), label: "Prática" },
+      ]),
+    );
+
     classUnits.push({ classUnitId: cu.id, title: uc.title, ch: uc.ch });
   }
-  console.log(`UCs vinculadas à Turma Demo: ${classUnits.length}.`);
+  console.log(`UCs vinculadas à Turma Demo: ${classUnits.length} (com plano + aulas).`);
 
   return { classUnitId: classUnit.id, matrix, classUnits };
 }
