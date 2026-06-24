@@ -4,10 +4,16 @@ import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
+import {
+  BASE_ACTIVITY_TYPES,
+  activityMeta,
+  isCodeKind,
+  type ActivityKind,
+} from "@/lib/activities/registry";
 import { criarExercicioManual, type NovoExercicioState } from "./actions";
 
 type Lang = { id: string; label: string };
-type Tipo = "codigo" | "apresentacao" | "modelo_resposta" | "pixel_art" | "vetor" | "arte_digital" | "blocos";
+type Tipo = ActivityKind;
 type CreativeTool = { kind: string; label: string; hint: string; defaultConfig: { width: number; height: number } };
 
 const taCls =
@@ -15,11 +21,11 @@ const taCls =
 const selCls =
   "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
 
-const TIPOS: { value: Tipo; label: string; hint: string }[] = [
-  { value: "codigo", label: "Código", hint: "Aluno resolve no editor; testado automaticamente." },
-  { value: "apresentacao", label: "Apresentação (link)", hint: "Aluno entrega um link (slides, Drive); você corrige a nota." },
-  { value: "modelo_resposta", label: "Modelo de resposta", hint: "Aluno preenche um texto a partir de um modelo; você corrige." },
-];
+// Tipos base (não-criativos) vêm do registro central. Os criativos chegam por
+// `creativeTools` (filtrados pelos toggles da instituição).
+const TIPOS: { value: Tipo; label: string; hint: string }[] = BASE_ACTIVITY_TYPES.map(
+  (a) => ({ value: a.kind, label: a.label, hint: a.hint }),
+);
 
 export function NovoExercicioForm({
   languages,
@@ -84,7 +90,7 @@ export function NovoExercicioForm({
       )}
 
       {/* Campos do tipo CÓDIGO */}
-      {tipo === "codigo" && (
+      {isCodeKind(tipo) && (
         <>
           <Field label="Linguagem" htmlFor="language_id" error={err?.language_id?.[0]}>
             <select id="language_id" name="language_id" className={selCls} defaultValue={languages[0]?.id}>
@@ -104,8 +110,8 @@ export function NovoExercicioForm({
         </>
       )}
 
-      {/* Campos do tipo MODELO DE RESPOSTA */}
-      {tipo === "modelo_resposta" && (
+      {/* Campos do tipo MODELO DE RESPOSTA (entrega por texto) */}
+      {activityMeta(tipo).deliveryInput === "text" && (
         <Field label="Modelo de resposta (opcional)" htmlFor="response_template">
           <textarea id="response_template" name="response_template" rows={5} className={taCls} placeholder="Estrutura/modelo que o aluno deve seguir ao responder..." />
         </Field>

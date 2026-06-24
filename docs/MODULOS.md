@@ -58,6 +58,41 @@ Regras de RLS usam sempre os helpers `SECURITY DEFINER` (ver
 4. Banco: crie uma migration que faz `drop table ...` das tabelas da feature
    (opcional — pode-se deixar os dados; o app deixa de referenciá-los).
 
+## Como adicionar um TIPO DE ATIVIDADE (`exercise_type`)
+
+Dentro de uma lista, cada exercício tem um **tipo** (`exercise_type`): `codigo`,
+`apresentacao`, `modelo_resposta` ou um tipo criativo (`pixel_art`, `vetor`,
+`arte_digital`, `blocos`). Esses tipos são governados por um **registro central**:
+[`lib/activities/registry.ts`](../web/src/lib/activities/registry.ts).
+
+> **Regra:** nenhuma tela compara `exercise_type` por string (`=== "codigo"`,
+> `includes([...])`). Elas leem o registro: `activityFamily()`, `isCodeKind()`,
+> `isCreativeKind()`, `isDeliveryKind()`, `activityMeta().deliveryInput`, etc.
+
+Cada tipo pertence a uma **família** de comportamento:
+
+| Família | Tipos | Entrega | Correção |
+|---|---|---|---|
+| `code` | `codigo` | editor Monaco (página dedicada) | testes automáticos + XP |
+| `creative` | `pixel_art`, `vetor`, `arte_digital`, `blocos` | editor embutido (canvas/blocos) | manual |
+| `delivery` | `apresentacao`, `modelo_resposta` | link ou texto inline | manual |
+
+Para **adicionar um tipo**:
+
+1. **Banco**: `alter type public.exercise_type add value if not exists '<novo>'`
+   numa migration aditiva.
+2. **Registro**: adicione uma entrada em `ACTIVITY_TYPES` (ou, se for criativo, um
+   item em `lib/canvas/tools.ts` — o registro herda dele). Defina `family`,
+   `autoXp`, `autoGraded`, `dedicatedPage` e, para `delivery`, `deliveryInput`.
+3. **UI de entrega** (só se a família não cobrir): adicione o caso no render do
+   aluno. Famílias existentes (`creative`/`delivery`) já têm componente.
+4. **Teste**: o invariante de famílias já é coberto por
+   `lib/activities/registry.test.ts`.
+
+As validações de servidor (`lib/submissions/actions.ts`) e o form do professor
+(`exercicios/novo/_form.tsx`) também leem do registro — não precisam ser tocados
+para tipos que caem numa família existente.
+
 ## Pontos de junção (acoplamento conhecido e aceito)
 
 Estes são compartilhados de propósito — são o "tronco" do modelo

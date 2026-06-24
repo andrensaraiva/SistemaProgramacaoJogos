@@ -3,16 +3,12 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { activityLabel, isCodeKind } from "@/lib/activities/registry";
 import { verifySession } from "@/lib/auth/dal";
 import { getLanguage } from "@/lib/exercises/languages";
 import { createClient } from "@/lib/supabase/server";
 
 import { Workbench } from "./_workbench";
-
-const TIPO_LABEL: Record<string, string> = {
-  apresentacao: "Apresentação (entrega de link)",
-  modelo_resposta: "Modelo de resposta",
-};
 
 export default async function ExercicioPage(
   props: PageProps<"/exercicios/[id]">,
@@ -34,12 +30,12 @@ export default async function ExercicioPage(
 
   // Exercícios não-código: visão de leitura. A entrega é feita dentro de uma
   // lista da turma (turmas/[id]/listas/[lid]), onde há o contexto do assignment.
-  if (exercise.exercise_type && exercise.exercise_type !== "codigo") {
+  if (!isCodeKind(exercise.exercise_type)) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader
           title={exercise.title}
-          description={TIPO_LABEL[exercise.exercise_type]}
+          description={activityLabel(exercise.exercise_type)}
           actions={
             exercise.is_group ? <StatusBadge label="Trabalho em grupo" tone="info" /> : undefined
           }

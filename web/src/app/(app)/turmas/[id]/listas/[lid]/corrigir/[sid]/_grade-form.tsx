@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { isCodeKind } from "@/lib/activities/registry";
 import { gradeSubmission, type GradeState } from "@/lib/grading/actions";
 
 const MonacoEditor = dynamic(
@@ -49,7 +50,7 @@ export function GradeForm({
     undefined,
   );
 
-  const isCode = exerciseType === "codigo";
+  const isCode = isCodeKind(exerciseType);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">

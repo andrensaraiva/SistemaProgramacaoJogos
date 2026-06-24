@@ -9,7 +9,7 @@ import { getAcessoTurma } from "@/lib/turmas/access";
 import { createClient } from "@/lib/supabase/server";
 import { excluirLista } from "@/lib/turmas/actions";
 import { CreativeSubmission } from "@/components/editores/CreativeSubmission";
-import { isCreativeKind } from "@/lib/canvas/tools";
+import { isCodeKind, isCreativeKind } from "@/lib/activities/registry";
 import { DEFAULT_CONFIG, type CreativeKind, type CreativeProject } from "@/lib/canvas/types";
 
 import { AnexarExercicios } from "./_anexar";
@@ -360,7 +360,7 @@ export default async function ListaProgressoPage({ params }: { params: Params })
         {exercises.map((exercise) => {
           const sub = mySubMap.get(exercise.id);
           const tipoEx = exercise.exercise_type ?? "codigo";
-          const isCode = tipoEx === "codigo";
+          const isCode = isCodeKind(tipoEx);
           const isCreative = isCreativeKind(tipoEx);
           const style = sub
             ? STATUS_ICON[sub.status] ?? {

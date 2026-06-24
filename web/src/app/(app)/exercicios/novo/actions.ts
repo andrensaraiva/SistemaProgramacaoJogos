@@ -3,10 +3,16 @@
 import { redirect } from "next/navigation";
 import * as z from "zod";
 
+import {
+  ACTIVITY_KINDS,
+  activityMeta,
+  isCodeKind,
+  isCreativeKind,
+} from "@/lib/activities/registry";
 import { getProfile } from "@/lib/auth/dal";
 import { getEnabledLanguages } from "@/lib/exercises/languages";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ferramentaHabilitada, isCreativeKind } from "@/lib/canvas/tools";
+import { ferramentaHabilitada } from "@/lib/canvas/tools";
 import { DEFAULT_CONFIG, type CreativeKind } from "@/lib/canvas/types";
 import { getInstitutionSettings } from "@/lib/reports/settings";
 
@@ -16,15 +22,7 @@ import { getInstitutionSettings } from "@/lib/reports/settings";
 const NovoSchema = z.object({
   title: z.string().trim().min(3, "Título muito curto").max(200),
   description: z.string().trim().min(5, "Descreva o enunciado").max(8000),
-  exercise_type: z.enum([
-    "codigo",
-    "apresentacao",
-    "modelo_resposta",
-    "pixel_art",
-    "vetor",
-    "arte_digital",
-    "blocos",
-  ]),
+  exercise_type: z.enum(ACTIVITY_KINDS),
   is_group: z.coerce.boolean().default(false),
   difficulty: z.enum(["facil", "medio", "dificil", "desafio"]),
   xp_reward: z.coerce.number().int().min(0).max(200),
@@ -75,7 +73,7 @@ export async function criarExercicioManual(
 
   // Validações específicas do tipo código.
   let languageId: string | null = null;
-  if (d.exercise_type === "codigo") {
+  if (isCodeKind(d.exercise_type)) {
     const langs = await getEnabledLanguages();
     const lang = langs.find((l) => l.id === d.language_id);
     if (!lang) {
@@ -106,8 +104,8 @@ export async function criarExercicioManual(
       author_id: profile.id,
       title: d.title,
       description: d.description,
-      starter_code: d.exercise_type === "codigo" ? d.starter_code || "" : "",
-      language: d.exercise_type === "codigo" ? "csharp" : "csharp", // legado; usa language_id
+      starter_code: isCodeKind(d.exercise_type) ? d.starter_code || "" : "",
+      language: "csharp", // legado; a linguagem real vem de language_id
       language_id: languageId,
       difficulty: d.difficulty,
       xp_reward: d.xp_reward,
@@ -115,7 +113,9 @@ export async function criarExercicioManual(
       exercise_type: d.exercise_type,
       is_group: d.is_group,
       response_template:
-        d.exercise_type === "modelo_resposta" ? d.response_template || null : null,
+        activityMeta(d.exercise_type).deliveryInput === "text"
+          ? d.response_template || null
+          : null,
       canvas_config: canvasConfig,
     })
     .select("id")

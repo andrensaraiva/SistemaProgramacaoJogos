@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
+import { activityMeta, isCodeKind, isCreativeKind } from "@/lib/activities/registry";
 import { verifySession } from "@/lib/auth/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -52,14 +53,15 @@ export async function entregarTrabalho(
     .eq("id", parsed.data.exercise_id)
     .single();
   if (!exercise) return { ok: false, message: "Exercício não encontrado." };
-  if (exercise.exercise_type === "codigo") {
+  if (isCodeKind(exercise.exercise_type)) {
     return { ok: false, message: "Este exercício é de código; use o editor." };
   }
 
-  if (exercise.exercise_type === "apresentacao" && !parsed.data.link) {
+  const meta = activityMeta(exercise.exercise_type);
+  if (meta.deliveryInput === "link" && !parsed.data.link) {
     return { ok: false, message: "Cole o link da sua apresentação." };
   }
-  if (exercise.exercise_type === "modelo_resposta" && !parsed.data.resposta) {
+  if (meta.deliveryInput === "text" && !parsed.data.resposta) {
     return { ok: false, message: "Preencha a sua resposta." };
   }
 
@@ -173,7 +175,7 @@ export async function entregarArte(
     .eq("id", parsed.data.exercise_id)
     .single();
   if (!exercise) return { ok: false, message: "Exercício não encontrado." };
-  if (!["pixel_art", "vetor", "arte_digital", "blocos"].includes(exercise.exercise_type)) {
+  if (!isCreativeKind(exercise.exercise_type)) {
     return { ok: false, message: "Este exercício não é de arte/blocos." };
   }
 

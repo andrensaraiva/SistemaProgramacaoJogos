@@ -5,16 +5,11 @@ import { useState, useTransition } from "react";
 import { ConfirmForm } from "@/components/confirm-form";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { activityLabel } from "@/lib/activities/registry";
 import { anexarExercicio, removerExercicio } from "@/lib/assignments/actions";
 
 type Disponivel = { id: string; title: string; exercise_type: string };
 type Anexado = { id: string; title: string; exercise_type: string };
-
-const TIPO: Record<string, string> = {
-  codigo: "Código",
-  apresentacao: "Apresentação",
-  modelo_resposta: "Modelo de resposta",
-};
 
 export function AnexarExercicios({
   classId,
@@ -61,7 +56,7 @@ export function AnexarExercicios({
               <span>
                 {ex.title}
                 <StatusBadge
-                  label={TIPO[ex.exercise_type] ?? ex.exercise_type}
+                  label={activityLabel(ex.exercise_type)}
                   tone="neutral"
                   className="ml-2"
                 />
@@ -90,7 +85,7 @@ export function AnexarExercicios({
           <option value="">Selecione um exercício...</option>
           {opcoes.map((d) => (
             <option key={d.id} value={d.id}>
-              {d.title} — {TIPO[d.exercise_type] ?? d.exercise_type}
+              {d.title} — {activityLabel(d.exercise_type)}
             </option>
           ))}
         </select>
