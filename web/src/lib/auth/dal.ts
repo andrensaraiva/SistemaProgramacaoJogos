@@ -33,7 +33,7 @@ export const getProfile = cache(async () => {
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses, personal_email, institutional_email, must_change_password, profile_completed, is_master",
+      "id, role, display_name, avatar_url, banner_id, avatar_frame_id, xp, level, duel_rating, duel_wins, duel_losses, personal_email, institutional_email, must_change_password, profile_completed, is_master",
     )
     .eq("id", user.id)
     .single();
@@ -63,7 +63,7 @@ export const getProfile = cache(async () => {
       { onConflict: "id" },
     )
     .select(
-      "id, role, display_name, avatar_url, xp, level, duel_rating, duel_wins, duel_losses, personal_email, institutional_email, must_change_password, profile_completed, is_master",
+      "id, role, display_name, avatar_url, banner_id, avatar_frame_id, xp, level, duel_rating, duel_wins, duel_losses, personal_email, institutional_email, must_change_password, profile_completed, is_master",
     )
     .single();
 

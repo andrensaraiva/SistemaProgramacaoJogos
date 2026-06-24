@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar";
+import { AvatarWithFrame } from "@/components/avatar-with-frame";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -27,9 +28,7 @@ export default async function AppLayout({
   const sidebarFooter = profile ? (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-3">
       <div className="flex items-center gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-          {profile.display_name.charAt(0).toUpperCase()}
-        </div>
+        <AvatarWithFrame name={profile.display_name} frameId={profile.avatar_frame_id} size={36} />
         <div className="min-w-0">
           <div className="truncate text-sm font-medium leading-tight">
             {profile.display_name}
