@@ -28,7 +28,7 @@ export default async function AppLayout({
   const sidebarFooter = profile ? (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-3">
       <div className="flex items-center gap-3">
-        <AvatarWithFrame name={profile.display_name} frameId={profile.avatar_frame_id} size={36} />
+        <AvatarWithFrame name={profile.display_name} frameId={profile.avatar_frame_id} skinId={profile.avatar_skin_id} size={36} />
         <div className="min-w-0">
           <div className="truncate text-sm font-medium leading-tight">
             {profile.display_name}

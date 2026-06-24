@@ -4,30 +4,40 @@ import { AvatarWithFrame } from "@/components/avatar-with-frame";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { getProfile } from "@/lib/auth/dal";
-import { bannerById, unlockedCount, nextUnlock } from "@/lib/cosmetics/registry";
+import { coinBalance } from "@/lib/cosmetics/coins";
+import { bannerById, freeIds } from "@/lib/cosmetics/registry";
 import { createClient } from "@/lib/supabase/server";
 
-import { CosmeticLocker } from "./_locker";
+import { CosmeticShop } from "./_shop";
 
-// Perfil do aluno — estilo Discord: banner + avatar com moldura + nível/XP e a
-// vitrine de cosméticos desbloqueados por XP.
+// Perfil do aluno — estilo Discord: banner + avatar (skin+moldura) + nível/XP,
+// saldo de moedas e a loja de cosméticos comprados com moedas Celeste.
 export default async function PerfilPage() {
   const profile = await getProfile();
   if (!profile) redirect("/entrar");
-  // Área de aluno; gestão/professor têm seus próprios painéis.
   if (profile.role !== "aluno") redirect("/painel");
 
   const supabase = await createClient();
-  const { count: conquistas } = await supabase
-    .from("user_badges")
-    .select("badge_id", { count: "exact", head: true })
-    .eq("user_id", profile.id);
+  const [{ count: conquistas }, { data: owned }] = await Promise.all([
+    supabase
+      .from("user_badges")
+      .select("badge_id", { count: "exact", head: true })
+      .eq("user_id", profile.id),
+    supabase.from("user_cosmetics").select("cosmetic_id").eq("user_id", profile.id),
+  ]);
 
   const level = profile.level;
   const xpNoNivel = profile.xp % 100;
   const banner = bannerById(profile.banner_id);
-  const proxFrame = nextUnlock(level, "frame");
-  const proxBanner = nextUnlock(level, "banner");
+  const saldo = coinBalance(level, profile.coins_bonus, profile.coins_spent);
+
+  // Possuídos = comprados + grátis (de todos os tipos).
+  const ownedIds = [
+    ...(owned ?? []).map((o) => o.cosmetic_id),
+    ...freeIds("frame"),
+    ...freeIds("banner"),
+    ...freeIds("avatar"),
+  ];
 
   return (
     <div className="flex flex-col gap-8">
@@ -37,7 +47,12 @@ export default async function PerfilPage() {
         <div className="flex flex-col gap-3 px-5 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="-mt-10 flex items-end gap-4">
             <div className="rounded-full ring-4 ring-card">
-              <AvatarWithFrame name={profile.display_name} frameId={profile.avatar_frame_id} size={84} />
+              <AvatarWithFrame
+                name={profile.display_name}
+                frameId={profile.avatar_frame_id}
+                skinId={profile.avatar_skin_id}
+                size={84}
+              />
             </div>
             <div className="pb-1">
               <h1 className="text-xl font-bold leading-tight">{profile.display_name}</h1>
@@ -58,29 +73,28 @@ export default async function PerfilPage() {
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="XP total" value={profile.xp} hint="pontos de experiência" />
+        <StatCard title="Moedas Celeste" value={`${saldo} 🪙`} hint="ganhe subindo de nível" />
         <StatCard title="Nível" value={level} hint="cada 100 XP = 1 nível" />
         <StatCard title="Conquistas" value={conquistas ?? 0} hint="badges desbloqueadas" />
         <StatCard title="Rating de duelo" value={profile.duel_rating} hint={`${profile.duel_wins}V / ${profile.duel_losses}D`} />
       </div>
 
-      {/* Vitrine de cosméticos */}
+      {/* Loja de cosméticos */}
       <Card>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-semibold">Vitrine</h2>
-            <p className="text-sm text-muted-foreground">
-              Você desbloqueou {unlockedCount(level, "frame")} molduras e {unlockedCount(level, "banner")} banners.
-              {proxFrame && ` Próxima moldura no nível ${proxFrame.unlockLevel}.`}
-              {!proxFrame && proxBanner && ` Próximo banner no nível ${proxBanner.unlockLevel}.`}
-            </p>
-          </div>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">Loja Celeste</h2>
+          <p className="text-sm text-muted-foreground">
+            Você tem <span className="font-medium text-foreground">{saldo} 🪙</span>. Compre cosméticos e equipe o que quiser — suba de nível para ganhar mais moedas.
+          </p>
         </div>
-        <CosmeticLocker
-          level={level}
+        <CosmeticShop
           displayName={profile.display_name}
+          level={level}
+          balance={saldo}
+          ownedIds={ownedIds}
           equippedFrameId={profile.avatar_frame_id}
           equippedBannerId={profile.banner_id}
+          equippedAvatarId={profile.avatar_skin_id}
         />
       </Card>
     </div>
