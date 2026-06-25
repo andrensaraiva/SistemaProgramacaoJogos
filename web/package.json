@@ -14,7 +14,9 @@
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
     "seed:demo": "node scripts/seed-demo.mjs",
     "seed:demo:reset": "node scripts/seed-demo.mjs --reset-users",
-    "seed:identidades": "node scripts/seed-identidades.mjs"
+    "seed:identidades": "node scripts/seed-identidades.mjs",
+    "seed:gamificacao": "node scripts/seed-gamificacao.mjs",
+    "seed:gamificacao:reset": "node scripts/seed-gamificacao.mjs --reset"
   },
   "engines": {
     "node": ">=20"

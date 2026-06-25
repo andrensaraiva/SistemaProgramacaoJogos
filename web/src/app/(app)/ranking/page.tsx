@@ -1,4 +1,7 @@
+import { AvatarWithFrame } from "@/components/avatar-with-frame";
 import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/states";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getProfile } from "@/lib/auth/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -7,7 +10,12 @@ type RankingProfile = {
   display_name: string;
   xp: number;
   level: number;
+  avatar_frame_id: string | null;
+  avatar_skin_id: string | null;
 };
+
+// Medalha para o pódio; demais posições mostram o número.
+const MEDAL = ["🥇", "🥈", "🥉"];
 
 export default async function RankingPage() {
   const profile = await getProfile();
@@ -15,7 +23,7 @@ export default async function RankingPage() {
 
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, display_name, xp, level")
+    .select("id, display_name, xp, level, avatar_frame_id, avatar_skin_id")
     .eq("role", "aluno")
     .order("xp", { ascending: false })
     .order("created_at", { ascending: true })
@@ -41,56 +49,53 @@ export default async function RankingPage() {
         description="Alunos ordenados por XP acumulado em exercícios aprovados."
       />
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/40">
-              <th className="w-16 px-4 py-3 text-left font-medium">#</th>
-              <th className="px-4 py-3 text-left font-medium">Aluno</th>
-              <th className="px-4 py-3 text-right font-medium">Nivel</th>
-              <th className="px-4 py-3 text-right font-medium">XP</th>
-              <th className="px-4 py-3 text-right font-medium">Badges</th>
-            </tr>
-          </thead>
-          <tbody>
+      {rows.length === 0 ? (
+        <EmptyState
+          title="Ranking vazio"
+          description="Nenhum aluno pontuou ainda. Resolva exercícios para aparecer aqui."
+          icon="🏆"
+        />
+      ) : (
+        <Table>
+          <THead>
+            <TH className="w-16 text-center">#</TH>
+            <TH>Aluno</TH>
+            <TH className="text-right">Nível</TH>
+            <TH className="text-right">XP</TH>
+            <TH className="text-right">Badges</TH>
+          </THead>
+          <TBody>
             {rows.map((row, index) => {
               const isMe = row.id === profile?.id;
               return (
-                <tr
-                  key={row.id}
-                  className={`border-b border-border/60 last:border-0 ${
-                    isMe ? "bg-primary/10" : "bg-card"
-                  }`}
-                >
-                  <td className="px-4 py-3 font-semibold">{index + 1}</td>
-                  <td className="px-4 py-3">
-                    <div className="font-medium">
-                      {row.display_name}
+                <TR key={row.id} className={isMe ? "bg-primary/10" : ""}>
+                  <TD className="text-center text-lg font-semibold">
+                    {MEDAL[index] ?? <span className="text-base text-muted-foreground">{index + 1}</span>}
+                  </TD>
+                  <TD>
+                    <div className="flex items-center gap-3">
+                      <AvatarWithFrame
+                        name={row.display_name}
+                        frameId={row.avatar_frame_id}
+                        skinId={row.avatar_skin_id}
+                        size={32}
+                      />
+                      <span className="font-medium">{row.display_name}</span>
                       {isMe && (
-                        <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
-                          voce
+                        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
+                          você
                         </span>
                       )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-right">{row.level}</td>
-                  <td className="px-4 py-3 text-right font-semibold">
-                    {row.xp}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {badgeCount.get(row.id) ?? 0}
-                  </td>
-                </tr>
+                  </TD>
+                  <TD className="text-right">{row.level}</TD>
+                  <TD className="text-right font-semibold">{row.xp}</TD>
+                  <TD className="text-right">{badgeCount.get(row.id) ?? 0}</TD>
+                </TR>
               );
             })}
-          </tbody>
-        </table>
-      </div>
-
-      {rows.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
-          Nenhum aluno no ranking ainda.
-        </div>
+          </TBody>
+        </Table>
       )}
     </div>
   );

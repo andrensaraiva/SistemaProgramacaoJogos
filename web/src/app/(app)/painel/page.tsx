@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 
 import { type DeadlineItem } from "@/components/upcoming-deadlines";
 import { getProfile } from "@/lib/auth/dal";
+import { coinBalance } from "@/lib/cosmetics/coins";
 import { getStudentDashboard } from "@/lib/dashboard/student";
+import { registrarVisita } from "@/lib/gamification/streak-actions";
 import { getTeacherDashboard } from "@/lib/dashboard/teacher";
 import { getFeedbackResumo } from "@/lib/feedback/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -51,12 +53,30 @@ export default async function PainelPage() {
   }
 
   // ALUNO: painel gamificado (nível/XP/conquistas) + pendências + desempenho.
-  const [dash, deadlines] = await Promise.all([
+  // Registra a "ofensiva diária" (streak) ao abrir o painel.
+  const [dash, deadlines, streak] = await Promise.all([
     getStudentDashboard({ id: profile.id, xp: profile.xp ?? 0 }),
     loadUpcomingDeadlines(supabase, profile.id, false),
+    registrarVisita(
+      profile.id,
+      profile.current_streak ?? 0,
+      profile.longest_streak ?? 0,
+      profile.last_active_on ?? null,
+    ),
   ]);
+  const moedas = coinBalance(profile.level, profile.coins_bonus, profile.coins_spent);
   return (
-    <PainelAluno nome={profile.display_name ?? ""} dash={dash} deadlines={deadlines} />
+    <PainelAluno
+      nome={profile.display_name ?? ""}
+      dash={dash}
+      deadlines={deadlines}
+      streak={streak}
+      avatar={{
+        frameId: profile.avatar_frame_id,
+        skinId: profile.avatar_skin_id,
+        moedas,
+      }}
+    />
   );
 }
 

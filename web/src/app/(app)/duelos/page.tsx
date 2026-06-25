@@ -1,7 +1,10 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
+import { EmptyState } from "@/components/ui/states";
 import { getProfile } from "@/lib/auth/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -37,7 +40,7 @@ type ExerciseRow = { id: string; title: string };
 const STATUS_LABEL: Record<string, string> = {
   aguardando: "Aguardando",
   em_andamento: "Em andamento",
-  concluido: "Concluido",
+  concluido: "Concluído",
   cancelado: "Cancelado",
 };
 
@@ -114,18 +117,20 @@ export default async function DuelosPage() {
         description="Crie um desafio, compartilhe o código e vença sendo o primeiro a aprovar o exercício."
       />
 
-      <section className="grid gap-3 sm:grid-cols-3">
-        <DuelStat
-          label="Meu ELO"
-          value={String(currentPlayer?.duel_rating ?? profile.duel_rating ?? 1000)}
+      <section className="grid gap-4 sm:grid-cols-3">
+        <StatCard
+          title="Meu ELO"
+          value={currentPlayer?.duel_rating ?? profile.duel_rating ?? 1000}
+          tone="primary"
         />
-        <DuelStat
-          label="Vitorias"
-          value={String(currentPlayer?.duel_wins ?? profile.duel_wins ?? 0)}
+        <StatCard
+          title="Vitórias"
+          value={currentPlayer?.duel_wins ?? profile.duel_wins ?? 0}
+          tone="success"
         />
-        <DuelStat
-          label="Derrotas"
-          value={String(currentPlayer?.duel_losses ?? profile.duel_losses ?? 0)}
+        <StatCard
+          title="Derrotas"
+          value={currentPlayer?.duel_losses ?? profile.duel_losses ?? 0}
         />
       </section>
 
@@ -134,19 +139,18 @@ export default async function DuelosPage() {
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">Meus duelos</h2>
         {rows.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
-            Nenhum duelo ainda.
-          </div>
+          <EmptyState
+            title="Nenhum duelo ainda"
+            description="Crie um desafio acima e compartilhe o código com um colega."
+            icon="⚔️"
+          />
         )}
         {rows.map((duel) => (
-          <div
-            key={duel.id}
-            className="rounded-2xl border border-border bg-card p-5"
-          >
+          <Card key={duel.id}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="font-semibold">
-                  {exerciseTitles.get(duel.exercise_id) ?? "Exercicio"}
+                  {exerciseTitles.get(duel.exercise_id) ?? "Exercício"}
                 </div>
                 <div className="mt-1 text-sm text-muted-foreground">
                   {names.get(duel.challenger_id) ?? "Desafiante"} vs{" "}
@@ -182,7 +186,7 @@ export default async function DuelosPage() {
 
               <div className="flex flex-wrap gap-2">
                 <Link href={`/exercicios/${duel.exercise_id}`}>
-                  <Button variant="secondary">Abrir exercicio</Button>
+                  <Button variant="secondary">Abrir exercício</Button>
                 </Link>
                 {duel.status === "em_andamento" && (
                   <form action={finishDuel}>
@@ -201,20 +205,9 @@ export default async function DuelosPage() {
                   )}
               </div>
             </div>
-          </div>
+          </Card>
         ))}
       </section>
-    </div>
-  );
-}
-
-function DuelStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="text-xs font-medium uppercase text-muted-foreground">
-        {label}
-      </div>
-      <div className="mt-1 text-2xl font-bold">{value}</div>
     </div>
   );
 }

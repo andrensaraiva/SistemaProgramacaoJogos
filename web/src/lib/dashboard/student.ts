@@ -30,9 +30,15 @@ export type Pendencia = {
 
 export type UcAtalho = { classUnitId: string; classId: string; turma: string; uc: string };
 
+export type ConquistaItem = { id: string; titulo: string; descricao: string | null };
+
 export type StudentDashboard = {
   nivel: ProgressoNivel;
   conquistas: number;
+  /** Total de badges no catálogo (pra mostrar "X de Y"). */
+  conquistasTotal: number;
+  /** Últimas conquistas ganhas, com título — pra vitrine no painel. */
+  conquistasRecentes: ConquistaItem[];
   turmas: { id: string; name: string }[];
   ucs: UcAtalho[];
   resumo: { aprovado: number; recuperacao: number; reprovado: number; freqMedia: number | null };
@@ -57,18 +63,36 @@ export async function getStudentDashboard(profile: {
   const turmaNome = new Map(turmas.map((t) => [t.id, t.name]));
   const turmaIds = turmas.map((t) => t.id);
 
-  const [conquistasRes, desempenhoTudo, pendencias, ucsRes] = await Promise.all([
-    admin.from("user_badges").select("id", { count: "exact", head: true }).eq("user_id", profile.id),
-    // Relatório institucional → filtra só as linhas DESTE aluno.
-    getStudentsReport(),
-    carregarPendencias(admin, profile.id, turmaIds, turmaNome),
-    turmaIds.length
-      ? admin
-          .from("class_units")
-          .select("id, class_id, uc:curricular_units!uc_id(title)")
-          .in("class_id", turmaIds)
-      : Promise.resolve({ data: [] as unknown[] }),
-  ]);
+  const [conquistasRes, badgeCatalogoRes, conquistasDetalhe, desempenhoTudo, pendencias, ucsRes] =
+    await Promise.all([
+      admin.from("user_badges").select("id", { count: "exact", head: true }).eq("user_id", profile.id),
+      admin.from("badges").select("id", { count: "exact", head: true }),
+      // Conquistas ganhas com título/descrição (catálogo embutido), recentes primeiro.
+      admin
+        .from("user_badges")
+        .select("earned_at, badge:badges!badge_id(id, title, description)")
+        .eq("user_id", profile.id)
+        .order("earned_at", { ascending: false })
+        .limit(6),
+      // Relatório institucional → filtra só as linhas DESTE aluno.
+      getStudentsReport(),
+      carregarPendencias(admin, profile.id, turmaIds, turmaNome),
+      turmaIds.length
+        ? admin
+            .from("class_units")
+            .select("id, class_id, uc:curricular_units!uc_id(title)")
+            .in("class_id", turmaIds)
+        : Promise.resolve({ data: [] as unknown[] }),
+    ]);
+
+  const conquistasRecentes: ConquistaItem[] = (conquistasDetalhe.data ?? [])
+    .map((raw) => {
+      const b = (raw as Record<string, unknown>).badge as
+        | { id: string; title: string; description: string | null }
+        | null;
+      return b ? { id: b.id, titulo: b.title, descricao: b.description } : null;
+    })
+    .filter((c): c is ConquistaItem => c !== null);
 
   const ucs: UcAtalho[] = (ucsRes.data ?? []).map((raw) => {
     const c = raw as Record<string, unknown>;
@@ -110,6 +134,8 @@ export async function getStudentDashboard(profile: {
   return {
     nivel: progressoNivel(profile.xp),
     conquistas: conquistasRes.count ?? 0,
+    conquistasTotal: badgeCatalogoRes.count ?? 0,
+    conquistasRecentes,
     turmas,
     ucs,
     resumo,
