@@ -55,18 +55,69 @@ function StatLink({
   );
 }
 
+/** Chip de resumo de desempenho: emoji + número grande + rótulo, com gradiente leve. */
+function ResumoChip({
+  emoji,
+  valor,
+  label,
+  tone,
+  bg,
+}: {
+  emoji: string;
+  valor: ReactNode;
+  label: string;
+  tone: string;
+  bg: string;
+}) {
+  return (
+    <div className={`flex items-center gap-3 rounded-xl border border-border bg-gradient-to-br ${bg} to-card p-3`}>
+      <span className="text-xl">{emoji}</span>
+      <div className="min-w-0">
+        <div className={`text-xl font-bold leading-none ${tone}`}>{valor}</div>
+        <div className="mt-0.5 truncate text-xs text-muted-foreground">{label}</div>
+      </div>
+    </div>
+  );
+}
+
 const SIT_LABEL: Record<string, string> = {
   reprovado: "Reprovado",
   recuperacao: "Recuperação",
   aprovado: "Aprovado",
 };
 
+// Cor/emoji por situação — reaproveitado nas etiquetas e nas barras de média.
+const SIT_META: Record<string, { chip: string; bar: string; emoji: string }> = {
+  aprovado: { chip: "bg-success/15 text-success", bar: "bg-success", emoji: "✅" },
+  recuperacao: { chip: "bg-warning/15 text-warning", bar: "bg-warning", emoji: "⚠️" },
+  reprovado: { chip: "bg-danger/15 text-danger", bar: "bg-danger", emoji: "❌" },
+};
+
+function sitMeta(situacao: string) {
+  return SIT_META[situacao] ?? { chip: "bg-muted text-muted-foreground", bar: "bg-muted", emoji: "•" };
+}
+
+function diasAte(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+}
+
 function prazoRelativo(iso: string | null): string {
-  if (!iso) return "";
-  const dias = Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+  const dias = diasAte(iso);
+  if (dias == null) return "";
   if (dias <= 0) return "hoje";
   if (dias === 1) return "amanhã";
   return `em ${dias} dias`;
+}
+
+/** Cor da etiqueta de prazo conforme a urgência. */
+function prazoTone(iso: string | null): string {
+  const dias = diasAte(iso);
+  if (dias == null) return "bg-muted text-muted-foreground";
+  if (dias <= 0) return "bg-danger/15 text-danger";
+  if (dias === 1) return "bg-warning/15 text-warning";
+  if (dias <= 3) return "bg-warning/10 text-warning";
+  return "bg-muted text-muted-foreground";
 }
 
 export function PainelAluno({
@@ -240,34 +291,63 @@ export function PainelAluno({
 
       {/* Pendências em destaque */}
       <Card className="reveal-up reveal-delay-3">
-        <CardHeader title="📌 A entregar" description="Atividades com prazo que você ainda não enviou." />
+        <CardHeader
+          title="📌 A entregar"
+          description="Atividades com prazo que você ainda não enviou."
+          action={
+            dash.pendencias.length > 0 ? (
+              <span className="rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-semibold text-warning">
+                {dash.pendencias.length} pendente{dash.pendencias.length > 1 ? "s" : ""}
+              </span>
+            ) : (
+              <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">
+                em dia
+              </span>
+            )
+          }
+        />
         {dash.pendencias.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Tudo em dia! 🎉</p>
+          <div className="pop-in flex flex-col items-center gap-2 rounded-xl border border-success/30 bg-gradient-to-br from-success/10 to-card py-8 text-center">
+            <span className="text-4xl">🎉</span>
+            <p className="font-semibold text-success">Tudo entregue!</p>
+            <p className="text-sm text-muted-foreground">
+              Nenhuma atividade com prazo em aberto. Mandou bem!
+            </p>
+          </div>
         ) : (
-          <ul className="divide-y divide-border">
-            {dash.pendencias.slice(0, 8).map((p) => (
-              <li key={p.assignmentId}>
-                <Link
-                  href={`/turmas/${p.classId}/listas/${p.assignmentId}`}
-                  className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-primary"
-                >
-                  <span className="min-w-0">
-                    <span className="font-medium">{p.titulo}</span>
-                    <span className="block truncate text-xs text-muted-foreground">{p.turma}</span>
-                  </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{prazoRelativo(p.dueAt)}</span>
-                </Link>
-              </li>
-            ))}
+          <ul className="flex flex-col gap-2">
+            {dash.pendencias.slice(0, 8).map((p) => {
+              const urgente = (diasAte(p.dueAt) ?? 99) <= 1;
+              return (
+                <li key={p.assignmentId}>
+                  <Link
+                    href={`/turmas/${p.classId}/listas/${p.assignmentId}`}
+                    className={`group flex items-center justify-between gap-3 rounded-xl border p-3 text-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                      urgente
+                        ? "border-danger/30 bg-danger/5"
+                        : "border-border bg-background/40 hover:border-primary/40"
+                    }`}
+                  >
+                    <span className="min-w-0">
+                      <span className="font-medium group-hover:text-primary">{p.titulo}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{p.turma}</span>
+                    </span>
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${prazoTone(p.dueAt)}`}>
+                      {prazoRelativo(p.dueAt)}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>
 
       {/* Minhas UCs — rever conteúdo e refazer exercícios */}
       {dash.ucs.length > 0 && (
-        <Card>
+        <Card className="reveal-up reveal-delay-4">
           <CardHeader
-            title="Minhas unidades curriculares"
+            title="📚 Minhas unidades curriculares"
             description="Reveja as aulas e refaça os exercícios de cada UC."
           />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -275,10 +355,15 @@ export function PainelAluno({
               <Link
                 key={u.classUnitId}
                 href={`/turmas/${u.classId}/ucs/${u.classUnitId}`}
-                className="rounded-xl border border-border bg-background/40 p-3 transition-colors hover:border-primary/40"
+                className="group flex items-start gap-3 rounded-xl border border-border bg-background/40 p-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
               >
-                <span className="text-sm font-medium">{u.uc}</span>
-                <span className="mt-1 block text-xs text-muted-foreground">{u.turma} · aulas e exercícios →</span>
+                <span className="text-xl">🎯</span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium group-hover:text-primary">{u.uc}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {u.turma} · aulas e exercícios →
+                  </span>
+                </span>
               </Link>
             ))}
           </div>
@@ -286,79 +371,73 @@ export function PainelAluno({
       )}
 
       {/* Meu desempenho por UC */}
-      <Card>
+      <Card className="reveal-up reveal-delay-5">
         <CardHeader
-          title="Meu desempenho"
+          title="📊 Meu desempenho"
           description="Como você vai em cada unidade curricular. Clique para ver o detalhe."
         />
         {dash.desempenho.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Ainda não há notas ou frequência lançadas.</p>
+          <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
+            <span className="text-2xl opacity-50">📭</span>
+            Ainda não há notas ou frequência lançadas. Elas aparecem aqui assim que seu professor avaliar.
+          </div>
         ) : (
           <>
-            <div className="mb-3 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full bg-success/15 px-2 py-0.5 text-success">
-                {dash.resumo.aprovado} aprovado(s)
-              </span>
-              <span className="rounded-full bg-warning/15 px-2 py-0.5 text-warning">
-                {dash.resumo.recuperacao} recuperação
-              </span>
-              <span className="rounded-full bg-danger/15 px-2 py-0.5 text-danger">
-                {dash.resumo.reprovado} reprovado(s)
-              </span>
-              {dash.resumo.freqMedia != null && (
-                <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
-                  Frequência média {dash.resumo.freqMedia}%
-                </span>
-              )}
+            {/* Resumo em chips com contagem grande */}
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <ResumoChip emoji="✅" valor={dash.resumo.aprovado} label="aprovada(s)" tone="text-success" bg="from-success/10" />
+              <ResumoChip emoji="⚠️" valor={dash.resumo.recuperacao} label="recuperação" tone="text-warning" bg="from-warning/10" />
+              <ResumoChip emoji="❌" valor={dash.resumo.reprovado} label="reprovada(s)" tone="text-danger" bg="from-danger/10" />
+              <ResumoChip
+                emoji="📅"
+                valor={dash.resumo.freqMedia != null ? `${dash.resumo.freqMedia}%` : "—"}
+                label="freq. média"
+                tone="text-foreground"
+                bg="from-muted/40"
+              />
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-muted-foreground">
-                    <th className="py-1">UC</th>
-                    <th>Turma</th>
-                    <th className="text-center">Média</th>
-                    <th className="text-center">Freq.</th>
-                    <th className="text-center">Situação</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dash.desempenho.map((d, i) => (
-                    <tr key={`${d.uc}-${i}`} className="border-t border-border">
-                      <td className="py-1.5">{d.uc}</td>
-                      <td>{d.turma}</td>
-                      <td className="text-center">{d.media != null ? d.media.toFixed(1) : "—"}</td>
-                      <td className={`text-center ${d.freqBaixa ? "text-danger font-medium" : ""}`}>
-                        {d.freqPct != null ? `${d.freqPct}%` : "—"}
-                      </td>
-                      <td className="text-center">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs ${
-                            d.situacao === "reprovado"
-                              ? "bg-danger/15 text-danger"
-                              : d.situacao === "recuperacao"
-                                ? "bg-warning/15 text-warning"
-                                : "bg-success/15 text-success"
-                          }`}
-                        >
-                          {SIT_LABEL[d.situacao] ?? d.situacao}
-                        </span>
-                      </td>
-                      <td className="text-right">
-                        {d.classId && (
-                          <Link
-                            href={`/turmas/${d.classId}/minhas-notas`}
-                            className="text-xs text-primary hover:underline"
-                          >
-                            detalhes
-                          </Link>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            {/* Uma linha por UC, com barra de média colorida pela situação */}
+            <div className="flex flex-col gap-2">
+              {dash.desempenho.map((d, i) => {
+                const meta = sitMeta(d.situacao);
+                const mediaPct = d.media != null ? Math.min(100, Math.max(0, d.media * 10)) : 0;
+                const inner = (
+                  <div className="group flex flex-col gap-2 rounded-xl border border-border bg-background/40 p-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:flex-row sm:items-center sm:gap-4">
+                    <div className="min-w-0 sm:w-48">
+                      <div className="truncate text-sm font-medium group-hover:text-primary">{d.uc}</div>
+                      <div className="truncate text-xs text-muted-foreground">{d.turma}</div>
+                    </div>
+                    {/* Barra de média */}
+                    <div className="flex flex-1 items-center gap-3">
+                      <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={`xp-grow h-full rounded-full ${meta.bar}`}
+                          style={{ ["--xp-target" as string]: `${mediaPct}%` }}
+                        />
+                      </div>
+                      <span className="w-10 shrink-0 text-right text-sm font-bold tabular-nums">
+                        {d.media != null ? d.media.toFixed(1) : "—"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs ${d.freqBaixa ? "font-medium text-danger" : "text-muted-foreground"}`}>
+                        {d.freqPct != null ? `${d.freqPct}% freq.` : "—"}
+                      </span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${meta.chip}`}>
+                        {meta.emoji} {SIT_LABEL[d.situacao] ?? d.situacao}
+                      </span>
+                    </div>
+                  </div>
+                );
+                return d.classId ? (
+                  <Link key={`${d.uc}-${i}`} href={`/turmas/${d.classId}/minhas-notas`}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={`${d.uc}-${i}`}>{inner}</div>
+                );
+              })}
             </div>
           </>
         )}
@@ -367,27 +446,30 @@ export function PainelAluno({
       {/* Próximas entregas + atalhos */}
       <div className="grid gap-6 lg:grid-cols-2">
         <UpcomingDeadlines items={deadlines} />
-        <Card>
-          <CardHeader title="Atalhos" description="Continue praticando." />
-          <div className="flex flex-wrap gap-2">
-            <Link href="/exercicios">
-              <Button variant="secondary">Exercícios</Button>
-            </Link>
-            <Link href="/duelos">
-              <Button variant="secondary">Duelos</Button>
-            </Link>
-            <Link href="/ranking">
-              <Button variant="secondary">Ranking</Button>
-            </Link>
-            <Link href="/turmas">
-              <Button variant="secondary">Minhas turmas</Button>
-            </Link>
-            <Link href="/perfil">
-              <Button variant="secondary">Perfil e loja</Button>
-            </Link>
+        <Card className="reveal-up">
+          <CardHeader title="🚀 Continue praticando" description="Vá direto ao que dá XP." />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Atalho href="/exercicios" emoji="💻" label="Exercícios" />
+            <Atalho href="/duelos" emoji="⚔️" label="Duelos" />
+            <Atalho href="/ranking" emoji="🏆" label="Ranking" />
+            <Atalho href="/turmas" emoji="🎓" label="Turmas" />
+            <Atalho href="/perfil" emoji="🪙" label="Perfil e loja" />
           </div>
         </Card>
       </div>
     </div>
+  );
+}
+
+/** Atalho em tile com emoji grande — entrada de game UI. */
+function Atalho({ href, emoji, label }: { href: string; emoji: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="group flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border bg-background/40 p-4 text-center transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+    >
+      <span className="text-2xl transition-transform group-hover:scale-110">{emoji}</span>
+      <span className="text-xs font-medium group-hover:text-primary">{label}</span>
+    </Link>
   );
 }
