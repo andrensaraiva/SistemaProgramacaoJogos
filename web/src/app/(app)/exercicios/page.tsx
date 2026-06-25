@@ -1,12 +1,12 @@
 import Link from "next/link";
 
-import { Badge, DIFFICULTY_LABEL, DIFFICULTY_TONE } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/states";
 import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
+
+import { ExerciciosList, type ExercicioItem } from "./_list";
 
 export default async function ExerciciosPage() {
   const profile = await getProfile();
@@ -19,6 +19,26 @@ export default async function ExerciciosPage() {
     .eq("is_public", true)
     .order("difficulty", { ascending: true })
     .order("created_at", { ascending: true });
+
+  // Quais o aluno já resolveu (submissão aprovada) — pra marcar ✓.
+  let solvedIds = new Set<string>();
+  if (profile && !isProfessor && (exercises?.length ?? 0) > 0) {
+    const { data: aprovadas } = await supabase
+      .from("submissions")
+      .select("exercise_id")
+      .eq("student_id", profile.id)
+      .eq("status", "aprovado");
+    solvedIds = new Set((aprovadas ?? []).map((s) => s.exercise_id));
+  }
+
+  const items: ExercicioItem[] = (exercises ?? []).map((e) => ({
+    id: e.id,
+    title: e.title,
+    language: e.language,
+    difficulty: e.difficulty,
+    xp_reward: e.xp_reward,
+    solved: solvedIds.has(e.id),
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,7 +65,7 @@ export default async function ExerciciosPage() {
         </div>
       )}
 
-      {!error && (exercises?.length ?? 0) === 0 && (
+      {!error && items.length === 0 && (
         <EmptyState
           title="Nenhum exercício ainda"
           description={
@@ -56,25 +76,9 @@ export default async function ExerciciosPage() {
         />
       )}
 
-      <div className="grid gap-3">
-        {(exercises ?? []).map((exercise) => (
-          <Link key={exercise.id} href={`/exercicios/${exercise.id}`} className="group">
-            <Card className="flex items-center justify-between gap-4 transition-colors group-hover:border-primary/50">
-              <div className="min-w-0">
-                <div className="text-lg font-semibold">{exercise.title}</div>
-                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="uppercase">{exercise.language}</span>
-                  <span>·</span>
-                  <span>{exercise.xp_reward} XP</span>
-                </div>
-              </div>
-              <Badge tone={DIFFICULTY_TONE[exercise.difficulty] ?? "neutral"}>
-                {DIFFICULTY_LABEL[exercise.difficulty] ?? exercise.difficulty}
-              </Badge>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      {items.length > 0 && (
+        <ExerciciosList exercises={items} showProgress={!isProfessor} />
+      )}
     </div>
   );
 }

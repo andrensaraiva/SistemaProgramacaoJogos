@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRef, useState, useTransition } from "react";
 
+import { RewardToast, type Reward } from "@/components/reward-toast";
 import { Button } from "@/components/ui/button";
 import type {
   Exercise,
@@ -42,6 +43,7 @@ export function Workbench({ exercise, sampleTests }: Props) {
   const [stdin, setStdin] = useState(sampleTests[0]?.stdin ?? "");
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [submission, setSubmission] = useState<SubmissionResult | null>(null);
+  const [reward, setReward] = useState<Reward | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [extraMsg, setExtraMsg] = useState<string | null>(null);
   const [running, startRun] = useTransition();
@@ -96,6 +98,16 @@ export function Workbench({ exercise, sampleTests }: Props) {
           firstEditAt.current === null ? null : Date.now() - firstEditAt.current,
       });
       setSubmission(result);
+      // Aprovou → comemora com toast de recompensa (XP + conquistas).
+      if (result.ok && result.status === "aprovado") {
+        setReward({
+          xp: result.xp_earned,
+          badges: result.badges_awarded.map((id) => ({
+            id,
+            label: BADGE_LABELS[id] ?? id,
+          })),
+        });
+      }
     });
   }
 
@@ -155,6 +167,7 @@ export function Workbench({ exercise, sampleTests }: Props) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+      <RewardToast reward={reward} onClose={() => setReward(null)} />
       {/* Enunciado */}
       <div className="flex flex-col gap-4">
         <div>

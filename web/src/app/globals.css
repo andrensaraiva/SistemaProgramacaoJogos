@@ -195,14 +195,48 @@ body {
   animation: pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* Toast de recompensa — entra de cima com leve overshoot e sai pra cima. */
+@keyframes reward-pop {
+  0% { opacity: 0; transform: translateY(-24px) scale(0.9); }
+  60% { transform: translateY(4px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.reward-pop {
+  animation: reward-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes reward-leave {
+  to { opacity: 0; transform: translateY(-24px) scale(0.95); }
+}
+.reward-leave {
+  animation: reward-leave 0.4s ease forwards;
+}
+
+/* Confete caindo dentro do toast. */
+@keyframes confetti-fall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(90px) rotate(360deg); opacity: 0; }
+}
+.confetti {
+  position: absolute;
+  top: 0;
+  width: 7px;
+  height: 11px;
+  border-radius: 1px;
+  animation: confetti-fall 1.6s ease-in infinite;
+}
+
 /* Respeita quem prefere menos movimento. */
 @media (prefers-reduced-motion: reduce) {
   .reveal-up,
   .xp-grow,
   .xp-shine::after,
   .flame-pulse,
-  .pop-in {
+  .pop-in,
+  .reward-pop,
+  .reward-leave,
+  .confetti {
     animation: none !important;
   }
   .xp-grow { width: var(--xp-target, 0%); }
+  .confetti { display: none; }
 }
