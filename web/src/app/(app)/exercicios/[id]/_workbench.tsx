@@ -181,6 +181,19 @@ export function Workbench({ exercise, sampleTests }: Props) {
           {exercise.description}
         </div>
 
+        {/* Exemplo do professor — referência opcional pro aluno */}
+        {exercise.example && (
+          <details className="group rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-primary">
+              <span className="transition-transform group-open:rotate-90">▶</span>
+              💡 Exemplo do professor
+            </summary>
+            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-lg bg-background/60 p-3 font-mono text-xs leading-relaxed">
+              {exercise.example}
+            </pre>
+          </details>
+        )}
+
         {sampleTests.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="text-sm font-semibold">

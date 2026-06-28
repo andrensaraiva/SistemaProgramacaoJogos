@@ -25,6 +25,8 @@ export type Exercise = {
   exercise_type?: ExerciseType;
   is_group?: boolean;
   response_template?: string | null;
+  /** Exemplo do professor mostrado ao aluno (não é a solução interna). */
+  example?: string | null;
 };
 
 export type SampleTest = {

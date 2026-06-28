@@ -110,6 +110,20 @@ export function NovoExercicioForm({
         </>
       )}
 
+      {/* Exemplo do professor — mostrado ao aluno como referência/modelo */}
+      <Field label="Exemplo para o aluno (opcional)" htmlFor="example">
+        <textarea
+          id="example"
+          name="example"
+          rows={4}
+          className={`${taCls} font-mono`}
+          placeholder="Um exemplo resolvido, dica guiada ou trecho de código que ajuda o aluno. Fica visível na página do exercício."
+        />
+        <span className="mt-1 text-xs text-muted-foreground">
+          Diferente da solução interna: isto aparece PARA o aluno como referência.
+        </span>
+      </Field>
+
       {/* Campos do tipo MODELO DE RESPOSTA (entrega por texto) */}
       {activityMeta(tipo).deliveryInput === "text" && (
         <Field label="Modelo de resposta (opcional)" htmlFor="response_template">

@@ -30,6 +30,8 @@ const NovoSchema = z.object({
   // código
   language_id: z.string().trim().optional().default(""),
   starter_code: z.string().optional().default(""),
+  // exemplo do professor (visível ao aluno)
+  example: z.string().max(8000).optional().default(""),
   // modelo de resposta
   response_template: z.string().max(8000).optional().default(""),
   // criativos
@@ -61,6 +63,7 @@ export async function criarExercicioManual(
     is_public: formData.get("is_public") === "on",
     language_id: formData.get("language_id") ?? "",
     starter_code: formData.get("starter_code") ?? "",
+    example: formData.get("example") ?? "",
     response_template: formData.get("response_template") ?? "",
     canvas_width: formData.get("canvas_width") ?? undefined,
     canvas_height: formData.get("canvas_height") ?? undefined,
@@ -112,6 +115,7 @@ export async function criarExercicioManual(
       is_public: d.is_public,
       exercise_type: d.exercise_type,
       is_group: d.is_group,
+      example: d.example.trim() || null,
       response_template:
         activityMeta(d.exercise_type).deliveryInput === "text"
           ? d.response_template || null

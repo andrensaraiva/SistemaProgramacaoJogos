@@ -21,7 +21,7 @@ export default async function ExercicioPage(
   const { data: exercise } = await supabase
     .from("exercises")
     .select(
-      "id, title, description, starter_code, language, language_id, difficulty, xp_reward, exercise_type, is_group, response_template",
+      "id, title, description, starter_code, language, language_id, difficulty, xp_reward, exercise_type, is_group, response_template, example",
     )
     .eq("id", id)
     .single();

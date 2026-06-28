@@ -84,6 +84,21 @@ export default async function UcDoAlunoPage({ params }: { params: Params }) {
       .order("created_at"),
   ]);
 
+  // Quais atividades de código o aluno já resolveu (pra marcar ✓ na jornada).
+  const atividadeIds = (atividades ?? []).map((a) => a.id);
+  let solvedAssignments = new Set<string>();
+  if (atividadeIds.length > 0) {
+    const { data: aprovadas } = await supabase
+      .from("submissions")
+      .select("assignment_id")
+      .eq("student_id", profile.id)
+      .eq("status", "aprovado")
+      .in("assignment_id", atividadeIds);
+    solvedAssignments = new Set(
+      (aprovadas ?? []).map((s) => s.assignment_id).filter(Boolean) as string[],
+    );
+  }
+
   const blocks: Bloco[] = (blocos ?? []).map((raw) => {
     const b = raw as Record<string, unknown>;
     return {
@@ -107,6 +122,11 @@ export default async function UcDoAlunoPage({ params }: { params: Params }) {
     blocks,
   );
 
+  const atividadesList = atividades ?? [];
+  const resolvidas = atividadesList.filter((a) => solvedAssignments.has(a.id)).length;
+  const totalAtividades = atividadesList.length;
+  const pctAtividades = totalAtividades > 0 ? Math.round((resolvidas / totalAtividades) * 100) : 0;
+
   return (
     <div className="flex flex-col gap-6">
       <Link href={`/turmas/${id}`} className="text-sm text-muted-foreground hover:text-foreground">
@@ -125,40 +145,74 @@ export default async function UcDoAlunoPage({ params }: { params: Params }) {
         }
       />
 
-      {/* Exercícios da UC — pra refazer/praticar */}
-      <Card>
-        <CardHeader title="Exercícios" description="Abra para resolver ou praticar de novo." />
-        {(atividades ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma atividade nesta UC ainda.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {(atividades ?? []).map((a) => (
-              <li key={a.id}>
-                <Link
-                  href={hrefAtividade(id, classUnitId, a)}
-                  className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-primary"
-                >
-                  <span className="flex items-center gap-2">
-                    {a.title}
-                    <Badge tone="neutral">{KIND_LABEL[a.kind] ?? a.kind}</Badge>
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {a.due_at ? `prazo ${dataBR(a.due_at)}` : "sem prazo"}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      {/* Barra de progresso da UC — quantos exercícios já dominou */}
+      {totalAtividades > 0 && (
+        <Card className="bg-gradient-to-br from-primary/10 to-card">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-semibold">Seu progresso nesta UC</span>
+            <span className="text-muted-foreground">{resolvidas} de {totalAtividades} concluídos</span>
+          </div>
+          <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-muted">
+            <div className="xp-fill h-full rounded-full transition-all" style={{ width: `${pctAtividades}%` }} />
+          </div>
+        </Card>
+      )}
 
-      {/* Linha do tempo das aulas — pra rever o conteúdo */}
+      {/* 1) APRENDER — aulas e apresentações primeiro (onde o conteúdo vive) */}
       <Card>
         <CardHeader
-          title="Aulas"
-          description={plan ? `Conteúdo do plano: ${plan.title}` : "Aulas registradas nesta UC."}
+          title="1. Aprenda — aulas e apresentações"
+          description={plan ? `Conteúdo do plano: ${plan.title}` : "Reveja o conteúdo antes de praticar."}
         />
         <AulasTimeline aulas={timeline} />
+      </Card>
+
+      {/* 2) PRATICAR — atividades, com status do aluno e exemplo guiado */}
+      <Card>
+        <CardHeader
+          title="2. Pratique — atividades e exercícios"
+          description="Resolva as atividades. O que você já concluiu fica marcado com ✓."
+        />
+        {totalAtividades === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma atividade nesta UC ainda.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {atividadesList.map((a) => {
+              const solved = solvedAssignments.has(a.id);
+              return (
+                <li key={a.id}>
+                  <Link
+                    href={hrefAtividade(id, classUnitId, a)}
+                    className={`group flex items-center justify-between gap-3 rounded-xl border p-3 text-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                      solved ? "border-success/40 bg-success/5" : "border-border bg-background/40 hover:border-primary/40"
+                    }`}
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm ${
+                          solved ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"
+                        }`}
+                        title={solved ? "Concluído" : "Pendente"}
+                      >
+                        {solved ? "✓" : "•"}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium group-hover:text-primary">{a.title}</span>
+                        <span className="mt-0.5 flex items-center gap-2">
+                          <Badge tone="neutral">{KIND_LABEL[a.kind] ?? a.kind}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {a.due_at ? `prazo ${dataBR(a.due_at)}` : "sem prazo"}
+                          </span>
+                        </span>
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground group-hover:text-primary">abrir →</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </Card>
     </div>
   );
