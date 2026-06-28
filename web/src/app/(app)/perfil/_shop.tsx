@@ -38,6 +38,7 @@ export function CosmeticShop({
 }) {
   const [tab, setTab] = useState<CosmeticKind>("frame");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [preview, setPreview] = useState<Cosmetic | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
 
@@ -45,6 +46,13 @@ export function CosmeticShop({
   const equippedId =
     tab === "frame" ? equippedFrameId : tab === "banner" ? equippedBannerId : equippedAvatarId;
   const items = catalog(tab);
+
+  // Progresso de coleção da aba atual: quantos itens já possuo de quantos.
+  const possuidos = items.filter((c) => owned.has(c.id) || isFree(c)).length;
+  // Próximo item de prestígio ainda travado por nível (pra incentivar subir).
+  const proximoTravado = items
+    .filter((c) => !meetsLevel(level, c) && !owned.has(c.id))
+    .sort((a, b) => a.minLevel - b.minLevel)[0];
 
   function run(fn: () => Promise<{ ok: boolean; message: string }>) {
     setMsg(null);
@@ -62,7 +70,7 @@ export function CosmeticShop({
           <button
             key={k}
             type="button"
-            onClick={() => { setTab(k); setMsg(null); }}
+            onClick={() => { setTab(k); setMsg(null); setPreview(null); }}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
               tab === k ? "bg-primary/12 text-primary" : "text-muted-foreground hover:bg-muted"
             }`}
@@ -70,6 +78,30 @@ export function CosmeticShop({
             {TAB_LABEL[k]}
           </button>
         ))}
+      </div>
+
+      {/* Progresso de coleção da aba + próximo desbloqueio */}
+      <div className="rounded-xl border border-border bg-background/40 p-3">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium">Coleção de {TAB_LABEL[tab].toLowerCase()}</span>
+          <span className="text-muted-foreground">
+            {possuidos} de {items.length}
+          </span>
+        </div>
+        <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="xp-fill xp-grow h-full rounded-full"
+            style={{ ["--xp-target" as string]: `${Math.round((possuidos / items.length) * 100)}%` }}
+          />
+        </div>
+        {proximoTravado ? (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            🔒 Próximo: <span className="font-medium text-foreground">{proximoTravado.name}</span> no nível {proximoTravado.minLevel}
+            {" "}(faltam {proximoTravado.minLevel - level} {proximoTravado.minLevel - level === 1 ? "nível" : "níveis"})
+          </p>
+        ) : possuidos === items.length ? (
+          <p className="mt-1.5 text-xs font-medium text-success">🏆 Coleção completa!</p>
+        ) : null}
       </div>
 
       {msg && (
@@ -84,6 +116,9 @@ export function CosmeticShop({
         </div>
       )}
 
+      {/* Pré-visualização do item em foco aplicado ao avatar/banner */}
+      <PreviewPanel cosmetic={preview} displayName={displayName} />
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((c) => {
           const isOwned = owned.has(c.id) || isFree(c);
@@ -97,7 +132,9 @@ export function CosmeticShop({
               equipped={isEquipped}
               canLevel={meetsLevel(level, c)}
               affordable={balance >= c.price}
+              levelFalta={Math.max(0, c.minLevel - level)}
               pending={pending}
+              onHover={() => setPreview(c)}
               onBuy={() => run(() => comprarCosmetico(c.kind, c.id))}
               onEquip={() => run(() => equiparCosmetico(c.kind, c.id))}
             />
@@ -115,7 +152,9 @@ function ShopCard({
   equipped,
   canLevel,
   affordable,
+  levelFalta,
   pending,
+  onHover,
   onBuy,
   onEquip,
 }: {
@@ -125,13 +164,17 @@ function ShopCard({
   equipped: boolean;
   canLevel: boolean;
   affordable: boolean;
+  levelFalta: number;
   pending: boolean;
+  onHover: () => void;
   onBuy: () => void;
   onEquip: () => void;
 }) {
   return (
     <div
-      className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-center ${
+      onMouseEnter={onHover}
+      onFocus={onHover}
+      className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all hover:-translate-y-0.5 hover:shadow-md ${
         equipped ? "border-primary/50 bg-primary/5" : "border-border bg-background/40"
       }`}
     >
@@ -140,7 +183,7 @@ function ShopCard({
 
       {equipped ? (
         <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
-          Equipado
+          ✓ Equipado
         </span>
       ) : owned ? (
         <button
@@ -152,8 +195,11 @@ function ShopCard({
           {pending ? "..." : "Equipar"}
         </button>
       ) : !canLevel ? (
-        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-          🔒 Nível {cosmetic.minLevel}
+        <span
+          className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+          title={`Falta${levelFalta === 1 ? "" : "m"} ${levelFalta} nível${levelFalta === 1 ? "" : "is"}`}
+        >
+          🔒 Nível {cosmetic.minLevel} · faltam {levelFalta}
         </span>
       ) : (
         <button
@@ -178,4 +224,41 @@ function Preview({ cosmetic, displayName }: { cosmetic: Cosmetic; displayName: s
     return <AvatarWithFrame name={displayName} skinId={cosmetic.id} size={48} />;
   }
   return <AvatarWithFrame name={displayName} frameId={cosmetic.id} size={48} />;
+}
+
+/** Mostra como ficaria o avatar/banner com o cosmético em foco, antes de equipar. */
+function PreviewPanel({
+  cosmetic,
+  displayName,
+}: {
+  cosmetic: Cosmetic | null;
+  displayName: string;
+}) {
+  if (!cosmetic) {
+    return (
+      <div className="flex items-center justify-center rounded-xl border border-dashed border-border bg-background/30 py-4 text-xs text-muted-foreground">
+        Passe o mouse num item para pré-visualizar 👀
+      </div>
+    );
+  }
+  const isBanner = cosmetic.kind === "banner";
+  return (
+    <div className="overflow-hidden rounded-xl border border-primary/30 bg-card">
+      <div className="h-14 w-full" style={isBanner ? cosmetic.style : undefined} />
+      <div className="flex items-center gap-3 px-4 pb-3">
+        <div className="-mt-6 rounded-full ring-4 ring-card">
+          <AvatarWithFrame
+            name={displayName}
+            frameId={cosmetic.kind === "frame" ? cosmetic.id : undefined}
+            skinId={cosmetic.kind === "avatar" ? cosmetic.id : undefined}
+            size={48}
+          />
+        </div>
+        <div className="pt-1 text-xs">
+          <div className="font-medium">Prévia: {cosmetic.name}</div>
+          <div className="text-muted-foreground">é assim que vai aparecer no seu perfil</div>
+        </div>
+      </div>
+    </div>
+  );
 }
