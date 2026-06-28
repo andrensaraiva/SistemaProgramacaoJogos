@@ -22,14 +22,28 @@ export default async function RelatorioTurmasLista() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {turmas.map((t) => (
-            <Link key={t.id} href={`/admin/relatorios/turmas/${t.id}`}>
-              <Card className="transition-colors hover:border-primary/50">
+            <Card key={t.id} className="flex flex-col gap-3">
+              <div>
                 <div className="font-semibold">{t.name}</div>
                 <div className="text-xs text-muted-foreground">
                   Prof. {t.owner?.display_name ?? "—"}
                 </div>
-              </Card>
-            </Link>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={`/admin/relatorios/turmas/${t.id}`}
+                  className="rounded-lg border border-border bg-muted px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted/70"
+                >
+                  📊 Relatório
+                </Link>
+                <Link
+                  href={`/turmas/${t.id}/calendario`}
+                  className="rounded-lg border border-border bg-muted px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted/70"
+                >
+                  📅 Calendário
+                </Link>
+              </div>
+            </Card>
           ))}
         </div>
       )}
