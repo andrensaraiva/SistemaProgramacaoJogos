@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { criarCard, excluirCard, moverCard } from "@/lib/projects/actions";
+import { criarCard, excluirCard, moverCardDnd } from "@/lib/projects/actions";
+import { createClient } from "@/lib/supabase/client";
 
 type Task = {
   id: string;
@@ -12,6 +14,7 @@ type Task = {
   status: string;
   sprint_id: string | null;
   assignee_id: string | null;
+  ord: number;
 };
 type Member = { id: string; display_name: string };
 type Sprint = { id: string; title: string };
@@ -22,11 +25,12 @@ const COLUMNS: { key: string; label: string }[] = [
   { key: "concluido", label: "Concluído" },
 ];
 
-// Board estilo Trello (sem drag por ora): 3 colunas, mover card por botões.
+// Board estilo Trello com drag-and-drop (HTML5 nativo, sem libs) e tempo real
+// (Supabase Realtime): mover um card numa aba reflete na aba dos colegas.
 export function GroupBoard({
   projectId,
   group,
-  tasks,
+  tasks: initialTasks,
   sprints,
   members,
 }: {
@@ -36,36 +40,129 @@ export function GroupBoard({
   sprints: Sprint[];
   members: Member[];
 }) {
+  const router = useRouter();
   const names = new Map(members.map((m) => [m.id, m.display_name]));
+  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overCol, setOverCol] = useState<string | null>(null);
+
+  // Sincroniza o estado local quando o servidor manda dados novos
+  // (revalidatePath após uma action, navegação ou realtime). Padrão React de
+  // "ajustar estado durante o render" guardando a última prop vista em state.
+  const [seenServer, setSeenServer] = useState(initialTasks);
+  if (seenServer !== initialTasks) {
+    setSeenServer(initialTasks);
+    setTasks(initialTasks);
+  }
+
+  // -------- Tempo real: atualiza o board quando um colega mexe nos cards. -----
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`board-${group.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "project_tasks",
+          filter: `group_id=eq.${group.id}`,
+        },
+        () => {
+          // Mudança veio de outra pessoa (ou outra aba): recarrega os dados do
+          // servidor. Simples e consistente — o board é pequeno.
+          router.refresh();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [group.id, router]);
+
+  function colTasks(status: string) {
+    return tasks
+      .filter((t) => t.status === status)
+      .sort((a, b) => a.ord - b.ord);
+  }
+
+  async function handleDrop(status: string) {
+    setOverCol(null);
+    const id = dragId;
+    setDragId(null);
+    if (!id) return;
+    const moved = tasks.find((t) => t.id === id);
+    if (!moved || moved.status === status) return;
+
+    // Otimista: move já na UI; o card vai pro fim da coluna de destino.
+    const destIds = [...colTasks(status).map((t) => t.id), id];
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status, ord: destIds.length } : t)),
+    );
+
+    const res = await moverCardDnd(id, status, destIds);
+    if (!res.ok) {
+      // Falhou: reverte recarregando o servidor.
+      router.refresh();
+    }
+  }
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-semibold">{group.name}</h3>
         <span className="text-xs text-muted-foreground">
-          {tasks.length} card{tasks.length !== 1 ? "s" : ""}
+          {tasks.length} card{tasks.length !== 1 ? "s" : ""} · arraste para mover
         </span>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
         {COLUMNS.map((col) => {
-          const colTasks = tasks
-            .filter((t) => t.status === col.key)
-            .sort((a, b) => a.title.localeCompare(b.title));
+          const list = colTasks(col.key);
           return (
-            <div key={col.key} className="rounded-xl bg-muted/40 p-3">
+            <div
+              key={col.key}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (overCol !== col.key) setOverCol(col.key);
+              }}
+              onDragLeave={(e) => {
+                // Só limpa se saiu de fato da coluna (não ao passar por um filho).
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                  setOverCol((c) => (c === col.key ? null : c));
+                }
+              }}
+              onDrop={() => handleDrop(col.key)}
+              className={`rounded-xl p-3 transition-colors ${
+                overCol === col.key
+                  ? "bg-primary/10 ring-2 ring-primary/40"
+                  : "bg-muted/40"
+              }`}
+            >
               <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
                 <span>{col.label}</span>
-                <span>{colTasks.length}</span>
+                <span>{list.length}</span>
               </div>
-              <div className="flex flex-col gap-2">
-                {colTasks.map((t) => (
+              <div className="flex min-h-[2.5rem] flex-col gap-2">
+                {list.map((t) => (
                   <Card
                     key={t.id}
                     task={t}
                     assigneeName={t.assignee_id ? names.get(t.assignee_id) : null}
+                    dragging={dragId === t.id}
+                    onDragStart={() => setDragId(t.id)}
+                    onDragEnd={() => {
+                      setDragId(null);
+                      setOverCol(null);
+                    }}
                   />
                 ))}
+                {list.length === 0 && (
+                  <div className="rounded-lg border border-dashed border-border/60 py-3 text-center text-[10px] text-muted-foreground">
+                    solte aqui
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -85,17 +182,35 @@ export function GroupBoard({
 function Card({
   task,
   assigneeName,
+  dragging,
+  onDragStart,
+  onDragEnd,
 }: {
   task: Task;
   assigneeName: string | null | undefined;
+  dragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-background p-2.5 text-sm shadow-sm">
-      <div className="font-medium">{task.title}</div>
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      className={`group cursor-grab rounded-lg border border-border bg-background p-2.5 text-sm shadow-sm transition-all active:cursor-grabbing ${
+        dragging ? "opacity-40" : "hover:-translate-y-0.5 hover:shadow-md"
+      }`}
+    >
+      <div className="flex items-start gap-1.5">
+        <span className="select-none pt-0.5 text-xs text-muted-foreground" aria-hidden>
+          ⠿
+        </span>
+        <span className="font-medium">{task.title}</span>
+      </div>
       {task.description && (
-        <p className="mt-1 text-xs text-muted-foreground">{task.description}</p>
+        <p className="mt-1 pl-5 text-xs text-muted-foreground">{task.description}</p>
       )}
-      <div className="mt-2 flex items-center justify-between gap-2">
+      <div className="mt-2 flex items-center justify-between gap-2 pl-5">
         {assigneeName ? (
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
             {assigneeName}
@@ -103,31 +218,16 @@ function Card({
         ) : (
           <span className="text-[10px] text-muted-foreground">sem responsável</span>
         )}
-        <div className="flex gap-1">
-          {COLUMNS.filter((c) => c.key !== task.status).map((c) => (
-            <form action={moverCard} key={c.key}>
-              <input type="hidden" name="task_id" value={task.id} />
-              <input type="hidden" name="status" value={c.key} />
-              <button
-                type="submit"
-                title={`Mover para ${c.label}`}
-                className="rounded border border-border px-1.5 py-0.5 text-[10px] hover:bg-muted"
-              >
-                {c.key === "a_fazer" ? "←" : c.key === "concluido" ? "✓" : "→"}
-              </button>
-            </form>
-          ))}
-          <form action={excluirCard}>
-            <input type="hidden" name="task_id" value={task.id} />
-            <button
-              type="submit"
-              title="Excluir card"
-              className="rounded border border-border px-1.5 py-0.5 text-[10px] text-danger hover:bg-danger/10"
-            >
-              ✕
-            </button>
-          </form>
-        </div>
+        <form action={excluirCard}>
+          <input type="hidden" name="task_id" value={task.id} />
+          <button
+            type="submit"
+            title="Excluir card"
+            className="rounded border border-border px-1.5 py-0.5 text-[10px] text-danger opacity-0 transition-opacity hover:bg-danger/10 group-hover:opacity-100"
+          >
+            ✕
+          </button>
+        </form>
       </div>
     </div>
   );
@@ -147,6 +247,13 @@ function AddCard({
   const [open, setOpen] = useState(false);
   const bound = criarCard.bind(null, projectId, groupId);
   const [state, action, pending] = useActionState(bound, undefined);
+  const wasPending = useRef(false);
+
+  // Fecha o formulário quando a criação terminou com sucesso.
+  useEffect(() => {
+    if (wasPending.current && !pending && state?.ok) setOpen(false);
+    wasPending.current = pending;
+  }, [pending, state]);
 
   if (!open) {
     return (

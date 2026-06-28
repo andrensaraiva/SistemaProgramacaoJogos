@@ -236,6 +236,7 @@ export default async function ProjetoPage({ params }: { params: Params }) {
               status: t.status,
               sprint_id: t.sprint_id,
               assignee_id: t.assignee_id,
+              ord: t.ord,
             }))}
             sprints={(sprints ?? []).map((s) => ({ id: s.id, title: s.title }))}
             members={membersByGroup.get(g.id) ?? []}

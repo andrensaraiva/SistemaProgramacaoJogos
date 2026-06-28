@@ -229,12 +229,20 @@ export async function criarCard(
   return { ok: true };
 }
 
-// Move o card para outra coluna (status). Sem drag: botão/select.
-export async function moverCard(formData: FormData): Promise<void> {
+/**
+ * Move um card por drag-and-drop: define a coluna (status) e a posição entre os
+ * cards da coluna de destino. `orderedIds` é a nova ordem completa daquela coluna
+ * (os ids na sequência desejada). Reescreve `ord` de todos eles de uma vez, então
+ * o resultado é determinístico e sobrevive a recarga/realtime.
+ */
+export async function moverCardDnd(
+  taskId: string,
+  status: string,
+  orderedIds: string[],
+): Promise<ActionResult> {
   const { user } = await verifySession();
-  const taskId = formData.get("task_id") as string;
-  const status = formData.get("status") as string;
-  if (!["a_fazer", "fazendo", "concluido"].includes(status)) return;
+  if (!["a_fazer", "fazendo", "concluido"].includes(status))
+    return { ok: false, message: "Coluna inválida." };
 
   const admin = createAdminClient();
   const { data: task } = await admin
@@ -242,27 +250,32 @@ export async function moverCard(formData: FormData): Promise<void> {
     .select("project_id, group_id")
     .eq("id", taskId)
     .single();
-  if (!task) return;
-  if (!(await canEditBoard(task.project_id, task.group_id, user.id))) return;
+  if (!task) return { ok: false, message: "Card não encontrado." };
+  if (!(await canEditBoard(task.project_id, task.group_id, user.id)))
+    return { ok: false, message: "Você não participa deste grupo." };
 
-  // Coloca no fim da coluna de destino.
-  const { data: last } = await admin
+  // O card movido recebe o novo status; todos os da coluna ganham ord conforme
+  // a ordem recebida. Garante que só mexemos em cards do mesmo board.
+  const { error: moveErr } = await admin
     .from("project_tasks")
-    .select("ord")
-    .eq("project_id", task.project_id)
-    .eq("group_id", task.group_id)
-    .eq("status", status)
-    .order("ord", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const ord = (last?.ord ?? 0) + 1;
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", taskId)
+    .eq("group_id", task.group_id);
+  if (moveErr) return { ok: false, message: `Erro: ${moveErr.message}` };
 
-  await admin
-    .from("project_tasks")
-    .update({ status, ord, updated_at: new Date().toISOString() })
-    .eq("id", taskId);
+  // Renumera a coluna de destino na ordem desejada.
+  await Promise.all(
+    orderedIds.map((id, i) =>
+      admin
+        .from("project_tasks")
+        .update({ ord: i + 1 })
+        .eq("id", id)
+        .eq("group_id", task.group_id),
+    ),
+  );
 
   await revalidateBoard(task.project_id);
+  return { ok: true };
 }
 
 export async function excluirCard(formData: FormData): Promise<void> {
