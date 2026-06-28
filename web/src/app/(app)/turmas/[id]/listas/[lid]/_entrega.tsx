@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
+import { RewardToast, type Reward } from "@/components/reward-toast";
 import { Button } from "@/components/ui/button";
 import { entregarTrabalho, type EntregaState } from "@/lib/submissions/actions";
 
@@ -34,9 +35,17 @@ export function EntregaForm({
     boundAction,
     undefined,
   );
+  // Recompensa derivada do resultado da action (sem espelhar em outro state).
+  // `dismissed` guarda o objeto de state já fechado pelo usuário.
+  const [dismissed, setDismissed] = useState<EntregaState>(undefined);
+  const reward: Reward | null =
+    state?.ok && state.xpEarned && state.xpEarned > 0 && state !== dismissed
+      ? { xp: state.xpEarned, badges: [] }
+      : null;
 
   return (
     <form action={action} className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
+      <RewardToast reward={reward} onClose={() => setDismissed(state)} />
       <input type="hidden" name="exercise_id" value={exerciseId} />
       <input type="hidden" name="assignment_id" value={assignmentId} />
 
@@ -78,6 +87,7 @@ export function EntregaForm({
           }`}
         >
           {state.message}
+          {state.ok && state.xpEarned ? ` +${state.xpEarned} XP` : ""}
         </div>
       )}
 

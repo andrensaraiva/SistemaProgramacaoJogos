@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
+import { isCodeKind } from "@/lib/activities/registry";
 import { getProfile } from "@/lib/auth/dal";
+import { awardDeliveryXp } from "@/lib/gamification/award";
+import { gradeXp, participationXp, type Difficulty } from "@/lib/gamification/reward-xp";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAcessoTurma } from "@/lib/turmas/access";
 
@@ -59,7 +62,7 @@ export async function gradeSubmission(
   const { data: sub, error: subErr } = await admin
     .from("submissions")
     .select(
-      "id, assignment_id, assignment:assignments!assignment_id(class_id, class:classes!class_id(owner_id))",
+      "id, assignment_id, student_id, exercise:exercises!exercise_id(exercise_type, difficulty), assignment:assignments!assignment_id(class_id, class:classes!class_id(owner_id))",
     )
     .eq("id", parsed.data.submission_id)
     .single();
@@ -100,6 +103,18 @@ export async function gradeSubmission(
 
   if (updErr) {
     return { ok: false, message: `Não foi possível salvar: ${updErr.message}` };
+  }
+
+  // XP por NOTA (mérito), só para entregas não-código (código já ganha XP pelos
+  // testes via trigger). Total desta submissão = participação + mérito pela nota.
+  // O award paga só o delta, então re-corrigir ajusta o XP sem duplicar.
+  const exercise = sub.exercise as unknown as { exercise_type: string; difficulty: string } | null;
+  if (exercise && !isCodeKind(exercise.exercise_type)) {
+    const nota = parsed.data.grade === null ? null : Number(parsed.data.grade);
+    const desired =
+      participationXp(exercise.difficulty as Difficulty) +
+      gradeXp(nota, exercise.difficulty as Difficulty);
+    await awardDeliveryXp(parsed.data.submission_id, sub.student_id, desired);
   }
 
   revalidatePath(`/turmas/${classId}/listas/${assignmentId}`);

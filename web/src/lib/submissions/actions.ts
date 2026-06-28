@@ -5,6 +5,8 @@ import * as z from "zod";
 
 import { activityMeta, isCodeKind, isCreativeKind } from "@/lib/activities/registry";
 import { verifySession } from "@/lib/auth/dal";
+import { awardDeliveryXp } from "@/lib/gamification/award";
+import { participationXp, type Difficulty } from "@/lib/gamification/reward-xp";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Entregas que NÃO são código (apresentação por link, modelo de resposta).
@@ -12,7 +14,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // O status fica 'entregue' até o professor corrigir (nota manual).
 
 export type EntregaState =
-  | { ok: true; message: string }
+  | { ok: true; message: string; xpEarned?: number }
   | { ok: false; message: string }
   | undefined;
 
@@ -49,7 +51,7 @@ export async function entregarTrabalho(
   // 1. Exercício existe e qual o tipo? Precisa ter link OU resposta conforme o tipo.
   const { data: exercise } = await admin
     .from("exercises")
-    .select("id, exercise_type, is_group")
+    .select("id, exercise_type, is_group, difficulty")
     .eq("id", parsed.data.exercise_id)
     .single();
   if (!exercise) return { ok: false, message: "Exercício não encontrado." };
@@ -118,6 +120,7 @@ export async function entregarTrabalho(
     group_id: groupId,
   };
 
+  let submissionId = existing?.id ?? null;
   if (existing) {
     const { error } = await admin
       .from("submissions")
@@ -125,12 +128,25 @@ export async function entregarTrabalho(
       .eq("id", existing.id);
     if (error) return { ok: false, message: `Erro ao salvar: ${error.message}` };
   } else {
-    const { error } = await admin.from("submissions").insert(payload);
+    const { data: inserted, error } = await admin
+      .from("submissions")
+      .insert(payload)
+      .select("id")
+      .single();
     if (error) return { ok: false, message: `Erro ao salvar: ${error.message}` };
+    submissionId = inserted.id;
+  }
+
+  // XP de participação por entregar (escala pela dificuldade). Idempotente: o
+  // award só paga o que ainda não foi concedido a esta submissão.
+  let xpEarned = 0;
+  if (submissionId) {
+    const desired = participationXp(exercise.difficulty as Difficulty);
+    xpEarned = await awardDeliveryXp(submissionId, user.id, desired);
   }
 
   revalidatePath(`/turmas/${classId}/listas/${parsed.data.assignment_id}`);
-  return { ok: true, message: "Entrega registrada!" };
+  return { ok: true, message: "Entrega registrada!", xpEarned };
 }
 
 // -----------------------------------------------------------------------------
@@ -171,7 +187,7 @@ export async function entregarArte(
 
   const { data: exercise } = await admin
     .from("exercises")
-    .select("id, exercise_type, is_group")
+    .select("id, exercise_type, is_group, difficulty")
     .eq("id", parsed.data.exercise_id)
     .single();
   if (!exercise) return { ok: false, message: "Exercício não encontrado." };
@@ -226,16 +242,29 @@ export async function entregarArte(
     group_id: groupId,
   };
 
+  let submissionId = existing?.id ?? null;
   if (existing) {
     const { error } = await admin.from("submissions").update(payload).eq("id", existing.id);
     if (error) return { ok: false, message: `Erro ao salvar: ${error.message}` };
   } else {
-    const { error } = await admin.from("submissions").insert(payload);
+    const { data: inserted, error } = await admin
+      .from("submissions")
+      .insert(payload)
+      .select("id")
+      .single();
     if (error) return { ok: false, message: `Erro ao salvar: ${error.message}` };
+    submissionId = inserted.id;
+  }
+
+  // XP de participação por entregar a arte (escala pela dificuldade).
+  let xpEarned = 0;
+  if (submissionId) {
+    const desired = participationXp(exercise.difficulty as Difficulty);
+    xpEarned = await awardDeliveryXp(submissionId, user.id, desired);
   }
 
   revalidatePath(`/turmas/${classId}/listas/${parsed.data.assignment_id}`);
-  return { ok: true, message: "Arte entregue!" };
+  return { ok: true, message: "Arte entregue!", xpEarned };
 }
 
 // Gera uma URL assinada para visualizar uma arte entregue (correção/aluno).
