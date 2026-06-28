@@ -12,8 +12,12 @@ import { CreativeSubmission } from "@/components/editores/CreativeSubmission";
 import { isCodeKind, isCreativeKind } from "@/lib/activities/registry";
 import { DEFAULT_CONFIG, type CreativeKind, type CreativeProject } from "@/lib/canvas/types";
 
+import { MeuGrupoPanel } from "@/components/meu-grupo";
+import { getMeuGrupo } from "@/lib/groups/queries";
+
 import { AnexarExercicios } from "./_anexar";
 import { EntregaForm } from "./_entrega";
+import { ExamLockdown } from "./_exam-lockdown";
 
 type Params = Promise<{ id: string; lid: string }>;
 
@@ -159,6 +163,18 @@ export default async function ListaProgressoPage({ params }: { params: Params })
       .eq("assignment_id", lid)
       .order("created_at", { ascending: false });
 
+    // Modo prova: tentativas dos alunos (quem saiu da tela → entrega automática).
+    const examAttempts =
+      lista.kind === "prova"
+        ? (
+            await supabase
+              .from("exam_attempts")
+              .select("student_id, finished_at, left_screen")
+              .eq("assignment_id", lid)
+          ).data ?? []
+        : [];
+    const sairamDaTela = examAttempts.filter((a) => a.left_screen);
+
     const submissionMap = buildLatestSubmissionMap(
       (allSubs ?? []) as SubmissionRow[],
     );
@@ -177,6 +193,16 @@ export default async function ListaProgressoPage({ params }: { params: Params })
     return (
       <div className="flex flex-col gap-6">
         <Header lista={lista} cls={cls} isOwner={isOwner} />
+
+        {lista.kind === "prova" && sairamDaTela.length > 0 && (
+          <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
+            <span className="font-semibold text-warning">⚠️ Saída da tela na prova: </span>
+            {sairamDaTela
+              .map((a) => studentNames.get(a.student_id) ?? "aluno")
+              .join(", ")}
+            {" "}— a prova foi entregue automaticamente para {sairamDaTela.length === 1 ? "esse aluno" : "esses alunos"}.
+          </div>
+        )}
 
         <AnexarExercicios
           classId={id}
@@ -342,21 +368,30 @@ export default async function ListaProgressoPage({ params }: { params: Params })
     (sub) => sub.status === "aprovado",
   ).length;
 
-  return (
-    <div className="flex flex-col gap-6">
-      <Header lista={lista} cls={cls} isOwner={false} />
+  // Modo prova: carrega a tentativa do aluno (iniciada/finalizada) e conta
+  // quantas questões já têm alguma submissão (pra avisar antes de entregar).
+  const isProva = lista.kind === "prova";
+  let examEstado: "nao_iniciada" | "em_andamento" | "finalizada" = "nao_iniciada";
+  let examLeftScreen = false;
+  if (isProva) {
+    const { data: attempt } = await supabase
+      .from("exam_attempts")
+      .select("started_at, finished_at, left_screen")
+      .eq("assignment_id", lid)
+      .eq("student_id", profile.id)
+      .maybeSingle();
+    if (attempt?.finished_at) examEstado = "finalizada";
+    else if (attempt?.started_at) examEstado = "em_andamento";
+    examLeftScreen = attempt?.left_screen ?? false;
+  }
+  const respondidas = exercises.filter((e) => mySubMap.has(e.id)).length;
 
-      <div className="flex items-center gap-4 rounded-xl border border-border bg-card px-5 py-4">
-        <div className="text-3xl font-bold text-primary">{myApproved}</div>
-        <div className="text-sm text-muted-foreground">
-          de {exercises.length} exercicio{exercises.length !== 1 ? "s" : ""}{" "}
-          aprovado{myApproved !== 1 ? "s" : ""}
-        </div>
-      </div>
+  // Atividade em grupo? Carrega o grupo do aluno uma vez (pra mostrar o time).
+  const temGrupo = exercises.some((e) => e.is_group);
+  const meuGrupo = temGrupo ? await getMeuGrupo(id, profile.id) : null;
 
-      {exercises.length === 0 && <EmptyExercises isOwner={false} />}
-
-      <div className="flex flex-col gap-2">
+  const listaExercicios = (
+    <div className="flex flex-col gap-2">
         {exercises.map((exercise) => {
           const sub = mySubMap.get(exercise.id);
           const tipoEx = exercise.exercise_type ?? "codigo";
@@ -411,6 +446,13 @@ export default async function ListaProgressoPage({ params }: { params: Params })
                 </div>
               </div>
 
+              {/* Atividade em grupo: mostra o time e que a entrega é compartilhada */}
+              {exercise.is_group && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <MeuGrupoPanel grupo={meuGrupo} meuId={profile.id} />
+                </div>
+              )}
+
               {/* Entrega de arte (pixel/vetor/arte digital) — editor embutido */}
               {isCreative && (
                 <div className="mt-3 border-t border-border pt-3">
@@ -451,7 +493,39 @@ export default async function ListaProgressoPage({ params }: { params: Params })
             </div>
           );
         })}
-      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Header lista={lista} cls={cls} isOwner={false} />
+
+      {!isProva && (
+        <div className="flex items-center gap-4 rounded-xl border border-border bg-card px-5 py-4">
+          <div className="text-3xl font-bold text-primary">{myApproved}</div>
+          <div className="text-sm text-muted-foreground">
+            de {exercises.length} exercicio{exercises.length !== 1 ? "s" : ""}{" "}
+            aprovado{myApproved !== 1 ? "s" : ""}
+          </div>
+        </div>
+      )}
+
+      {exercises.length === 0 && <EmptyExercises isOwner={false} />}
+
+      {isProva ? (
+        <ExamLockdown
+          classId={id}
+          assignmentId={lid}
+          estadoInicial={examEstado}
+          respondidas={respondidas}
+          total={exercises.length}
+          leftScreen={examLeftScreen}
+        >
+          {listaExercicios}
+        </ExamLockdown>
+      ) : (
+        listaExercicios
+      )}
     </div>
   );
 }
