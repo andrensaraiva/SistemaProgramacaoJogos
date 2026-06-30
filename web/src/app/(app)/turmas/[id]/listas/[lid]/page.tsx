@@ -116,25 +116,29 @@ export default async function ListaProgressoPage({ params }: { params: Params })
     .eq("assignment_id", lid)
     .order("ord");
 
-  const exercises: ExerciseRow[] = (assignmentExercises ?? []).map((ae) => {
-    const ex = ae.exercise as unknown as {
-      id: string;
-      title: string;
-      exercise_type?: string;
-      is_group?: boolean;
-      response_template?: string | null;
-      canvas_config?: { width: number; height: number; palette?: string[] } | null;
-    };
-    return {
-      id: ex.id,
-      title: ex.title,
-      ord: ae.ord,
-      exercise_type: ex.exercise_type ?? "codigo",
-      is_group: ex.is_group ?? false,
-      response_template: ex.response_template ?? null,
-      canvas_config: ex.canvas_config ?? null,
-    };
-  });
+  const exercises: ExerciseRow[] = (assignmentExercises ?? [])
+    .map((ae) => {
+      // O exercício pode vir null se foi deletado e o vínculo ficou órfão.
+      const ex = ae.exercise as unknown as {
+        id: string;
+        title: string;
+        exercise_type?: string;
+        is_group?: boolean;
+        response_template?: string | null;
+        canvas_config?: { width: number; height: number; palette?: string[] } | null;
+      } | null;
+      if (!ex) return null;
+      return {
+        id: ex.id,
+        title: ex.title,
+        ord: ae.ord,
+        exercise_type: ex.exercise_type ?? "codigo",
+        is_group: ex.is_group ?? false,
+        response_template: ex.response_template ?? null,
+        canvas_config: ex.canvas_config ?? null,
+      };
+    })
+    .filter((e): e is ExerciseRow => e !== null);
 
   if (isOwner) {
     // Exercícios disponíveis para anexar (públicos ou do professor).
