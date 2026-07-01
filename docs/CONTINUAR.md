@@ -1,209 +1,157 @@
-# Como continuar o projeto
+# Onde estamos + para onde vamos
 
-> **Documento de retomada. Leia isto primeiro ao voltar a trabalhar.**
-> **Última sessão:** 2026-06-02
-> **Branch atual:** `refactor/atividades-na-uc` (ainda **não** mergeada em `main`)
-> **Repositório:** https://github.com/andrensaraiva/SistemaProgramacaoJogos
-
-Para o histórico detalhado por data, veja [STATUS.md](STATUS.md). Este arquivo é o
-"onde paramos + o que fazer agora".
-
----
-
-## TL;DR — o que fazer agora
-
-O projeto passou por uma **reorientação de modelo** (de "Duolingo" para
-**CURSO → UC → TURMA**) e ganhou três features grandes. Tudo está na branch
-`refactor/atividades-na-uc`, com typecheck + lint limpos, mas **ainda não foi
-mergeado nem rodado na app** (só validado com `tsc`, `eslint` e `supabase db push`).
-
-**Próximos passos, em ordem de recomendação:**
-
-1. **Rodar a app e validar visualmente** o que foi construído (ver "Como testar" abaixo).
-   Nada foi clicado num navegador ainda.
-2. **Merge da branch em `main`** — a frente SAEP/SAP está completa (teórico +
-   prático). Bom momento para estabilizar.
-3. Follow-ups menores: drag-and-drop/realtime no board do projeto integrador;
-   Fase 2 do modelo UC (remover `class_id`). (O SAP já entra no dashboard por
-   competência — feito.)
-
-> **Modularidade**: o projeto é organizado por features desacopladas. Antes de
-> adicionar/remover uma, leia [MODULOS.md](MODULOS.md). Há testes (Vitest):
-> `npm run test`. Ao criar regra de cálculo/correção, extraia a parte pura num
-> módulo e teste-a (padrão: `lib/saep/scoring.ts`, `lib/dashboard/bands.ts`).
+> **Comece por aqui.** Snapshot do projeto: o que é hoje, onde paramos, backlog e
+> histórico resumido. Detalhes de como funciona por dentro em
+> [ARCHITECTURE.md](ARCHITECTURE.md); como rodar em [SETUP.md](SETUP.md).
+>
+> **Última atualização:** 2026-07-01 · **Branch:** `main` (tudo mergeado) ·
+> **Repo:** https://github.com/andrensaraiva/SistemaProgramacaoJogos
 
 ---
 
-## Onde paramos (sessão de 2026-06-01)
+## O que é o projeto hoje
 
-Quatro blocos de trabalho, todos commitados na branch `refactor/atividades-na-uc`:
+**Celeste Academy** — plataforma educacional institucional (SENAI) para ensino de
+programação/jogos. Modelo **CURSO → UC → TURMA**: toda atividade (lista, prova,
+desafio, duelo, Unity, projeto integrador, SAEP, SAP) vive dentro de uma UC de uma
+turma (`class_unit`). Sem cadastro aberto: o **admin** cria professores, o
+**professor** cria alunos. Banco: migrations `0001` → `0046`.
 
-### 1. Atividades vivem dentro da UC (turma × UC)
-Reorientação do modelo. Toda atividade (lista, prova, desafio, duelo, Unity,
-projeto integrador, simulado SAEP) é uma `assignment` ligada a um `class_unit`
-(turma × UC), não mais solta por turma.
-- Migrations `0015` (assignments + kinds novos), `0016` (duelos + ELO contextual
-  `duel_ratings`), `0017` (Unity por UC).
-- Hub de atividades em `turmas/[id]/ucs/[classUnitId]/atividades`.
-- `exercises` continua sendo **banco reutilizável**; só a atribuição vincula à UC.
-- `class_id` mantido por compat — **Fase 2 pendente**: tornar `class_unit_id` NOT
-  NULL, remover `class_id`, aposentar rotas globais `/duelos` e `/unity`,
-  reclassificar atividades que caíram na UC "Geral (migrado)".
+Frentes construídas (todas em `main`):
 
-### 2. Projeto Integrador (TCC) — board estilo Trello por grupo
-- Migration `0018`: `projects` (1:1 com a atividade `kind=projeto_integrador`)
-  → `project_sprints` → `project_tasks` (cards por grupo).
-- Página em `turmas/[id]/ucs/[cu]/projetos/[assignmentId]`: professor configura +
-  cria sprints; cada grupo tem seu board (3 colunas, cards movidos por botão).
-- **Sem drag-and-drop e sem tempo real ainda** (decisão de MVP). Falta entrega/nota.
-
-### 3. SAEP teórico — matriz + banco de questões (1ª fatia)
-- Migration `0019`: matriz **por curso** (`competency_matrices` → `competencies`
-  C1-C8 + `knowledge_objects` A-T), banco de questões formato SAEP
-  (`quiz_questions` + `quiz_options` A-E com correta e justificativa), simulados,
-  tentativas e respostas.
-- `lib/saep/actions.ts` (matriz, questão manual, simulado, tentativa) e
-  `lib/saep/ai.ts` (gera questão no formato SAEP via Gemini — o instrutor revisa).
-- Banco de questões em `/saep/questoes` (lista/nova/editar) com editor de entrada
-  manual + botão "Gerar sugestão". Link **SAEP** na sidebar (professor).
-
-### 4. SAEP — simulado dentro da UC (2ª fatia)
-- Página em `turmas/[id]/ucs/[cu]/simulados/[assignmentId]` (chaveada pelo
-  assignment_id; `quiz_simulados` criado na 1ª visita via `obterOuCriarSimulado`).
-- Professor (`_manager`): configura (título/descrição/tempo/mostrar gabarito) e
-  monta selecionando questões do banco.
-- Aluno (`_responder`): inicia → responde (1 alternativa/questão, cronômetro que
-  envia ao zerar) → envio único → resultado (%/acertos) + gabarito/justificativa/
-  resolução se habilitado. **Corretas só são expostas após o envio.**
-- Correção automática + XP de bônus (15 por acerto).
-
-### 5. SAEP — dashboard por competência (3ª fatia)
-- `lib/saep/dashboard.ts` (`getSaepDashboard`): % de acerto por competência, objeto
-  de conhecimento e aluno numa UC. **Combina SAEP teórico + SAP prático** nas barras
-  por competência/objeto (quiz_answers + sap_item_marks); tabela por aluno é teórica.
-- Página `turmas/[id]/ucs/[cu]/saep` (só o dono): cards de resumo, "pontos a
-  reforçar" (3 competências de menor acerto), barras por competência/objeto e tabela
-  por aluno. Link na lista de UCs e na página do simulado.
-
-### 6. SAEP — duelo de quiz (4ª fatia)
-- Migration `0020` + `lib/saep/duelo.ts`: X1 onde dois alunos respondem o mesmo
-  conjunto sorteado de questões da UC; vence quem acerta mais (desempate por tempo).
-  ELO reusa `duel_ratings` (mesmo ranking dos duelos de código).
-- Página `turmas/[id]/ucs/[cu]/duelos-quiz` (lobby criar/entrar + lista + ranking) e
-  `[duelId]` (responder/resultado). Links cruzados com os duelos de código.
-
-### 7. SAP prático — rubrica/lista de verificação
-- Migrations `0021`/`0022` + `lib/sap/`: a rubrica varia por desafio, vive na
-  atividade `kind='sap_pratico'`. `sap_assessments`→units→elements→criteria→items
-  (Sim/Não, pontos, vínculo à competência) + `sap_evaluations`/`sap_item_marks`.
-  Nota = soma dos pontos dos itens "Sim" (`lib/sap/scoring.ts`, testado).
-- Página `turmas/[id]/ucs/[cu]/sap/[assignmentId]`: professor monta rubrica + avalia
-  aluno a aluno; aluno entrega link e vê nota + checklist ✓/✗.
+- **Identidades hierárquicas**: admin → professor → aluno, 2 e-mails por aluno,
+  1º acesso (troca de senha + completar perfil), esqueci-senha por aprovação,
+  notificações in-app.
+- **Governança**: painel **admin** (master, configurações, stats, relatórios,
+  feriados), papel **coordenador**, **salas/ocupação**, **calendário do curso**,
+  **co-docência** (vários professores por turma) + feedback anônimo.
+- **Currículo**: PPC → módulos → UCs (importação por IA) → plano de ensino
+  (clonável) → frequência por aula do dia.
+- **Atividades na UC**: exercícios (código/apresentação/modelo de resposta +
+  **criativos**: pixel/vetor/arte/blocos), **SAEP** (teórico + dashboard por
+  competência + duelo-quiz), **SAP prático** (rubrica), **projeto integrador**
+  (board Trello com drag-and-drop + realtime), **duelos** de código, **Unity**
+  (GitHub Classroom).
+- **Experiência do aluno**: painel gamificado (XP/streak/conquistas), perfil
+  estilo Discord + **loja de cosméticos** (moedas Celeste), jornada da UC
+  (aprender → praticar), **modo prova** com lockdown, revisão de conteúdo por UC.
 
 ---
 
-## O que falta (backlog priorizado)
+## Onde paramos (últimas sessões, jun/2026)
+
+Foco recente: **experiência do aluno**. Últimos blocos em `main`:
+
+- **Jornada da UC** (`aprender → praticar`) + exemplo do professor por exercício.
+- **Modo prova com lockdown** + experiência de grupos para o aluno.
+- **XP em toda entrega** + XP pela nota lançada pelo professor.
+- **Perfil estilo Discord** + **loja de moedas Celeste**; painel/desempenho
+  gamificados (hero XP animado, streak, conquistas, toasts).
+- **Projeto integrador**: board com **drag-and-drop e tempo real** (fecha o
+  backlog antigo desse item).
+- Fix: aluno enxerga exercícios não-públicos atribuídos à sua turma.
+
+A frente de aluno segue o roadmap em [ALUNO_DISCORD.md](ALUNO_DISCORD.md).
+**Fase 1** (economia + loja + avatares) concluída; **Fases 2–5** pendentes.
+
+---
+
+## Próximos passos (backlog priorizado)
 
 | Prioridade | Item | Observação |
 |---|---|---|
-| Baixa | **Drag-and-drop / realtime** no board do projeto integrador | Hoje move card por botão; sem tempo real. |
-| Baixa | **Fase 2 do modelo UC** | Tornar `class_unit_id` NOT NULL, remover `class_id`, aposentar rotas globais `/duelos` e `/unity`. |
-| Média | **Fase 2 do modelo UC** | `class_unit_id` NOT NULL, remover `class_id`, aposentar `/duelos` e `/unity` globais, reclassificar UC "Geral (migrado)". |
-| Baixa | Projeto integrador: drag-and-drop, tempo real (Supabase Realtime), entrega/nota | Polimento do board. |
-| Baixa | Cadastro da matriz de competências por UI | Hoje a action `salvarMatriz` existe, mas falta uma tela amigável para o professor cadastrar a matriz do curso. |
+| Alta | **Rodar a app e validar visualmente** o ciclo do aluno recém-construído | A validação recente foi majoritariamente `tsc`/`lint`/`test`/`build`. |
+| Média | **ALUNO_DISCORD Fase 2** — shell do aluno (rail de turmas → canais → membros) | Ver [ALUNO_DISCORD.md](ALUNO_DISCORD.md). |
+| Média | **ALUNO_DISCORD Fase 3** — feed `#atividades` (cards, reações, comentários) | Estende grading com nota→XP. |
+| Baixa | **Deploy de produção** | Piston na Oracle Cloud + Vercel. Ver [DEPLOY.md](DEPLOY.md). |
+| Baixa | **Fase 2 do modelo UC** | `class_unit_id` NOT NULL, remover `class_id`, aposentar rotas globais `/duelos` e `/unity`, reclassificar UC "Geral (migrado)". |
+| Baixa | **Fluxo de e-mail (SMTP)** para senha temporária / notificações | Hoje a senha temporária é mostrada uma vez na tela. |
+| Baixa | **Arduino** | Especificação pronta em [ARDUINO_PLANO.md](ARDUINO_PLANO.md); nada roda ainda. |
+
+### Ideias por papel (backlog aberto)
+
+- **Aluno**: shell/feed/chat estilo Discord (ver ALUNO_DISCORD), mural/avisos,
+  notificações de prazo/correção, metas, acessibilidade (teclado, contraste, leitor).
+- **Professor**: editor de casos de teste pela UI, nota em lote/por grupo no
+  dashboard, exportar CSV/planilha, controle de prazo por exercício, reabrir entrega.
+- **Admin/Coordenador**: auditoria (quem alterou nota/frequência), visão
+  institucional (desempenho por curso/eixo, evasão), configurar integrações pela UI.
+- **Plataforma**: deploy (Piston + Vercel), SMTP, upload de arquivos (Storage),
+  testes automatizados (RLS/actions) + CI, Arduino.
 
 ---
 
-## Como testar o que foi construído
+## Histórico resumido
 
-Pré-requisitos: Supabase + `.env.local` configurados, Piston em Docker rodando
-(ver seção "Setup do zero" mais abaixo, se for outra máquina).
+Do mais recente ao mais antigo (detalhe fica no `git log`):
+
+- **2026-06-28→30** — Experiência do aluno: jornada da UC, modo prova (lockdown),
+  XP por entrega/nota, board do projeto com drag-and-drop + realtime. *(0043, 0045, 0046)*
+- **2026-06-24→25** — Perfil estilo Discord + loja de cosméticos (moedas Celeste);
+  registry central de tipos de exercício. *(0039–0042, 0044)*
+- **2026-06-07→08** — Governança institucional: admin (master/config/stats/
+  relatórios/feriados), coordenador, salas/calendário, co-docência + feedback;
+  editores criativos (pixel/vetor/arte/blocos); revisão por UC. *(0025–0038)*
+- **2026-06-03→04** — Gestão de identidades hierárquica; rebrand **Celeste
+  Academy** (fim do cadastro aberto). *(0024)*
+- **2026-06-01→02** — Modelo **CURSO → UC → TURMA** (atividades na UC); frente
+  **SAEP/SAP** completa (teórico + dashboard + duelo-quiz + SAP prático); projeto
+  integrador; modularidade (registry de features + Vitest). Merge do refactor. *(0015–0023)*
+- **2026-05-31** — Camada curricular (PPC → UC → plano → frequência); tipos de
+  exercício; grupos; notas/dashboard por UC + PDF; kit de UI; Supabase CLI. *(0007–0014)*
+- **2026-05-20** — Antifraude, IA (Gemini), duelos X1 (ELO), Unity/GitHub
+  Classroom, tour de 1º acesso. *(0003–0006)*
+- **2026-05-16** — Fundação: auth, exercícios no navegador (Monaco + Piston),
+  turmas/listas, gamificação (XP/badges/ranking). *(0001–0002)*
+
+---
+
+## Como rodar (resumo)
+
+Setup do zero em [SETUP.md](SETUP.md). Se o ambiente já está pronto:
 
 ```powershell
 cd web
-npx supabase db push   # garante as migrations 0015-0022 aplicadas
-npm run seed:demo      # popula a Turma Demo (inclui SAEP + SAP prontos)
-npm run dev
+npx supabase db push      # aplica migrations novas (0001-0046)
+npm run seed:demo:reset   # recria contas demo + Turma Demo (SAEP/SAP/currículo prontos)
+npm run dev               # http://127.0.0.1:3000
 ```
 
-O **seed demo** (`npm run seed:demo`, idempotente) já deixa pronto, na "Turma Demo"
-(código `DEMO2026`):
-- Matriz de competências do curso; banco com 5 questões SAEP.
-- **Simulado SAEP** com o Aluno 1 já tendo enviado (4/5) → o **dashboard SAEP/SAP**
-  já mostra dados por competência.
-- **SAP prático** com rubrica montada; Aluno 1 **avaliado** (8/10) e Aluno 2 só
-  **entregou** (para testar a fila do professor).
-- Logins: `prof.demo@codequest.dev`, `aluno1.demo@codequest.dev`,
-  `aluno2.demo@codequest.dev` — senha `password123`.
+Seeds: `seed:demo` / `seed:demo:reset` (base), `seed:experiencia` (experiência
+gamificada do aluno), `seed:gamificacao` (ranking), `seed:identidades`.
 
-Fluxos para clicar (logado como **professor**):
-1. **Dashboard SAEP/SAP**: na lista de UCs, botão **SAEP** → veja as barras por
-   competência (já com dados do simulado + SAP).
-2. **SAP prático**: abra a atividade "SAP — Protótipo de Jogo (Demo)" → veja a
-   rubrica e a fila de alunos; avalie o Aluno 2.
-3. **Simulado SAEP**: abra "Simulado SAEP — Demo" → veja a montagem e os envios.
-4. Logado como **aluno** (navegador anônimo): responda um novo simulado / entregue
-   o SAP / inicie um duelo de quiz.
+**Contas demo** (senha `password123`, turma `DEMO2026`):
 
-> **Ainda não foi clicado na app.** Se algo quebrar em runtime, é esperado — a
-> validação até agora foi `tsc`, `eslint`, `npm run test`, `supabase db push` e o
-> próprio seed rodando 2x sem erro.
-
----
+```text
+Professor    : prof.demo@codequest.dev        (dono da turma)
+Professor 2  : prof2.demo@codequest.dev       (co-docência)
+Coordenador  : coord.demo@celeste.academy
+Aluno 1      : aluno1.demo@codequest.dev
+Aluno 2      : aluno2.demo@codequest.dev
+```
 
 ## Comandos úteis
 
 ```powershell
-cd web; npm run dev              # dev server
-cd web; npx tsc --noEmit        # type-check
-cd web; npm run lint            # lint
-cd web; npm run test            # testes (Vitest, logica pura)
+cd web; npm run dev              # dev server (Webpack, 127.0.0.1)
 cd web; npm run verify          # typecheck + lint + test + build
+cd web; npm run test            # testes (Vitest, lógica pura)
 cd web; npx supabase db push    # aplicar migrations
 
 docker ps --filter name=piston_api   # Piston rodando?
 docker start piston_api              # se parado
 
 git status
-git log --oneline main..HEAD         # commits da branch atual
+git log --oneline -20
 ```
-
----
-
-## Setup do zero (só se for outra máquina)
-
-Se você está no PC onde já fez tudo, pula esta seção.
-
-1. **Supabase**: cria projeto, roda as migrations de `supabase/migrations/` em
-   ordem (`npx supabase db push`), habilita Email Provider (Confirm email OFF),
-   copia URL + chaves.
-2. **`.env.local` em `web/`** (formato novo `sb_publishable_` / `sb_secret_`):
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
-   SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
-   GEMINI_API_KEY=AIza...
-   GEMINI_MODEL=gemini-flash-latest
-   PISTON_API_URL=http://localhost:2000/api/v2
-   ```
-3. **Piston em Docker** (a API pública emkc.org virou whitelist-only em 15/02/2026):
-   ```powershell
-   docker volume create piston_data
-   docker run -d --name piston_api --privileged --restart unless-stopped `
-     -v piston_data:/piston -p 2000:2000 ghcr.io/engineer-man/piston:latest
-   $body = '{"language":"dotnet","version":"5.0.201"}'
-   Invoke-RestMethod -Uri "http://localhost:2000/api/v2/packages" -Method Post `
-     -ContentType "application/json" -Body $body
-   ```
-4. **App**: `cd web; npm install; npm run dev` → http://localhost:3000
 
 ---
 
 ## Como invocar a próxima sessão
 
-> "Continuando o projeto, branch `refactor/atividades-na-uc`. A frente SAEP/SAP
-> está completa (teórico + SAP prático). Quero validar na app e depois fazer o
-> merge em `main`."
+> "Continuando o **Celeste Academy** (branch `main`). Quero rodar a app e validar
+> visualmente a experiência do aluno (jornada da UC, modo prova, perfil/loja) e
+> seguir a Fase 2 do [ALUNO_DISCORD.md](ALUNO_DISCORD.md)."
 
-Ou, se preferir validar antes: "Roda a app e me mostra o fluxo do simulado SAEP
-funcionando (professor monta → aluno responde → resultado → dashboard)."
+Ou, se preferir deploy: "Vamos publicar — Piston na Oracle Cloud + Vercel
+([DEPLOY.md](DEPLOY.md))."

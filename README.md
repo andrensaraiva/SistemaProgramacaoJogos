@@ -1,30 +1,33 @@
-# Sistema Jogos Programacao
+# Celeste Academy
 
-Plataforma educacional gamificada para ensino de programacao com foco em C#,
-jogos e Unity. O MVP inclui autenticacao, turmas, listas, editor Monaco,
-execucao via Piston, XP, badges, ranking, sinais antifraude, geracao de
-exercicios com Gemini, duelos X1 e templates para GitHub Classroom.
+Plataforma educacional gamificada e **institucional** (SENAI) para ensino de
+programacao com foco em C#, jogos e Unity. Modelo **CURSO → UC → TURMA**: toda
+atividade vive dentro de uma UC de uma turma. Sem cadastro aberto — o admin cria
+professores; o professor cria alunos.
+
+> **Onde estamos:** comece por [docs/CONTINUAR.md](docs/CONTINUAR.md) — estado,
+> backlog e histórico do projeto num só lugar.
 
 ## Status
 
 | Area | Estado |
 |---|---|
-| Auth | Login/cadastro Supabase com papeis aluno/professor |
-| Exercicios | Monaco Editor, testes visiveis/ocultos, submissao e Piston |
-| Turmas | CRUD, codigo de convite, listas e progresso |
-| Gamificacao | XP por trigger, badges, ranking global e ranking de turma |
-| Antifraude | Paste, tempo, edicoes, score e similaridade entre alunos |
-| IA | Geracao de exercicios para professor e treino extra para aluno |
-| Duelos | X1 por codigo, historico, ELO e vencedor por primeira submissao aprovada |
+| Identidades | Gestao hierarquica (admin→professor→aluno), 2 e-mails/aluno, 1º acesso, notificacoes |
+| Governanca | Painel admin, coordenador, salas/ocupacao, calendario, co-docencia + feedback anonimo |
+| Exercicios | Monaco + Piston; tipos: codigo, apresentacao, modelo de resposta e **criativos** (pixel/vetor/arte/blocos) |
+| Turmas/Curriculo | PPC → modulos → UCs (import por IA) → plano de ensino (clonavel) → frequencia por aula |
+| Atividades na UC | Listas, provas, desafios, duelos, Unity, projeto integrador, SAEP, SAP |
+| SAEP | Matriz por curso, banco de questoes, simulado, dashboard por competencia, duelo-quiz |
+| SAP pratico | Rubrica/lista de verificacao por desafio |
+| Projeto integrador | Board estilo Trello por grupo com drag-and-drop e tempo real |
+| Gamificacao | XP (entrega + nota→XP + badges), streak, ranking, **perfil Discord + loja de cosmeticos** |
+| Antifraude | Paste, tempo, edicoes, score e similaridade; **modo prova com lockdown** |
+| IA | Geracao de exercicios e importacao de PPC (Gemini) |
 | Unity | Templates C# e Unity + notas por GitHub Classroom/GameCI |
-| Curriculo | PPC → modulos → UCs → plano de ensino (clonavel) → frequencia por aula |
-| Exercicios | Tipos: codigo, apresentacao (link) e modelo de resposta |
-| Grupos | Grupos por turma e entrega em grupo |
-| Notas/Dashboard | Notas do aluno por turma; dashboard por UC + relatorio PDF |
 
-Deploy: veja [docs/DEPLOY.md](docs/DEPLOY.md). A unica parte externa obrigatoria
-para producao e hospedar o Piston em uma URL publica, porque a Vercel nao roda
-Docker local.
+Deploy: veja [docs/DEPLOY.md](docs/DEPLOY.md) (inclui o apêndice de como hospedar
+o Piston na Oracle Cloud). A unica parte externa obrigatoria para producao e
+hospedar o Piston em uma URL publica, porque a Vercel nao roda Docker local.
 
 ## Comecar rapido
 
@@ -40,7 +43,7 @@ Abra `http://127.0.0.1:3000`.
 
 Para banco novo, rode **`supabase/SETUP_COMPLETO.sql`** inteiro no SQL Editor
 (reset + schema completo + seed base). Para mudanças incrementais use a Supabase
-CLI: `npx supabase db push` (ver [docs/SUPABASE_CLI.md](docs/SUPABASE_CLI.md)).
+CLI: `npx supabase db push` (setup da CLI em [docs/SETUP.md](docs/SETUP.md)).
 
 Para recriar dados demo:
 
@@ -75,17 +78,18 @@ npm run verify
 
 ## Documentacao principal
 
-Para contribuir: **[CONTRIBUTING.md](CONTRIBUTING.md)** → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) → [docs/SETUP_COMPLETO_PASSO_A_PASSO.md](docs/SETUP_COMPLETO_PASSO_A_PASSO.md).
+Para contribuir: **[CONTRIBUTING.md](CONTRIBUTING.md)** → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) → [docs/SETUP.md](docs/SETUP.md).
 
-- [Arquitetura](docs/ARCHITECTURE.md) — como o projeto funciona por dentro
-- [Como contribuir](CONTRIBUTING.md) — padrões, RLS, migrations, commits
-- [Roadmap & backlog](docs/ROADMAP.md) — feito + ideias por papel
-- [UI/UX](docs/UI_UX.md) — kit visual e telas a migrar
-- [Setup passo a passo](docs/SETUP_COMPLETO_PASSO_A_PASSO.md)
-- [Supabase CLI](docs/SUPABASE_CLI.md) — aplicar migrations por comando
-- [Fluxo de teste completo](docs/TEST_FLOW.md)
-- [Projeto e funcionamento](docs/PROJETO_FUNCIONAMENTO.md)
-- [Manual do professor](docs/MANUAL.md) · [Deploy](docs/DEPLOY.md) · [Status](docs/STATUS.md)
+Só 6 docs, um por assunto:
+
+- [**CONTINUAR**](docs/CONTINUAR.md) — onde estamos: estado, backlog e histórico (comece aqui)
+- [**ARCHITECTURE**](docs/ARCHITECTURE.md) — como funciona por dentro + modularidade + UI/UX
+- [**SETUP**](docs/SETUP.md) — setup do zero + Supabase CLI + fluxo de teste
+- [**DEPLOY**](docs/DEPLOY.md) — Vercel + Piston na Oracle Cloud
+- [**ALUNO_DISCORD**](docs/ALUNO_DISCORD.md) — spec/roadmap ativo da experiência do aluno
+- [**ARDUINO_PLANO**](docs/ARDUINO_PLANO.md) — spec futura (Arduino)
+
+Padrões de contribuição (RLS, migrations, commits) em [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Estrutura
 

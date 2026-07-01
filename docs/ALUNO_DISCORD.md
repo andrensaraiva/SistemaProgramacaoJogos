@@ -54,7 +54,7 @@ marca/cores atuais. Documento vivo: atualize ao concluir cada fase.
 
 ## Modularidade (manter)
 
-- Tipos de atividade: registro único em [`lib/activities/registry.ts`](../web/src/lib/activities/registry.ts) — ver [MODULOS.md](MODULOS.md). Adicionar tipo = 1 entrada.
+- Tipos de atividade: registro único em [`lib/activities/registry.ts`](../web/src/lib/activities/registry.ts) — ver seção **Modularidade** de [ARCHITECTURE.md](ARCHITECTURE.md). Adicionar tipo = 1 entrada.
 - Cosméticos: registro único em [`lib/cosmetics/registry.ts`](../web/src/lib/cosmetics/registry.ts). Adicionar cosmético = 1 entrada (id + preço + estilo CSS).
 - Navegação por papel: [`lib/features.ts`](../web/src/lib/features.ts).
 

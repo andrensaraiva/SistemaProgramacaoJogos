@@ -4,7 +4,7 @@ Guia para você (ou um colega) tocar o projeto via git, usando a IA que preferir
 (Claude, ChatGPT, Copilot, etc.).
 
 ## Antes de começar (uma vez)
-1. Leia, nesta ordem: [README.md](README.md) → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) → [docs/SETUP_COMPLETO_PASSO_A_PASSO.md](docs/SETUP_COMPLETO_PASSO_A_PASSO.md).
+1. Leia, nesta ordem: [README.md](README.md) → [docs/CONTINUAR.md](docs/CONTINUAR.md) (onde estamos) → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) → [docs/SETUP.md](docs/SETUP.md).
 2. **⚠️ [web/AGENTS.md](web/AGENTS.md)**: este é Next.js 16, com mudanças em relação ao que as IAs "lembram". Ao usar uma IA, peça para ela conferir `web/node_modules/next/dist/docs/` antes de usar API nova do Next.
 3. Configure o ambiente (Supabase, `.env.local`, Piston Docker) e rode `npm run seed:demo:reset`.
 
@@ -58,5 +58,6 @@ export async function minhaAction(classId: string, formData: FormData) {
 | Dados de teste | `web/scripts/seed-demo.mjs` |
 
 ## Backlog e prioridades
-Veja [docs/ROADMAP.md](docs/ROADMAP.md) (o que está feito + ideias por papel) e
-[docs/UI_UX.md](docs/UI_UX.md) (diretrizes visuais e telas a migrar).
+Veja [docs/CONTINUAR.md](docs/CONTINUAR.md) (estado, backlog priorizado + ideias
+por papel). Diretrizes visuais estão na seção **UI/UX** de
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
