@@ -38,6 +38,23 @@ export type AlunoRiscoResumo = {
   freqPct: number | null;
 };
 
+export type EventoProximo = {
+  date: string;
+  turma: string;
+  marker: string;
+  note: string | null;
+};
+
+export type EntregaFaltante = {
+  turmaId: string;
+  turma: string;
+  listaId: string;
+  lista: string;
+  dueAt: string;
+  faltantes: number;
+  total: number;
+};
+
 export type TeacherDashboard = {
   turmasCount: number;
   alunosCount: number;
@@ -46,6 +63,8 @@ export type TeacherDashboard = {
   aCorrigir: CorrecaoPendente[];
   aulasHoje: AulaHoje[];
   emRisco: AlunoRiscoResumo[];
+  eventosProximos: EventoProximo[];
+  entregasFaltantes: EntregaFaltante[];
 };
 
 /** YYYY-MM-DD de hoje no fuso local do servidor (datas do calendário são sem fuso). */
@@ -90,6 +109,8 @@ export async function getTeacherDashboard(professorId: string): Promise<TeacherD
       aCorrigir: [],
       aulasHoje: [],
       emRisco: [],
+      eventosProximos: [],
+      entregasFaltantes: [],
     };
   }
 
@@ -172,6 +193,33 @@ export async function getTeacherDashboard(professorId: string): Promise<TeacherD
     }));
   const emRiscoCount = emRiscoTudo.filter((r) => nomesTurmas.has(r.turma)).length;
 
+  // Próximos eventos do calendário (marcadores: feriado/recesso/conselho/...) nos
+  // próximos 14 dias, nas turmas do professor.
+  const em14dias = new Date(Date.now() + 14 * 86_400_000);
+  const ate = `${em14dias.getFullYear()}-${String(em14dias.getMonth() + 1).padStart(2, "0")}-${String(em14dias.getDate()).padStart(2, "0")}`;
+  const { data: eventosData } = await admin
+    .from("calendar_days")
+    .select("date, marker, note, calendar:course_calendars!calendar_id(class_id)")
+    .not("marker", "is", null)
+    .gte("date", hoje)
+    .lte("date", ate)
+    .order("date", { ascending: true });
+  const eventosProximos: EventoProximo[] = [];
+  for (const e of eventosData ?? []) {
+    const classId = (e.calendar as unknown as { class_id: string } | null)?.class_id;
+    if (!classId || !turmaIds.includes(classId)) continue;
+    eventosProximos.push({
+      date: e.date as string,
+      turma: turmaNome.get(classId) ?? "Turma",
+      marker: e.marker as string,
+      note: (e.note as string | null) ?? null,
+    });
+  }
+
+  // Entregas com faltantes: atividades com prazo VENCIDO nas turmas do professor,
+  // contando quantos alunos não entregaram.
+  const entregasFaltantes = await calcularEntregasFaltantes(admin, turmaIds, turmaNome, hoje);
+
   return {
     turmasCount: turmas.length,
     alunosCount: alunosSet.size,
@@ -180,5 +228,69 @@ export async function getTeacherDashboard(professorId: string): Promise<TeacherD
     aCorrigir: aCorrigir.slice(0, 10),
     aulasHoje,
     emRisco,
+    eventosProximos: eventosProximos.slice(0, 6),
+    entregasFaltantes,
   };
+}
+
+/** Atividades com prazo vencido e quantos alunos ainda não entregaram. */
+async function calcularEntregasFaltantes(
+  admin: ReturnType<typeof createAdminClient>,
+  turmaIds: string[],
+  turmaNome: Map<string, string>,
+  hoje: string,
+): Promise<EntregaFaltante[]> {
+  // Atividades com prazo já vencido (nos últimos 30 dias) nas turmas do professor.
+  const trintaDiasAtras = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const { data: assignments } = await admin
+    .from("assignments")
+    .select("id, title, class_id, due_at")
+    .in("class_id", turmaIds)
+    .not("due_at", "is", null)
+    .lt("due_at", `${hoje}T00:00:00`)
+    .gte("due_at", trintaDiasAtras)
+    .order("due_at", { ascending: false })
+    .limit(20);
+  if (!assignments || assignments.length === 0) return [];
+
+  // Total de alunos por turma.
+  const { data: membros } = await admin
+    .from("class_members")
+    .select("class_id, student_id")
+    .in("class_id", turmaIds);
+  const alunosPorTurma = new Map<string, number>();
+  for (const m of membros ?? []) {
+    alunosPorTurma.set(m.class_id, (alunosPorTurma.get(m.class_id) ?? 0) + 1);
+  }
+
+  // Entregas por assignment (alunos distintos que enviaram qualquer coisa).
+  const assignmentIds = assignments.map((a) => a.id);
+  const { data: subs } = await admin
+    .from("submissions")
+    .select("assignment_id, student_id")
+    .in("assignment_id", assignmentIds);
+  const entreguesPor = new Map<string, Set<string>>();
+  for (const s of subs ?? []) {
+    if (!entreguesPor.has(s.assignment_id)) entreguesPor.set(s.assignment_id, new Set());
+    entreguesPor.get(s.assignment_id)!.add(s.student_id);
+  }
+
+  const result: EntregaFaltante[] = [];
+  for (const a of assignments) {
+    const total = alunosPorTurma.get(a.class_id) ?? 0;
+    if (total === 0) continue;
+    const entregaram = entreguesPor.get(a.id)?.size ?? 0;
+    const faltantes = total - entregaram;
+    if (faltantes <= 0) continue; // todos entregaram
+    result.push({
+      turmaId: a.class_id,
+      turma: turmaNome.get(a.class_id) ?? "Turma",
+      listaId: a.id,
+      lista: a.title,
+      dueAt: a.due_at as string,
+      faltantes,
+      total,
+    });
+  }
+  return result.slice(0, 6);
 }

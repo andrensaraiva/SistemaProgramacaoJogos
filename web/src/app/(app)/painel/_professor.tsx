@@ -17,6 +17,30 @@ const SIT_LABEL: Record<string, string> = {
   aprovado: "Aprovado",
 };
 
+const MARKER_META: Record<string, { label: string; emoji: string }> = {
+  feriado: { label: "Feriado", emoji: "🎉" },
+  recesso: { label: "Recesso", emoji: "🌴" },
+  ferias: { label: "Férias", emoji: "🏖️" },
+  capacitacao: { label: "Capacitação", emoji: "🎓" },
+  conselho: { label: "Conselho de classe", emoji: "🧑‍🏫" },
+  evento: { label: "Evento", emoji: "📌" },
+};
+
+function markerMeta(marker: string) {
+  return MARKER_META[marker] ?? { label: marker, emoji: "📅" };
+}
+
+function dataCurta(iso: string): string {
+  return new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function diasAte(iso: string): number {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+}
+
 function tempoRelativo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const dias = Math.floor(diffMs / 86_400_000);
@@ -91,6 +115,33 @@ export function PainelProfessor({
       {/* Checklist diário: chamada + plano de aula */}
       <ChecklistDiario checklist={checklist} temAulaHoje={dash.aulasHoje.length > 0} />
 
+      {/* Próximos eventos do calendário (feriado, conselho, etc.) */}
+      {dash.eventosProximos.length > 0 && (
+        <Card>
+          <CardHeader title="📅 Próximos eventos" description="Marcadores do calendário das suas turmas (14 dias)." />
+          <div className="flex flex-wrap gap-2">
+            {dash.eventosProximos.map((e, i) => {
+              const meta = markerMeta(e.marker);
+              const dias = diasAte(e.date);
+              return (
+                <div
+                  key={`${e.date}-${i}`}
+                  className="flex items-center gap-2 rounded-full border border-border bg-background/40 px-3 py-1.5 text-sm"
+                  title={e.note ?? undefined}
+                >
+                  <span>{meta.emoji}</span>
+                  <span className="font-medium">{meta.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {dataCurta(e.date)} · {e.turma}
+                    {dias <= 2 && dias >= 0 ? (dias === 0 ? " · hoje" : dias === 1 ? " · amanhã" : ` · em ${dias}d`) : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* A corrigir */}
         <Card>
@@ -154,6 +205,36 @@ export function PainelProfessor({
           )}
         </Card>
       </div>
+
+      {/* Entregas com faltantes (prazo vencido) */}
+      {dash.entregasFaltantes.length > 0 && (
+        <Card>
+          <CardHeader
+            title="⏳ Faltam entregar"
+            description="Atividades com prazo vencido e quantos alunos ainda não entregaram."
+          />
+          <ul className="flex flex-col gap-2">
+            {dash.entregasFaltantes.map((e) => (
+              <li key={e.listaId}>
+                <Link
+                  href={`/turmas/${e.turmaId}/listas/${e.listaId}`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background/40 p-3 text-sm transition-colors hover:border-primary/40"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{e.lista}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {e.turma} · venceu {dataCurta(e.dueAt)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-danger/15 px-2.5 py-1 text-xs font-semibold text-danger">
+                    {e.faltantes} de {e.total} não entregaram
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* Alunos em risco */}
       {dash.emRisco.length > 0 && (
@@ -249,10 +330,13 @@ export function PainelProfessor({
               <Button variant="secondary">Minhas turmas</Button>
             </Link>
             <Link href="/exercicios/novo">
-              <Button variant="secondary">+ Novo exercício</Button>
+              <Button variant="secondary">+ Nova atividade</Button>
             </Link>
             <Link href="/exercicios/gerar">
-              <Button variant="secondary">Gerar com IA</Button>
+              <Button variant="secondary">✨ Gerar com IA</Button>
+            </Link>
+            <Link href="/cursos">
+              <Button variant="secondary">Cursos</Button>
             </Link>
           </div>
         </Card>
