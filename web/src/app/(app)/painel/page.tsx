@@ -4,6 +4,7 @@ import { type DeadlineItem } from "@/components/upcoming-deadlines";
 import { getProfile } from "@/lib/auth/dal";
 import { coinBalance } from "@/lib/cosmetics/coins";
 import { getStudentDashboard } from "@/lib/dashboard/student";
+import { getMissoesDoDia } from "@/lib/gamification/missions-actions";
 import { registrarVisita } from "@/lib/gamification/streak-actions";
 import { getTeacherDashboard } from "@/lib/dashboard/teacher";
 import { getFeedbackResumo } from "@/lib/feedback/actions";
@@ -54,7 +55,7 @@ export default async function PainelPage() {
 
   // ALUNO: painel gamificado (nível/XP/conquistas) + pendências + desempenho.
   // Registra a "ofensiva diária" (streak) ao abrir o painel.
-  const [dash, deadlines, streak] = await Promise.all([
+  const [dash, deadlines, streak, missoes] = await Promise.all([
     getStudentDashboard({ id: profile.id, xp: profile.xp ?? 0 }),
     loadUpcomingDeadlines(supabase, profile.id, false),
     registrarVisita(
@@ -63,6 +64,11 @@ export default async function PainelPage() {
       profile.longest_streak ?? 0,
       profile.last_active_on ?? null,
     ),
+    getMissoesDoDia(profile.id, {
+      current: profile.current_streak ?? 0,
+      longest: profile.longest_streak ?? 0,
+      lastActiveOn: profile.last_active_on ?? null,
+    }),
   ]);
   const moedas = coinBalance(profile.level, profile.coins_bonus, profile.coins_spent);
   return (
@@ -71,6 +77,7 @@ export default async function PainelPage() {
       dash={dash}
       deadlines={deadlines}
       streak={streak}
+      missoes={missoes}
       avatar={{
         frameId: profile.avatar_frame_id,
         skinId: profile.avatar_skin_id,

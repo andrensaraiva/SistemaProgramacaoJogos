@@ -13,6 +13,7 @@ import type {
   Language,
   SubmissionResult,
 } from "@/lib/exercises/types";
+import { notificarConquistas, notificarNivel } from "@/lib/notifications/create";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -103,6 +104,14 @@ export async function submitSolution(
     time_to_solve_ms: timeToSolveMs,
   });
 
+  // Nível antes da submissão — pra detectar level-up (o trigger atualiza o XP).
+  const { data: beforeProf } = await admin
+    .from("profiles")
+    .select("level")
+    .eq("id", user.id)
+    .single();
+  const levelBefore = beforeProf?.level ?? 1;
+
   const supa = await createClient();
   const { data: inserted, error: insertErr } = await supa
     .from("submissions")
@@ -133,6 +142,23 @@ export async function submitSolution(
 
   const xp_earned = inserted?.xp_awarded ?? 0;
   const badges_awarded = inserted?.badges_awarded ?? [];
+
+  // Notificações in-app (sino): conquistas novas e level-up. Secundário ao
+  // fluxo — não bloqueia a resposta se falhar.
+  try {
+    if (badges_awarded.length > 0) await notificarConquistas(user.id, badges_awarded);
+    if (xp_earned > 0) {
+      const { data: afterProf } = await admin
+        .from("profiles")
+        .select("level")
+        .eq("id", user.id)
+        .single();
+      const levelAfter = afterProf?.level ?? levelBefore;
+      if (levelAfter > levelBefore) await notificarNivel(user.id, levelAfter);
+    }
+  } catch {
+    /* notificação é secundária; ignora falha */
+  }
 
   revalidatePath("/painel");
   revalidatePath("/ranking");

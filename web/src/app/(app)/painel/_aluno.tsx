@@ -9,7 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import type { StudentDashboard } from "@/lib/dashboard/student";
+import type { MissionProgress } from "@/lib/gamification/missions";
 import type { StreakInfo } from "@/lib/gamification/streak-actions";
+
+import { MissoesDiarias } from "./_missoes";
 
 type AvatarInfo = {
   frameId?: string | null;
@@ -85,12 +88,14 @@ export function PainelAluno({
   dash,
   deadlines,
   streak,
+  missoes,
   avatar,
 }: {
   nome: string;
   dash: StudentDashboard;
   deadlines: DeadlineItem[];
   streak: StreakInfo;
+  missoes: MissionProgress[];
   avatar: AvatarInfo;
 }) {
   const { nivel } = dash;
@@ -248,6 +253,9 @@ export function PainelAluno({
           </div>
         )}
       </Card>
+
+      {/* Missões diárias — moedas por metas do dia */}
+      <MissoesDiarias missoes={missoes} />
 
       {/* Pendências em destaque */}
       <Card className="reveal-up reveal-delay-3">

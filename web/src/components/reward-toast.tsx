@@ -8,6 +8,8 @@ import { useEffect, useState } from "react";
 export type Reward = {
   xp: number;
   badges: { id: string; label: string }[];
+  /** Moedas ganhas (ex.: missão diária). Opcional. */
+  coins?: number;
   /** Subiu de nível com esta submissão? (opcional) */
   levelUpTo?: number | null;
 };
@@ -47,6 +49,9 @@ function RewardToastInner({
 
   const temBadge = reward.badges.length > 0;
   const subiuNivel = reward.levelUpTo != null;
+  const temCoins = (reward.coins ?? 0) > 0;
+  // Recompensa só de moedas (missão) vs. de exercício aprovado.
+  const soMoedas = temCoins && reward.xp === 0 && !temBadge && !subiuNivel;
 
   return (
     <div
@@ -75,15 +80,24 @@ function RewardToastInner({
         </div>
 
         <div className="relative flex items-center gap-4">
-          <span className="text-3xl">{subiuNivel ? "🎉" : "⚡"}</span>
+          <span className="text-3xl">{soMoedas ? "🪙" : subiuNivel ? "🎉" : "⚡"}</span>
           <div>
             <div className="text-base font-bold leading-tight">
-              {subiuNivel ? `Nível ${reward.levelUpTo}! 🆙` : "Exercício aprovado!"}
+              {subiuNivel
+                ? `Nível ${reward.levelUpTo}! 🆙`
+                : soMoedas
+                  ? "Missão concluída!"
+                  : "Exercício aprovado!"}
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm">
               {reward.xp > 0 && (
                 <span className="rounded-full bg-success/20 px-2.5 py-0.5 font-semibold text-success">
                   +{reward.xp} XP
+                </span>
+              )}
+              {temCoins && (
+                <span className="rounded-full bg-yellow-500/20 px-2.5 py-0.5 font-semibold text-yellow-600 dark:text-yellow-400">
+                  +{reward.coins} 🪙
                 </span>
               )}
               {temBadge &&
