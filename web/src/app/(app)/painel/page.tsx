@@ -9,6 +9,7 @@ import { registrarVisita } from "@/lib/gamification/streak-actions";
 import { getTeacherDashboard } from "@/lib/dashboard/teacher";
 import { getFeedbackResumo } from "@/lib/feedback/actions";
 import { createClient } from "@/lib/supabase/server";
+import { getChecklistHoje } from "@/lib/teacher/checklist";
 
 import { PainelAluno } from "./_aluno";
 import { PainelProfessor } from "./_professor";
@@ -38,10 +39,11 @@ export default async function PainelPage() {
 
   // PROFESSOR: painel próprio (a corrigir, aulas de hoje, em risco, feedback).
   if (profile.role === "professor") {
-    const [dash, deadlines, feedback] = await Promise.all([
+    const [dash, deadlines, feedback, checklist] = await Promise.all([
       getTeacherDashboard(profile.id),
       loadUpcomingDeadlines(supabase, profile.id, true),
       getFeedbackResumo(profile.id),
+      getChecklistHoje(profile.id),
     ]);
     return (
       <PainelProfessor
@@ -49,6 +51,7 @@ export default async function PainelPage() {
         dash={dash}
         deadlines={deadlines}
         feedback={feedback}
+        checklist={checklist}
       />
     );
   }

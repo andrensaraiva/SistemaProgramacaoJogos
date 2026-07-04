@@ -7,6 +7,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import type { TeacherDashboard } from "@/lib/dashboard/teacher";
 import type { FeedbackSummary } from "@/lib/feedback/aggregate";
+import type { ChecklistDia } from "@/lib/teacher/checklist";
+
+import { ChecklistDiario } from "./_checklist";
 
 const SIT_LABEL: Record<string, string> = {
   reprovado: "Reprovado",
@@ -32,11 +35,13 @@ export function PainelProfessor({
   dash,
   deadlines,
   feedback,
+  checklist,
 }: {
   nome: string;
   dash: TeacherDashboard;
   deadlines: DeadlineItem[];
   feedback: FeedbackSummary;
+  checklist: ChecklistDia;
 }) {
   // Professor sem turmas: onboarding direto.
   if (dash.turmasCount === 0) {
@@ -82,6 +87,9 @@ export function PainelProfessor({
           hint="recuperação ou reprovação"
         />
       </div>
+
+      {/* Checklist diário: chamada + plano de aula */}
+      <ChecklistDiario checklist={checklist} temAulaHoje={dash.aulasHoje.length > 0} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* A corrigir */}
