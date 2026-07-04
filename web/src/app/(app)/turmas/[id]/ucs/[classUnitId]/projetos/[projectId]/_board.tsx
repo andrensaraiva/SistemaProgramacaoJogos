@@ -4,8 +4,10 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { criarCard, excluirCard, moverCardDnd } from "@/lib/projects/actions";
+import { avaliarGrupo, criarCard, excluirCard, moverCardDnd } from "@/lib/projects/actions";
 import { createClient } from "@/lib/supabase/client";
+
+type Grade = { grade: number | null; feedback: string | null };
 
 type Task = {
   id: string;
@@ -30,12 +32,16 @@ const COLUMNS: { key: string; label: string }[] = [
 export function GroupBoard({
   projectId,
   group,
+  isOwner,
+  grade,
   tasks: initialTasks,
   sprints,
   members,
 }: {
   projectId: string;
   group: { id: string; name: string };
+  isOwner: boolean;
+  grade: Grade | null;
   tasks: Task[];
   sprints: Sprint[];
   members: Member[];
@@ -110,8 +116,15 @@ export function GroupBoard({
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-semibold">{group.name}</h3>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 font-semibold">
+          {group.name}
+          {grade?.grade != null && (
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
+              Nota {grade.grade}
+            </span>
+          )}
+        </h3>
         <span className="text-xs text-muted-foreground">
           {tasks.length} card{tasks.length !== 1 ? "s" : ""} · arraste para mover
         </span>
@@ -175,7 +188,77 @@ export function GroupBoard({
         sprints={sprints}
         members={members}
       />
+
+      {/* Avaliação do projeto: professor dá nota; aluno vê nota + feedback */}
+      {isOwner ? (
+        <GradeForm projectId={projectId} groupId={group.id} grade={grade} />
+      ) : (
+        grade?.grade != null && (
+          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+            <div className="flex items-center gap-2 font-semibold text-primary">
+              🏆 Nota do projeto: {grade.grade}
+            </div>
+            {grade.feedback && (
+              <p className="mt-1 whitespace-pre-wrap text-foreground">{grade.feedback}</p>
+            )}
+          </div>
+        )
+      )}
     </div>
+  );
+}
+
+function GradeForm({
+  projectId,
+  groupId,
+  grade,
+}: {
+  projectId: string;
+  groupId: string;
+  grade: Grade | null;
+}) {
+  const bound = avaliarGrupo.bind(null, projectId, groupId);
+  const [state, action, pending] = useActionState(bound, undefined);
+
+  return (
+    <form action={action} className="mt-4 flex flex-col gap-2 rounded-xl border border-border bg-background/40 p-3">
+      <div className="text-xs font-semibold uppercase text-muted-foreground">Avaliar projeto</div>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex flex-col gap-1 text-xs">
+          <span className="text-muted-foreground">Nota (0–10)</span>
+          <input
+            name="grade"
+            type="number"
+            min={0}
+            max={10}
+            step={0.1}
+            defaultValue={grade?.grade ?? ""}
+            placeholder="Ex: 8.5"
+            className="w-24 rounded-md border border-border bg-card px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+        </label>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Salvando..." : "Salvar nota"}
+        </Button>
+      </div>
+      <textarea
+        name="feedback"
+        rows={2}
+        defaultValue={grade?.feedback ?? ""}
+        placeholder="Feedback para o grupo (opcional)"
+        className="rounded-md border border-border bg-card px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+      />
+      {state && !state.ok && (
+        <div className="rounded-md border border-danger/40 bg-danger/10 px-2 py-1 text-xs text-danger">
+          {state.message}
+        </div>
+      )}
+      {state?.ok && (
+        <div className="rounded-md border border-success/40 bg-success/10 px-2 py-1 text-xs text-success">
+          Nota salva.
+        </div>
+      )}
+    </form>
   );
 }
 

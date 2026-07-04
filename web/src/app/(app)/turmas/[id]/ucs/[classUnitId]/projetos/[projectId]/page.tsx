@@ -149,6 +149,19 @@ export default async function ProjetoPage({ params }: { params: Params }) {
       ).data ?? [])
     : [];
 
+  // Notas por grupo (professor vê/edita todas; aluno vê a do seu grupo).
+  type GradeRow = { group_id: string; grade: number | null; feedback: string | null };
+  const grades: GradeRow[] = visibleIds.length
+    ? ((
+        await admin
+          .from("project_grades")
+          .select("group_id, grade, feedback")
+          .eq("project_id", project.id)
+          .in("group_id", visibleIds)
+      ).data ?? [])
+    : [];
+  const gradeByGroup = new Map(grades.map((g) => [g.group_id, g]));
+
   const tasksByGroup = new Map<string, TaskRow[]>();
   for (const t of tasks) {
     const arr = tasksByGroup.get(t.group_id) ?? [];
@@ -229,6 +242,8 @@ export default async function ProjetoPage({ params }: { params: Params }) {
             key={g.id}
             projectId={project.id}
             group={g}
+            isOwner={isOwner}
+            grade={gradeByGroup.get(g.id) ?? null}
             tasks={(tasksByGroup.get(g.id) ?? []).map((t) => ({
               id: t.id,
               title: t.title,

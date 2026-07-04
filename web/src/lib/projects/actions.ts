@@ -299,3 +299,60 @@ async function revalidateBoard(projectId: string) {
   if (ctx?.classId)
     revalidatePath(`/turmas/${ctx.classId}/ucs/${ctx.classUnitId}/projetos/${projectId}`);
 }
+
+// -----------------------------------------------------------------------------
+// NOTA do projeto por grupo (professor dono da UC)
+// -----------------------------------------------------------------------------
+const GradeSchema = z.object({
+  grade: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? null : v))
+    .refine(
+      (v) => v === null || (!Number.isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 10),
+      { error: "A nota deve ser um número entre 0 e 10." },
+    ),
+  feedback: z.string().trim().max(4000).optional().default(""),
+});
+
+/** Professor dono da UC dá nota + feedback ao projeto de um grupo. */
+export async function avaliarGrupo(
+  projectId: string,
+  groupId: string,
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { user } = await verifySession();
+  const ctx = await projectContext(projectId);
+  if (!ctx) return { ok: false, message: "Projeto não encontrado." };
+  if (!(await ownsClassUnit(ctx.classUnitId, user.id)))
+    return { ok: false, message: "Apenas o professor da turma." };
+
+  const parsed = GradeSchema.safeParse({
+    grade: formData.get("grade") ?? "",
+    feedback: formData.get("feedback") ?? "",
+  });
+  if (!parsed.success)
+    return {
+      ok: false,
+      message: z.flattenError(parsed.error).fieldErrors.grade?.[0] ?? "Dados inválidos.",
+    };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("project_grades").upsert(
+    {
+      project_id: projectId,
+      group_id: groupId,
+      grade: parsed.data.grade === null ? null : Number(parsed.data.grade),
+      feedback: parsed.data.feedback || null,
+      graded_by: user.id,
+      graded_at: new Date().toISOString(),
+    },
+    { onConflict: "project_id,group_id" },
+  );
+  if (error) return { ok: false, message: `Erro ao salvar: ${error.message}` };
+
+  await revalidateBoard(projectId);
+  return { ok: true };
+}
