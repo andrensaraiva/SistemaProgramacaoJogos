@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { isCodeKind } from "@/lib/activities/registry";
@@ -51,6 +51,37 @@ export function GradeForm({
   );
 
   const isCode = isCodeKind(exerciseType);
+
+  // Campos controlados pra a IA poder preencher (o professor confirma/edita).
+  const [grade, setGrade] = useState(currentGrade != null ? String(currentGrade) : "");
+  const [feedback, setFeedback] = useState(currentFeedback ?? "");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSugerida, setAiSugerida] = useState(false);
+
+  async function sugerirComIA() {
+    setAiError(null);
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/grade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(typeof data.error === "string" ? data.error : "Falha ao sugerir nota.");
+        return;
+      }
+      setGrade(String(data.grade));
+      setFeedback(data.feedback);
+      setAiSugerida(true);
+    } catch {
+      setAiError("Falha de rede ao chamar a IA.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -103,6 +134,29 @@ export function GradeForm({
       <form action={formAction} className="flex flex-col gap-4">
         <input type="hidden" name="submission_id" value={submissionId} />
 
+        {/* Sugestão de nota + feedback por IA — o professor confirma/edita */}
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-medium text-primary">✨ Correção assistida por IA</span>
+            <Button type="button" variant="secondary" onClick={sugerirComIA} disabled={aiLoading}>
+              {aiLoading ? "Analisando…" : "Sugerir nota + feedback"}
+            </Button>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            A IA sugere uma nota e um feedback com base na entrega. Você revisa e ajusta antes de salvar.
+          </p>
+          {aiSugerida && (
+            <p className="mt-2 rounded-md bg-primary/10 px-2 py-1 text-xs text-primary">
+              💡 Sugestão preenchida abaixo — confira e edite se necessário.
+            </p>
+          )}
+          {aiError && (
+            <p className="mt-2 rounded-md border border-danger/40 bg-danger/10 px-2 py-1 text-xs text-danger">
+              {aiError}
+            </p>
+          )}
+        </div>
+
         <div>
           <label className="text-sm font-medium" htmlFor="grade">
             Nota (0 a 10)
@@ -114,7 +168,8 @@ export function GradeForm({
             min={0}
             max={10}
             step={0.1}
-            defaultValue={currentGrade ?? ""}
+            value={grade}
+            onChange={(e) => setGrade(e.target.value)}
             placeholder="Ex: 8.5 (deixe vazio para não atribuir)"
             className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
@@ -128,7 +183,8 @@ export function GradeForm({
             id="feedback"
             name="feedback"
             rows={10}
-            defaultValue={currentFeedback ?? ""}
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
             placeholder="Comentários, sugestões, o que melhorar…"
             className="mt-1 w-full flex-1 rounded-md border border-input bg-background p-3 font-mono text-sm"
           />
