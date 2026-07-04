@@ -138,7 +138,7 @@ export default async function ListaProgressoPage({ params }: { params: Params })
         canvas_config: ex.canvas_config ?? null,
       };
     })
-    .filter((e): e is ExerciseRow => e !== null);
+    .filter((e): e is NonNullable<typeof e> => e !== null);
 
   if (isOwner) {
     // Exercícios disponíveis para anexar (públicos ou do professor).
