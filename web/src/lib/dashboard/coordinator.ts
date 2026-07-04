@@ -2,6 +2,7 @@ import "server-only";
 
 import { getStudentsReport } from "@/lib/reports/students";
 import { getTeachersReport, type TeacherRow } from "@/lib/reports/teachers";
+import { computeOccupancy, type OccupancyDay } from "@/lib/rooms/occupancy";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // =============================================================================
@@ -36,6 +37,19 @@ export type AlunoRiscoResumo = {
   freqPct: number | null;
 };
 
+export type ChecklistProfessor = {
+  id: string;
+  nome: string;
+  presencaFeita: boolean;
+  planoRegistrado: boolean;
+};
+
+export type UsoSalas = {
+  totalConflitos: number;
+  /** Aulas (dias de calendário) sem sala definida, nos próximos 30 dias. */
+  aulasSemSala: number;
+};
+
 export type CoordinatorDashboard = {
   turmasCount: number;
   alunosCount: number;
@@ -44,6 +58,8 @@ export type CoordinatorDashboard = {
   turmas: TurmaResumo[];
   professores: ProfessorAcompanhar[];
   emRisco: AlunoRiscoResumo[];
+  checklistHoje: ChecklistProfessor[];
+  usoSalas: UsoSalas;
 };
 
 export async function getCoordinatorDashboard(): Promise<CoordinatorDashboard> {
@@ -119,6 +135,14 @@ export async function getCoordinatorDashboard(): Promise<CoordinatorDashboard> {
     freqPct: r.freqPct,
   }));
 
+  // Peças novas (helpers modulares, calculados em paralelo).
+  const idsProfessores = professores.map((p) => p.id);
+  const nomePorProfessor = new Map(professores.map((p) => [p.id, p.nome]));
+  const [checklistHoje, usoSalas] = await Promise.all([
+    calcularChecklistProfessores(admin, idsProfessores, nomePorProfessor),
+    calcularUsoSalas(admin),
+  ]);
+
   return {
     turmasCount: turmasRaw.length,
     alunosCount: alunosDistintos.size,
@@ -127,5 +151,75 @@ export async function getCoordinatorDashboard(): Promise<CoordinatorDashboard> {
     turmas,
     professores,
     emRisco,
+    checklistHoje,
+    usoSalas,
   };
+}
+
+/** YYYY-MM-DD de hoje no fuso local do servidor. */
+function hojeISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Estado do checklist diário (chamada/plano) de cada professor HOJE. */
+async function calcularChecklistProfessores(
+  admin: ReturnType<typeof createAdminClient>,
+  professorIds: string[],
+  nomePorId: Map<string, string>,
+): Promise<ChecklistProfessor[]> {
+  if (professorIds.length === 0) return [];
+  const { data } = await admin
+    .from("teacher_daily_checklist")
+    .select("teacher_id, presenca_feita, plano_registrado")
+    .eq("check_date", hojeISO())
+    .in("teacher_id", professorIds);
+  const porId = new Map(
+    (data ?? []).map((c) => [c.teacher_id, c]),
+  );
+  return professorIds.map((id) => {
+    const c = porId.get(id);
+    return {
+      id,
+      nome: nomePorId.get(id) ?? "Professor",
+      presencaFeita: c?.presenca_feita ?? false,
+      planoRegistrado: c?.plano_registrado ?? false,
+    };
+  });
+}
+
+/** Uso de salas: conflitos (reusa computeOccupancy) + aulas sem sala (30 dias). */
+async function calcularUsoSalas(
+  admin: ReturnType<typeof createAdminClient>,
+): Promise<UsoSalas> {
+  const hoje = hojeISO();
+  const em30 = new Date(Date.now() + 30 * 86_400_000);
+  const ate = `${em30.getFullYear()}-${String(em30.getMonth() + 1).padStart(2, "0")}-${String(em30.getDate()).padStart(2, "0")}`;
+
+  const { data } = await admin
+    .from("calendar_days")
+    .select("date, room_id, marker, calendar:course_calendars!calendar_id(class_id, class:classes!class_id(name))")
+    .gte("date", hoje)
+    .lte("date", ate);
+
+  const dias: OccupancyDay[] = [];
+  let aulasSemSala = 0;
+  for (const d of data ?? []) {
+    // Só dias letivos (sem marker de feriado/recesso/etc.).
+    if (d.marker) continue;
+    const cal = d.calendar as unknown as { class_id: string; class: { name: string } | null } | null;
+    if (!cal) continue;
+    if (!d.room_id) {
+      aulasSemSala += 1;
+      continue;
+    }
+    dias.push({
+      date: d.date as string,
+      roomId: d.room_id as string,
+      classId: cal.class_id,
+      turma: cal.class?.name ?? "Turma",
+    });
+  }
+  const occ = computeOccupancy(dias);
+  return { totalConflitos: occ.totalConflitos, aulasSemSala };
 }

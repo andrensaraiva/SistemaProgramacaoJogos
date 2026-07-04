@@ -13,6 +13,14 @@ const SIT_LABEL: Record<string, string> = {
   aprovado: "Aprovado",
 };
 
+function SimNao({ ok }: { ok: boolean }) {
+  return ok ? (
+    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">✓ feito</span>
+  ) : (
+    <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning">pendente</span>
+  );
+}
+
 export default async function CoordenadorPage() {
   await requireCapability("supervisionar_turmas");
   const dash = await getCoordinatorDashboard();
@@ -92,6 +100,69 @@ export default async function CoordenadorPage() {
             </table>
           </div>
         )}
+      </Card>
+
+      {/* Checklist diário dos professores (chamada + plano) */}
+      <Card>
+        <CardHeader
+          title="Rotina de hoje dos professores"
+          description="Quem já fez a chamada e registrou o plano de aula hoje."
+        />
+        {dash.checklistHoje.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum professor com turma no momento.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted-foreground">
+                  <th className="py-1">Professor</th>
+                  <th className="text-center">Chamada</th>
+                  <th className="text-center">Plano de aula</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dash.checklistHoje.map((c) => (
+                  <tr key={c.id} className="border-t border-border">
+                    <td className="py-1.5">{c.nome}</td>
+                    <td className="text-center">
+                      <SimNao ok={c.presencaFeita} />
+                    </td>
+                    <td className="text-center">
+                      <SimNao ok={c.planoRegistrado} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* Uso de salas */}
+      <Card>
+        <CardHeader
+          title="Uso de salas"
+          description="Alocação nos próximos 30 dias — conflitos e aulas sem sala definida."
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <StatCard
+            title="Conflitos de sala"
+            value={dash.usoSalas.totalConflitos}
+            tone={dash.usoSalas.totalConflitos ? "danger" : "success"}
+            hint="mesma sala, mesma data, 2+ turmas"
+          />
+          <StatCard
+            title="Aulas sem sala"
+            value={dash.usoSalas.aulasSemSala}
+            tone={dash.usoSalas.aulasSemSala ? "warning" : "success"}
+            hint="dias letivos sem sala definida"
+          />
+        </div>
+        <div className="mt-3">
+          <Link href="/salas/ocupacao" className="text-sm text-primary hover:underline">
+            Ver ocupação detalhada →
+          </Link>
+        </div>
       </Card>
 
       {/* Alunos em risco */}
