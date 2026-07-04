@@ -107,6 +107,19 @@ body {
   background: linear-gradient(90deg, var(--xp), var(--xp-2));
 }
 
+/* Skeleton de carregamento (shimmer). */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.skeleton {
+  background: var(--muted);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; opacity: 0.7; }
+}
+
 /* Transição padrão suave para hover/tema. */
 .transition-theme {
   transition:

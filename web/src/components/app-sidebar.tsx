@@ -107,13 +107,14 @@ function NavLinks({
                 key={item.href}
                 href={item.href}
                 onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   active
                     ? "bg-primary/12 text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
-                <span className={active ? "text-primary" : ""}>{item.icon}</span>
+                <span aria-hidden="true" className={active ? "text-primary" : ""}>{item.icon}</span>
                 {item.label}
               </Link>
             );
