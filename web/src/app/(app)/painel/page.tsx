@@ -6,6 +6,7 @@ import { coinBalance } from "@/lib/cosmetics/coins";
 import { getStudentDashboard } from "@/lib/dashboard/student";
 import { getMissoesDoDia } from "@/lib/gamification/missions-actions";
 import { registrarVisita } from "@/lib/gamification/streak-actions";
+import { getPesquisasPendentes } from "@/lib/uc-survey/actions";
 import { getTeacherDashboard } from "@/lib/dashboard/teacher";
 import { getFeedbackResumo } from "@/lib/feedback/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -58,7 +59,7 @@ export default async function PainelPage() {
 
   // ALUNO: painel gamificado (nível/XP/conquistas) + pendências + desempenho.
   // Registra a "ofensiva diária" (streak) ao abrir o painel.
-  const [dash, deadlines, streak, missoes] = await Promise.all([
+  const [dash, deadlines, streak, missoes, pesquisas] = await Promise.all([
     getStudentDashboard({ id: profile.id, xp: profile.xp ?? 0 }),
     loadUpcomingDeadlines(supabase, profile.id, false),
     registrarVisita(
@@ -72,6 +73,7 @@ export default async function PainelPage() {
       longest: profile.longest_streak ?? 0,
       lastActiveOn: profile.last_active_on ?? null,
     }),
+    getPesquisasPendentes(profile.id),
   ]);
   const moedas = coinBalance(profile.level, profile.coins_bonus, profile.coins_spent);
   return (
@@ -81,6 +83,7 @@ export default async function PainelPage() {
       deadlines={deadlines}
       streak={streak}
       missoes={missoes}
+      pesquisas={pesquisas}
       avatar={{
         frameId: profile.avatar_frame_id,
         skinId: profile.avatar_skin_id,

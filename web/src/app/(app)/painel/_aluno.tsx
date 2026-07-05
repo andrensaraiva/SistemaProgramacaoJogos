@@ -11,8 +11,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import type { StudentDashboard } from "@/lib/dashboard/student";
 import type { MissionProgress } from "@/lib/gamification/missions";
 import type { StreakInfo } from "@/lib/gamification/streak-actions";
+import type { PesquisaPendente } from "@/lib/uc-survey/actions";
 
 import { MissoesDiarias } from "./_missoes";
+import { PesquisaUcPainel } from "./_pesquisa-uc";
 
 type AvatarInfo = {
   frameId?: string | null;
@@ -89,6 +91,7 @@ export function PainelAluno({
   deadlines,
   streak,
   missoes,
+  pesquisas,
   avatar,
 }: {
   nome: string;
@@ -96,6 +99,7 @@ export function PainelAluno({
   deadlines: DeadlineItem[];
   streak: StreakInfo;
   missoes: MissionProgress[];
+  pesquisas: PesquisaPendente[];
   avatar: AvatarInfo;
 }) {
   const { nivel } = dash;
@@ -253,6 +257,9 @@ export function PainelAluno({
           </div>
         )}
       </Card>
+
+      {/* Pesquisa de UC encerrada (anônima) — prioridade quando existe */}
+      <PesquisaUcPainel pendentes={pesquisas} />
 
       {/* Missões diárias — moedas por metas do dia */}
       <MissoesDiarias missoes={missoes} />

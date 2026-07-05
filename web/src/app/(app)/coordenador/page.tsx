@@ -31,9 +31,14 @@ export default async function CoordenadorPage() {
         title="Painel de coordenação"
         description="Supervisão das turmas: operação dos professores, alunos em risco e gestão."
         actions={
-          <Link href="/turmas/nova">
-            <Button>+ Nova turma</Button>
-          </Link>
+          <>
+            <Link href="/coordenador/pesquisas">
+              <Button variant="secondary">📝 Pesquisas de UC</Button>
+            </Link>
+            <Link href="/turmas/nova">
+              <Button>+ Nova turma</Button>
+            </Link>
+          </>
         }
       />
 
