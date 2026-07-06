@@ -26,10 +26,10 @@ export default async function AppLayout({
   const unread = notifications.filter((n) => !n.read_at).length;
 
   const sidebarFooter = profile ? (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-3">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-2.5">
         <AvatarWithFrame name={profile.display_name} frameId={profile.avatar_frame_id} skinId={profile.avatar_skin_id} size={36} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium leading-tight">
             {profile.display_name}
           </div>
@@ -52,14 +52,18 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <AppSidebar role={role} footer={sidebarFooter} />
+      <AppSidebar
+        role={role}
+        footer={sidebarFooter}
+        mobileAction={profile ? <NotificationBell notifications={notifications} unread={unread} /> : null}
+      />
       <div className="flex w-full flex-1 flex-col">
         {profile && (
-          <div className="flex items-center justify-end border-b border-border px-5 py-2 sm:px-8">
+          <div className="sticky top-0 z-20 hidden items-center justify-end border-b border-border bg-background/80 px-5 py-2.5 backdrop-blur sm:px-8 md:flex">
             <NotificationBell notifications={notifications} unread={unread} />
           </div>
         )}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 sm:px-8">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
           {children}
         </main>
       </div>

@@ -93,10 +93,10 @@ function NavLinks({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex flex-col gap-5">
+    <nav className="flex flex-col gap-6">
       {groups.map((g) => (
-        <div key={g.title} className="flex flex-col gap-1">
-          <span className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div key={g.title} className="flex flex-col gap-0.5">
+          <span className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
             {g.title}
           </span>
           {g.items.map((item) => {
@@ -108,13 +108,25 @@ function NavLinks({
                 href={item.href}
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                className={`group relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
                   active
                     ? "bg-primary/12 text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
-                <span aria-hidden="true" className={active ? "text-primary" : ""}>{item.icon}</span>
+                {/* Rail indicador do item ativo (padrão profissional) */}
+                {active && (
+                  <span
+                    className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary"
+                    aria-hidden="true"
+                  />
+                )}
+                <span
+                  aria-hidden="true"
+                  className={`transition-colors ${active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}`}
+                >
+                  {item.icon}
+                </span>
                 {item.label}
               </Link>
             );
@@ -128,9 +140,12 @@ function NavLinks({
 export function AppSidebar({
   role,
   footer,
+  mobileAction,
 }: {
   role: Role;
   footer: ReactNode;
+  /** Slot na topbar mobile (ex.: sino de notificações). */
+  mobileAction?: ReactNode;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -138,50 +153,57 @@ export function AppSidebar({
 
   return (
     <>
-      {/* Topbar mobile com botão de menu */}
-      <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 md:hidden">
+      {/* Topbar mobile: sticky, com botão de menu (tap target 44px) */}
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-card/95 px-4 py-3 backdrop-blur md:hidden">
         <Link href="/painel">
           <Logo />
         </Link>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Abrir menu"
-          className="grid h-9 w-9 place-items-center rounded-lg border border-border"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {mobileAction}
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Abrir menu"
+            className="grid h-11 w-11 place-items-center rounded-xl border border-border text-foreground active:scale-95"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
+          </button>
+        </div>
       </div>
 
-      {/* Drawer mobile */}
+      {/* Drawer mobile (slide-in + overlay) */}
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
-          <aside className="absolute left-0 top-0 flex h-full w-64 flex-col gap-6 bg-card p-4 shadow-xl">
-            <div className="flex items-center justify-between">
+          <div className="drawer-overlay absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
+          <aside className="drawer-panel absolute left-0 top-0 flex h-full w-72 flex-col gap-6 bg-card p-4 shadow-e3">
+            <div className="flex items-center justify-between px-1">
               <Logo />
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Fechar menu"
-                className="grid h-8 w-8 place-items-center rounded-lg border border-border"
+                className="grid h-11 w-11 place-items-center rounded-xl border border-border text-muted-foreground active:scale-95"
               >
-                ✕
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
               </button>
             </div>
-            <NavLinks groups={groups} pathname={pathname} onNavigate={() => setOpen(false)} />
-            <div className="mt-auto">{footer}</div>
+            <div className="flex-1 overflow-y-auto">
+              <NavLinks groups={groups} pathname={pathname} onNavigate={() => setOpen(false)} />
+            </div>
+            <div className="border-t border-border-subtle pt-3">{footer}</div>
           </aside>
         </div>
       )}
 
       {/* Sidebar desktop fixa */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-border bg-card p-4 md:flex">
-        <Link href="/painel" className="px-2 pt-1">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
+        <Link href="/painel" className="flex items-center px-5 pb-4 pt-5">
           <Logo />
         </Link>
-        <NavLinks groups={groups} pathname={pathname} />
-        <div className="mt-auto">{footer}</div>
+        <div className="flex-1 overflow-y-auto px-3 pb-4">
+          <NavLinks groups={groups} pathname={pathname} />
+        </div>
+        <div className="border-t border-border-subtle p-3">{footer}</div>
       </aside>
     </>
   );
