@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
 
-// Tabela reutilizável com o estilo do projeto (cabeçalho mut., linhas divididas,
-// scroll horizontal e cantos arredondados). Para grades complexas (frequência)
-// continue usando <table> direto; este é para listagens simples.
+// Tabela reutilizável com o estilo do projeto: cabeçalho sutil, linhas com hover,
+// scroll horizontal próprio e cantos arredondados. Números usam .tnum no chamador.
 export function Table({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border">
+    <div className="overflow-x-auto rounded-2xl border border-border shadow-e1">
       <table className="min-w-full border-collapse text-sm">{children}</table>
     </div>
   );
@@ -14,7 +13,9 @@ export function Table({ children }: { children: ReactNode }) {
 export function THead({ children }: { children: ReactNode }) {
   return (
     <thead>
-      <tr className="bg-muted/50 text-left">{children}</tr>
+      <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+        {children}
+      </tr>
     </thead>
   );
 }
@@ -26,7 +27,7 @@ export function TH({
   children?: ReactNode;
   className?: string;
 }) {
-  return <th className={`px-3 py-2 font-semibold ${className}`}>{children}</th>;
+  return <th className={`px-3 py-2.5 font-semibold ${className}`}>{children}</th>;
 }
 
 export function TBody({ children }: { children: ReactNode }) {
@@ -40,7 +41,11 @@ export function TR({
   children: ReactNode;
   className?: string;
 }) {
-  return <tr className={`border-t border-border ${className}`}>{children}</tr>;
+  return (
+    <tr className={`border-t border-border-subtle transition-colors hover:bg-muted/30 ${className}`}>
+      {children}
+    </tr>
+  );
 }
 
 export function TD({
@@ -50,5 +55,5 @@ export function TD({
   children?: ReactNode;
   className?: string;
 }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+  return <td className={`px-3 py-2.5 ${className}`}>{children}</td>;
 }

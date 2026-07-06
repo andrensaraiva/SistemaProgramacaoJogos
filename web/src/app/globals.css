@@ -5,14 +5,24 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f7f7fb;
+  --background: #f6f6fb;
   --foreground: #0a0a0f;
   --card: #ffffff;
   --card-foreground: #0a0a0f;
+  /* Superfície elevada (card sobre card, hover, header sticky). No light é um
+     branco levemente afastado do fundo; no dark sobe em luminância (sem sombra). */
+  --card-2: #fbfbff;
   --muted: #f1f1f6;
-  --muted-foreground: #6b6b78;
+  --muted-foreground: #64646f;
   --border: #e6e6ee;
+  /* Borda mais sutil pra divisórias internas. */
+  --border-subtle: #eeeef4;
   --ring: #7c3aed;
+
+  /* Sombras (light): elevação real. No dark viram quase nulas (usa luminância). */
+  --shadow-sm: 0 1px 2px rgb(10 10 20 / 0.04), 0 1px 3px rgb(10 10 20 / 0.06);
+  --shadow-md: 0 2px 6px rgb(10 10 20 / 0.06), 0 8px 24px -8px rgb(10 10 20 / 0.10);
+  --shadow-lg: 0 12px 40px -12px rgb(10 10 20 / 0.18);
 
   --primary: #7c3aed;          /* roxo vibrante */
   --primary-foreground: #ffffff;
@@ -30,14 +40,22 @@
 }
 
 .dark {
-  --background: #0a0a12;
+  --background: #08080f;
   --foreground: #f4f4f8;
-  --card: #14141f;
+  --card: #13131e;
   --card-foreground: #f4f4f8;
+  /* Elevação por LUMINÂNCIA: superfície sobe = fica mais clara (guia dark mode). */
+  --card-2: #1a1a28;
   --muted: #1e1e2b;
-  --muted-foreground: #a3a3b3;
+  --muted-foreground: #9a9aab;
   --border: #262635;
+  --border-subtle: #1d1d29;
   --ring: #a78bfa;
+
+  /* No dark, sombras não lêem — quase nulas; a hierarquia vem da luminância. */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 16px -6px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 16px 48px -16px rgb(0 0 0 / 0.6);
 
   --primary: #a78bfa;
   --primary-foreground: #1a1024;
@@ -56,9 +74,11 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-card-2: var(--card-2);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
   --color-ring: var(--ring);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -127,6 +147,21 @@ body {
     border-color 0.2s ease,
     color 0.2s ease;
 }
+
+/* ----- Elevação (sombras por token, coerentes em light/dark) ----- */
+.shadow-e1 { box-shadow: var(--shadow-sm); }
+.shadow-e2 { box-shadow: var(--shadow-md); }
+.shadow-e3 { box-shadow: var(--shadow-lg); }
+
+/* Faixa de severidade à esquerda de um card/linha (estado em FORMA, não só cor). */
+.stripe-l { box-shadow: inset 3px 0 0 0 var(--stripe, transparent); }
+.stripe-danger { --stripe: var(--danger); }
+.stripe-warning { --stripe: var(--warning); }
+.stripe-success { --stripe: var(--success); }
+.stripe-primary { --stripe: var(--primary); }
+
+/* Números tabulares (colunas de dígitos alinhadas). */
+.tnum { font-variant-numeric: tabular-nums; }
 
 /* ===========================================================================
    Animações do painel gamificado do aluno
