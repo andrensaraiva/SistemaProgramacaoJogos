@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/states";
+import { PageHeader } from "@/components/ui/page-header";
 import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 
@@ -18,8 +21,8 @@ const STATUS_LABEL: Record<string, string> = {
   falta: "Falta",
 };
 const STATUS_STYLE: Record<string, string> = {
-  presente: "bg-green-500/15 text-green-700 dark:text-green-300",
-  atraso: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  presente: "bg-success/15 text-success",
+  atraso: "bg-warning/15 text-warning",
   falta: "bg-danger/15 text-danger",
   "—": "bg-muted text-muted-foreground",
 };
@@ -122,35 +125,33 @@ export default async function MinhaFrequenciaPage({
         ]}
       />
 
-      <div>
-        <h1 className="text-3xl font-bold">Minha frequência</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Turma {turma.name}. Acompanhe suas presenças, faltas e atrasos por
-          unidade curricular.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow={turma.name}
+        title="Minha frequência"
+        description="Acompanhe suas presenças, faltas e atrasos por unidade curricular."
+      />
 
       {!classUnits?.length && (
-        <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
-          Esta turma ainda não tem unidades curriculares com frequência.
-        </div>
+        <EmptyState
+          title="Sem frequência ainda"
+          description="Esta turma ainda não tem unidades curriculares com frequência."
+          icon="📋"
+        />
       )}
 
       {classUnits?.length && !temAlgo ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
-          Nenhuma aula registrada ainda. Quando o professor lançar a frequência,
-          ela aparece aqui.
-        </div>
+        <EmptyState
+          title="Nenhuma aula registrada"
+          description="Quando o professor lançar a frequência, ela aparece aqui."
+          icon="📋"
+        />
       ) : null}
 
       <div className="flex flex-col gap-5">
         {blocos
           .filter((b) => b.sessions.length > 0)
           .map((b) => (
-            <section
-              key={b.classUnitId}
-              className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5"
-            >
+            <Card key={b.classUnitId} className="flex flex-col gap-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold">{b.title}</h2>
@@ -163,12 +164,10 @@ export default async function MinhaFrequenciaPage({
                 {b.percentual != null && (
                   <div
                     className={`rounded-xl px-4 py-2 text-center ${
-                      b.percentual >= 75
-                        ? "bg-green-500/10 text-green-700 dark:text-green-300"
-                        : "bg-danger/10 text-danger"
+                      b.percentual >= 75 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
                     }`}
                   >
-                    <div className="text-2xl font-bold leading-none">
+                    <div className="text-2xl font-bold leading-none tnum">
                       {b.percentual}%
                     </div>
                     <div className="text-[10px] uppercase tracking-wide">
@@ -225,7 +224,7 @@ export default async function MinhaFrequenciaPage({
                   mínima exigida.
                 </p>
               )}
-            </section>
+            </Card>
           ))}
       </div>
     </div>
@@ -242,13 +241,13 @@ function Resumo({
   tone: "green" | "amber" | "red";
 }) {
   const toneCls = {
-    green: "text-green-700 dark:text-green-300",
-    amber: "text-amber-700 dark:text-amber-300",
+    green: "text-success",
+    amber: "text-warning",
     red: "text-danger",
   }[tone];
   return (
     <div className="rounded-xl border border-border bg-background/40 p-3">
-      <div className={`text-2xl font-bold ${toneCls}`}>{value}</div>
+      <div className={`text-2xl font-bold tnum ${toneCls}`}>{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -108,12 +109,10 @@ export default async function MinhasNotasPage({
                   const s = latest.get(`${lista.id}:${ex.id}`);
                   return (
                     <div key={ex.id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/40 px-3 py-2 text-sm">
-                      <span>{ex.title}</span>
-                      <div className="flex items-center gap-2">
+                      <span className="min-w-0 truncate">{ex.title}</span>
+                      <div className="flex shrink-0 items-center gap-2">
                         {s?.manual_grade != null && (
-                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
-                            Nota {s.manual_grade}
-                          </span>
+                          <Badge tone="primary">Nota {s.manual_grade}</Badge>
                         )}
                         <StatusBadge status={s?.status ?? "pendente"} />
                       </div>
