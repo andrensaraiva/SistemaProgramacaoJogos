@@ -1,10 +1,12 @@
 import Link from "next/link";
 
 import { UpcomingDeadlines, type DeadlineItem } from "@/components/upcoming-deadlines";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import type { TeacherDashboard } from "@/lib/dashboard/teacher";
 import type { FeedbackSummary } from "@/lib/feedback/aggregate";
 import type { ChecklistDia } from "@/lib/teacher/checklist";
@@ -30,6 +32,29 @@ function markerMeta(marker: string) {
   return MARKER_META[marker] ?? { label: marker, emoji: "📅" };
 }
 
+/** Data de hoje por extenso, ex.: "Segunda, 30 de junho". */
+function hojeFormatado(): string {
+  const s = new Date().toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Ícones dos KPIs (18px, stroke currentColor). Herdam a cor do tom via StatCard.
+const sv = (d: string) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+const ICON = {
+  turma: sv("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"),
+  alunos: sv("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"),
+  corrigir: sv("M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"),
+  risco: sv("M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"),
+};
+
 function dataCurta(iso: string): string {
   return new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -41,9 +66,12 @@ function diasAte(iso: string): number {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 }
 
+function diasDesde(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+}
+
 function tempoRelativo(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const dias = Math.floor(diffMs / 86_400_000);
+  const dias = diasDesde(iso);
   if (dias <= 0) return "hoje";
   if (dias === 1) return "ontem";
   return `há ${dias} dias`;
@@ -88,27 +116,30 @@ export function PainelProfessor({
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <PageHeader
-        title={`Olá, ${nome}!`}
+        eyebrow={hojeFormatado()}
+        title={`Olá, ${nome.split(" ")[0]} 👋`}
         description="Seu dia de ensino: o que corrigir, as aulas de hoje e quem precisa de atenção."
       />
 
-      {/* Métricas do professor (sem XP/nível/conquistas) */}
+      {/* Métricas do professor (sem XP/nível/conquistas). Ícones + tom por estado. */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Turmas" value={dash.turmasCount} tone="primary" />
-        <StatCard title="Alunos" value={dash.alunosCount} />
+        <StatCard title="Turmas" value={dash.turmasCount} tone="primary" icon={ICON.turma} />
+        <StatCard title="Alunos" value={dash.alunosCount} icon={ICON.alunos} />
         <StatCard
           title="A corrigir"
           value={dash.aCorrigirCount}
-          tone={dash.aCorrigirCount ? "warning" : "default"}
-          hint="entregas aguardando nota"
+          tone={dash.aCorrigirCount ? "warning" : "success"}
+          hint={dash.aCorrigirCount ? "entregas aguardando nota" : "tudo corrigido"}
+          icon={ICON.corrigir}
         />
         <StatCard
           title="Em risco"
           value={dash.emRiscoCount}
-          tone={dash.emRiscoCount ? "danger" : "default"}
-          hint="recuperação ou reprovação"
+          tone={dash.emRiscoCount ? "danger" : "success"}
+          hint={dash.emRiscoCount ? "recuperação ou reprovação" : "ninguém em risco"}
+          icon={ICON.risco}
         />
       </div>
 
@@ -143,34 +174,55 @@ export function PainelProfessor({
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* A corrigir */}
+        {/* A corrigir — cada entrega é uma ação; itens antigos ganham stripe */}
         <Card>
           <CardHeader
             title="A corrigir"
-            description="Entregas aguardando sua nota. Clique para corrigir."
+            description="Entregas aguardando sua nota."
+            action={
+              dash.aCorrigir.length > 0 ? (
+                <Badge tone="warning" dot>
+                  {dash.aCorrigirCount}
+                </Badge>
+              ) : undefined
+            }
           />
           {dash.aCorrigir.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nada pendente de correção. 🎉</p>
+            <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
+              <span className="text-xl">✅</span> Nada pendente de correção. Bom trabalho!
+            </div>
           ) : (
-            <ul className="divide-y divide-border">
-              {dash.aCorrigir.map((c) => (
-                <li key={c.submissionId}>
-                  <Link
-                    href={c.href}
-                    className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-primary"
-                  >
-                    <span className="min-w-0">
-                      <span className="font-medium">{c.aluno}</span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {c.exercicio} · {c.turma} · {c.lista}
+            <ul className="flex flex-col gap-2">
+              {dash.aCorrigir.map((c) => {
+                const urgente = diasDesde(c.enviadaEm) >= 3;
+                return (
+                  <li key={c.submissionId}>
+                    <Link
+                      href={c.href}
+                      className={`group flex items-center gap-3 rounded-xl border p-2.5 transition-all hover:-translate-y-0.5 hover:shadow-e2 ${
+                        urgente ? "stripe-l stripe-danger border-danger/25 bg-danger/5" : "border-border bg-background/40 hover:border-primary/40"
+                      }`}
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/12 text-sm font-semibold text-primary">
+                        {c.aluno.charAt(0).toUpperCase()}
                       </span>
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {tempoRelativo(c.enviadaEm)}
-                    </span>
-                  </Link>
-                </li>
-              ))}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium group-hover:text-primary">{c.aluno}</span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {c.exercicio} · {c.turma}
+                        </span>
+                      </span>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                          urgente ? "bg-danger/15 text-danger" : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {tempoRelativo(c.enviadaEm)}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
@@ -238,47 +290,40 @@ export function PainelProfessor({
 
       {/* Alunos em risco */}
       {dash.emRisco.length > 0 && (
-        <Card>
+        <Card tone="danger">
           <CardHeader
             title="Alunos em risco"
             description="Recuperação ou reprovação nas suas turmas — vale acompanhar."
+            action={<Badge tone="danger" dot>{dash.emRiscoCount}</Badge>}
           />
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted-foreground">
-                  <th className="py-1">Aluno</th>
-                  <th>Turma</th>
-                  <th>UC</th>
-                  <th className="text-center">Média</th>
-                  <th className="text-center">Freq.</th>
-                  <th className="text-center">Situação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dash.emRisco.map((r, i) => (
-                  <tr key={`${r.aluno}-${i}`} className="border-t border-border">
-                    <td className="py-1.5">{r.aluno}</td>
-                    <td>{r.turma}</td>
-                    <td>{r.uc}</td>
-                    <td className="text-center">{r.media != null ? r.media.toFixed(1) : "—"}</td>
-                    <td className={`text-center ${r.freqPct != null && r.freqPct < 75 ? "text-danger font-medium" : ""}`}>
-                      {r.freqPct != null ? `${r.freqPct}%` : "—"}
-                    </td>
-                    <td className="text-center">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs ${
-                          r.situacao === "reprovado" ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning"
-                        }`}
-                      >
-                        {SIT_LABEL[r.situacao] ?? r.situacao}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <THead>
+              <TH>Aluno</TH>
+              <TH>Turma</TH>
+              <TH>UC</TH>
+              <TH className="text-center">Média</TH>
+              <TH className="text-center">Freq.</TH>
+              <TH className="text-center">Situação</TH>
+            </THead>
+            <TBody>
+              {dash.emRisco.map((r, i) => (
+                <TR key={`${r.aluno}-${i}`}>
+                  <TD className="font-medium">{r.aluno}</TD>
+                  <TD className="text-muted-foreground">{r.turma}</TD>
+                  <TD className="text-muted-foreground">{r.uc}</TD>
+                  <TD className="text-center tnum">{r.media != null ? r.media.toFixed(1) : "—"}</TD>
+                  <TD className={`text-center tnum ${r.freqPct != null && r.freqPct < 75 ? "font-medium text-danger" : ""}`}>
+                    {r.freqPct != null ? `${r.freqPct}%` : "—"}
+                  </TD>
+                  <TD className="text-center">
+                    <Badge tone={r.situacao === "reprovado" ? "danger" : "warning"} dot>
+                      {SIT_LABEL[r.situacao] ?? r.situacao}
+                    </Badge>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         </Card>
       )}
 

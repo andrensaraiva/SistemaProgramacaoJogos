@@ -1,9 +1,11 @@
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { requireCapability } from "@/lib/auth/guard";
 import { getCoordinatorDashboard } from "@/lib/dashboard/coordinator";
 
@@ -14,12 +16,25 @@ const SIT_LABEL: Record<string, string> = {
 };
 
 function SimNao({ ok }: { ok: boolean }) {
-  return ok ? (
-    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">✓ feito</span>
-  ) : (
-    <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning">pendente</span>
+  return (
+    <Badge tone={ok ? "success" : "warning"} dot>
+      {ok ? "feito" : "pendente"}
+    </Badge>
   );
 }
+
+// Ícones dos KPIs (herdam a cor do tom via StatCard).
+const csv = (d: string) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+const CICON = {
+  turma: csv("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"),
+  alunos: csv("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"),
+  corrigir: csv("M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"),
+  risco: csv("M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"),
+};
 
 export default async function CoordenadorPage() {
   await requireCapability("supervisionar_turmas");
@@ -28,8 +43,9 @@ export default async function CoordenadorPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Painel de coordenação"
-        description="Supervisão das turmas: operação dos professores, alunos em risco e gestão."
+        eyebrow="Coordenação"
+        title="Supervisão das turmas"
+        description="Operação dos professores, salas, alunos em risco e a percepção dos alunos por UC."
         actions={
           <>
             <Link href="/coordenador/pesquisas">
@@ -43,19 +59,21 @@ export default async function CoordenadorPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Turmas" value={dash.turmasCount} tone="primary" />
-        <StatCard title="Alunos" value={dash.alunosCount} />
+        <StatCard title="Turmas" value={dash.turmasCount} tone="primary" icon={CICON.turma} />
+        <StatCard title="Alunos" value={dash.alunosCount} icon={CICON.alunos} />
         <StatCard
           title="A corrigir"
           value={dash.aCorrigirCount}
-          tone={dash.aCorrigirCount ? "warning" : "default"}
+          tone={dash.aCorrigirCount ? "warning" : "success"}
           hint="entregas aguardando nota"
+          icon={CICON.corrigir}
         />
         <StatCard
           title="Em risco"
           value={dash.emRiscoCount}
-          tone={dash.emRiscoCount ? "danger" : "default"}
+          tone={dash.emRiscoCount ? "danger" : "success"}
           hint="recuperação ou reprovação"
+          icon={CICON.risco}
         />
       </div>
 
@@ -68,42 +86,36 @@ export default async function CoordenadorPage() {
         {dash.professores.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum professor com turma no momento.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted-foreground">
-                  <th className="py-1">Professor</th>
-                  <th className="text-center">Turmas</th>
-                  <th className="text-center">UCs sem plano</th>
-                  <th className="text-center">Execução</th>
-                  <th className="text-center">Frequência</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dash.professores.map((p) => (
-                  <tr key={p.id} className="border-t border-border">
-                    <td className="py-1.5">{p.nome}</td>
-                    <td className="text-center">{p.turmas}</td>
-                    <td className={`text-center ${p.semPlano > 0 ? "text-warning font-medium" : ""}`}>
-                      {p.semPlano}
-                    </td>
-                    <td className="text-center">
-                      {p.execucaoPct != null ? `${p.execucaoPct}%` : "—"}
-                    </td>
-                    <td className="text-center">
-                      {p.semFrequencia ? (
-                        <span className="rounded-full bg-danger/15 px-2 py-0.5 text-xs text-danger">
-                          sem registro
-                        </span>
-                      ) : (
-                        <span className="text-success">✓</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <THead>
+              <TH>Professor</TH>
+              <TH className="text-center">Turmas</TH>
+              <TH className="text-center">UCs sem plano</TH>
+              <TH className="text-center">Execução</TH>
+              <TH className="text-center">Frequência</TH>
+            </THead>
+            <TBody>
+              {dash.professores.map((p) => (
+                <TR key={p.id}>
+                  <TD className="font-medium">{p.nome}</TD>
+                  <TD className="text-center tnum">{p.turmas}</TD>
+                  <TD className={`text-center tnum ${p.semPlano > 0 ? "font-medium text-warning" : "text-muted-foreground"}`}>
+                    {p.semPlano}
+                  </TD>
+                  <TD className="text-center tnum text-muted-foreground">
+                    {p.execucaoPct != null ? `${p.execucaoPct}%` : "—"}
+                  </TD>
+                  <TD className="text-center">
+                    {p.semFrequencia ? (
+                      <Badge tone="danger" dot>sem registro</Badge>
+                    ) : (
+                      <Badge tone="success" dot>ok</Badge>
+                    )}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
       </Card>
 
@@ -116,30 +128,22 @@ export default async function CoordenadorPage() {
         {dash.checklistHoje.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum professor com turma no momento.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted-foreground">
-                  <th className="py-1">Professor</th>
-                  <th className="text-center">Chamada</th>
-                  <th className="text-center">Plano de aula</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dash.checklistHoje.map((c) => (
-                  <tr key={c.id} className="border-t border-border">
-                    <td className="py-1.5">{c.nome}</td>
-                    <td className="text-center">
-                      <SimNao ok={c.presencaFeita} />
-                    </td>
-                    <td className="text-center">
-                      <SimNao ok={c.planoRegistrado} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <THead>
+              <TH>Professor</TH>
+              <TH className="text-center">Chamada</TH>
+              <TH className="text-center">Plano de aula</TH>
+            </THead>
+            <TBody>
+              {dash.checklistHoje.map((c) => (
+                <TR key={c.id}>
+                  <TD className="font-medium">{c.nome}</TD>
+                  <TD className="text-center"><SimNao ok={c.presencaFeita} /></TD>
+                  <TD className="text-center"><SimNao ok={c.planoRegistrado} /></TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
       </Card>
 
@@ -171,50 +175,45 @@ export default async function CoordenadorPage() {
       </Card>
 
       {/* Alunos em risco */}
-      <Card>
+      <Card tone={dash.emRisco.length > 0 ? "danger" : undefined}>
         <CardHeader
           title="Alunos em risco"
           description="Recuperação ou reprovação por UC — aja para evitar evasão."
+          action={dash.emRisco.length > 0 ? <Badge tone="danger" dot>{dash.emRiscoCount}</Badge> : undefined}
         />
         {dash.emRisco.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum aluno em risco no momento. 🎉</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted-foreground">
-                  <th className="py-1">Aluno</th>
-                  <th>Turma</th>
-                  <th>UC</th>
-                  <th className="text-center">Média</th>
-                  <th className="text-center">Freq.</th>
-                  <th className="text-center">Situação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dash.emRisco.map((r, i) => (
-                  <tr key={`${r.aluno}-${i}`} className="border-t border-border">
-                    <td className="py-1.5">{r.aluno}</td>
-                    <td>{r.turma}</td>
-                    <td>{r.uc}</td>
-                    <td className="text-center">{r.media != null ? r.media.toFixed(1) : "—"}</td>
-                    <td className={`text-center ${r.freqPct != null && r.freqPct < 75 ? "text-danger font-medium" : ""}`}>
-                      {r.freqPct != null ? `${r.freqPct}%` : "—"}
-                    </td>
-                    <td className="text-center">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs ${
-                          r.situacao === "reprovado" ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning"
-                        }`}
-                      >
-                        {SIT_LABEL[r.situacao] ?? r.situacao}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
+            <span className="text-xl">🎉</span> Nenhum aluno em risco no momento.
           </div>
+        ) : (
+          <Table>
+            <THead>
+              <TH>Aluno</TH>
+              <TH>Turma</TH>
+              <TH>UC</TH>
+              <TH className="text-center">Média</TH>
+              <TH className="text-center">Freq.</TH>
+              <TH className="text-center">Situação</TH>
+            </THead>
+            <TBody>
+              {dash.emRisco.map((r, i) => (
+                <TR key={`${r.aluno}-${i}`}>
+                  <TD className="font-medium">{r.aluno}</TD>
+                  <TD className="text-muted-foreground">{r.turma}</TD>
+                  <TD className="text-muted-foreground">{r.uc}</TD>
+                  <TD className="text-center tnum">{r.media != null ? r.media.toFixed(1) : "—"}</TD>
+                  <TD className={`text-center tnum ${r.freqPct != null && r.freqPct < 75 ? "font-medium text-danger" : ""}`}>
+                    {r.freqPct != null ? `${r.freqPct}%` : "—"}
+                  </TD>
+                  <TD className="text-center">
+                    <Badge tone={r.situacao === "reprovado" ? "danger" : "warning"} dot>
+                      {SIT_LABEL[r.situacao] ?? r.situacao}
+                    </Badge>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
       </Card>
 
