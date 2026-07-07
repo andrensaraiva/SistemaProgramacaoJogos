@@ -9,7 +9,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import type { TeacherDashboard } from "@/lib/dashboard/teacher";
 import type { FeedbackSummary } from "@/lib/feedback/aggregate";
-import type { ChecklistDia } from "@/lib/teacher/checklist";
+import type { TurmaChecklist } from "@/lib/teacher/checklist";
 
 import { ChecklistDiario } from "./_checklist";
 
@@ -93,7 +93,7 @@ export function PainelProfessor({
   dash: TeacherDashboard;
   deadlines: DeadlineItem[];
   feedback: FeedbackSummary;
-  checklist: ChecklistDia;
+  checklist: TurmaChecklist[];
 }) {
   // Professor sem turmas: onboarding direto.
   if (dash.turmasCount === 0) {
@@ -143,8 +143,8 @@ export function PainelProfessor({
         />
       </div>
 
-      {/* Checklist diário: chamada + plano de aula */}
-      <ChecklistDiario checklist={checklist} temAulaHoje={dash.aulasHoje.length > 0} />
+      {/* Checklist diário por turma: chamada + plano de aula */}
+      <ChecklistDiario turmas={checklist} />
 
       {/* Próximos eventos do calendário (feriado, conselho, etc.) */}
       {dash.eventosProximos.length > 0 && (

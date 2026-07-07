@@ -162,7 +162,8 @@ function hojeISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Estado do checklist diário (chamada/plano) de cada professor HOJE. */
+/** Estado do checklist diário HOJE por professor: "feito" = TODAS as turmas do
+ *  dia marcadas (o checklist agora é por turma). Sem linhas = ainda não marcou. */
 async function calcularChecklistProfessores(
   admin: ReturnType<typeof createAdminClient>,
   professorIds: string[],
@@ -174,16 +175,24 @@ async function calcularChecklistProfessores(
     .select("teacher_id, presenca_feita, plano_registrado")
     .eq("check_date", hojeISO())
     .in("teacher_id", professorIds);
-  const porId = new Map(
-    (data ?? []).map((c) => [c.teacher_id, c]),
-  );
+
+  // Agrega por professor: presença/plano só contam como "feito" se TODAS as
+  // linhas (turmas) do dia estão marcadas. Sem linha = false.
+  const agg = new Map<string, { presenca: boolean; plano: boolean; temLinha: boolean }>();
+  for (const c of data ?? []) {
+    const a = agg.get(c.teacher_id) ?? { presenca: true, plano: true, temLinha: false };
+    a.presenca = a.presenca && c.presenca_feita;
+    a.plano = a.plano && c.plano_registrado;
+    a.temLinha = true;
+    agg.set(c.teacher_id, a);
+  }
   return professorIds.map((id) => {
-    const c = porId.get(id);
+    const a = agg.get(id);
     return {
       id,
       nome: nomePorId.get(id) ?? "Professor",
-      presencaFeita: c?.presenca_feita ?? false,
-      planoRegistrado: c?.plano_registrado ?? false,
+      presencaFeita: a?.temLinha ? a.presenca : false,
+      planoRegistrado: a?.temLinha ? a.plano : false,
     };
   });
 }
