@@ -60,10 +60,10 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 const STATUS_ICON: Record<string, { icon: string; className: string }> = {
-  aprovado: { icon: "OK", className: "text-green-600 font-bold" },
-  reprovado: { icon: "X", className: "text-red-500 font-bold" },
-  rodando: { icon: "...", className: "text-yellow-500" },
-  erro: { icon: "!", className: "text-orange-500" },
+  aprovado: { icon: "OK", className: "text-success font-bold" },
+  reprovado: { icon: "X", className: "text-danger font-bold" },
+  rodando: { icon: "...", className: "text-warning" },
+  erro: { icon: "!", className: "text-warning" },
   entregue: { icon: "↑", className: "text-primary font-bold" },
 };
 
@@ -235,11 +235,11 @@ export default async function ListaProgressoPage({ params }: { params: Params })
           <>
             <SuspicionSummary alerts={alerts} />
 
-            <div className="overflow-x-auto rounded-xl border border-border">
+            <div className="overflow-x-auto rounded-2xl border border-border shadow-e1">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-muted/40">
-                    <th className="px-4 py-3 text-left font-medium">Aluno</th>
+                  <tr className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-4 py-3 text-left font-semibold">Aluno</th>
                     {exercises.map((exercise) => (
                       <th
                         key={exercise.id}
@@ -658,16 +658,16 @@ function Legend() {
   return (
     <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
       <span>
-        <span className="font-bold text-green-600">OK</span> Aprovado
+        <span className="font-bold text-success">OK</span> Aprovado
       </span>
       <span>
-        <span className="font-bold text-red-500">X</span> Reprovado
+        <span className="font-bold text-danger">X</span> Reprovado
       </span>
       <span>
-        <span className="text-yellow-500">...</span> Rodando
+        <span className="text-warning">...</span> Rodando
       </span>
       <span>
-        <span className="text-orange-500">!</span> Erro
+        <span className="text-warning">!</span> Erro
       </span>
       <span>
         <span className="rounded-full bg-warning/20 px-1.5 py-0.5 text-[10px] font-semibold text-warning">

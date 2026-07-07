@@ -34,8 +34,8 @@ const NEXT: Record<"none" | AttendanceStatus, AttendanceStatus> = {
 
 const STYLE: Record<"none" | AttendanceStatus, string> = {
   none: "bg-background text-muted-foreground hover:bg-muted",
-  presente: "bg-green-500/20 text-green-700 dark:text-green-300",
-  atraso: "bg-amber-500/20 text-amber-700 dark:text-amber-300",
+  presente: "bg-success/20 text-success",
+  atraso: "bg-warning/20 text-warning",
   falta: "bg-danger/20 text-danger",
 };
 
@@ -288,10 +288,10 @@ export function FrequenciaGrid({
 
       <div className="flex gap-4 text-xs text-muted-foreground">
         <span>
-          <span className="font-semibold text-green-600">P</span> Presente
+          <span className="font-semibold text-success">P</span> Presente
         </span>
         <span>
-          <span className="font-semibold text-amber-600">A</span> Atraso
+          <span className="font-semibold text-warning">A</span> Atraso
         </span>
         <span>
           <span className="font-semibold text-danger">F</span> Falta
