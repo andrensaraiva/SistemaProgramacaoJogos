@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Button } from "@/components/ui/button";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getProfile } from "@/lib/auth/dal";
 import { getAcessoTurma } from "@/lib/turmas/access";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -209,30 +210,28 @@ export default async function DuelosQuizPage({ params }: { params: Params }) {
       {(ratings ?? []).length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">Ranking da UC (duelos)</h2>
-          <div className="overflow-hidden rounded-2xl border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="px-4 py-2 text-left font-medium">#</th>
-                  <th className="px-4 py-2 text-left font-medium">Aluno</th>
-                  <th className="px-4 py-2 text-center font-medium">ELO</th>
-                  <th className="px-4 py-2 text-center font-medium">V/D</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(ratings ?? []).map((r, i) => (
-                  <tr key={r.student_id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
-                    <td className="px-4 py-2 font-semibold">{i + 1}</td>
-                    <td className="px-4 py-2">{rankNames.get(r.student_id) ?? "Aluno"}</td>
-                    <td className="px-4 py-2 text-center font-semibold">{r.rating}</td>
-                    <td className="px-4 py-2 text-center text-muted-foreground">
-                      {r.wins}/{r.losses}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <THead>
+              <TH className="w-12 text-center">#</TH>
+              <TH>Aluno</TH>
+              <TH className="text-center">ELO</TH>
+              <TH className="text-center">V/D</TH>
+            </THead>
+            <TBody>
+              {(ratings ?? []).map((r, i) => (
+                <TR key={r.student_id}>
+                  <TD className="text-center text-lg font-semibold">
+                    {["🥇", "🥈", "🥉"][i] ?? <span className="text-sm text-muted-foreground">{i + 1}</span>}
+                  </TD>
+                  <TD className="font-medium">{rankNames.get(r.student_id) ?? "Aluno"}</TD>
+                  <TD className="text-center tnum font-semibold">{r.rating}</TD>
+                  <TD className="text-center tnum text-muted-foreground">
+                    {r.wins}/{r.losses}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         </section>
       )}
     </div>

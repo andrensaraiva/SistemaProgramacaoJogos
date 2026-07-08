@@ -5,6 +5,7 @@ import { BarChart, type BarItem } from "@/components/ui/charts";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/states";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getProfile } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import { getSaepDashboard, type TagStat } from "@/lib/saep/dashboard";
@@ -176,44 +177,36 @@ export default async function SaepDashboardPage({ params }: { params: Params }) 
         <p className="mb-3 text-xs text-muted-foreground">
           Acerto nos simulados SAEP. A nota do SAP prático fica na própria atividade.
         </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="px-3 py-2 text-left font-medium">Aluno</th>
-                <th className="px-3 py-2 text-center font-medium">Envios</th>
-                <th className="px-3 py-2 text-center font-medium">Respondidas</th>
-                <th className="px-3 py-2 text-center font-medium">Acerto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.students.map((s, i) => (
-                <tr key={s.id} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
-                  <td className="px-3 py-2">{s.name}</td>
-                  <td className="px-3 py-2 text-center text-muted-foreground">{s.attempts}</td>
-                  <td className="px-3 py-2 text-center text-muted-foreground">{s.answered}</td>
-                  <td className="px-3 py-2 text-center">
-                    {s.pct != null ? (
-                      <span
-                        className={
-                          s.pct < 50
-                            ? "font-semibold text-danger"
-                            : s.pct < 70
-                              ? "font-semibold text-warning"
-                              : "font-semibold text-success"
-                        }
-                      >
-                        {s.pct}%
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <THead>
+            <TH>Aluno</TH>
+            <TH className="text-center">Envios</TH>
+            <TH className="text-center">Respondidas</TH>
+            <TH className="text-center">Acerto</TH>
+          </THead>
+          <TBody>
+            {stats.students.map((s) => (
+              <TR key={s.id}>
+                <TD className="font-medium">{s.name}</TD>
+                <TD className="text-center tnum text-muted-foreground">{s.attempts}</TD>
+                <TD className="text-center tnum text-muted-foreground">{s.answered}</TD>
+                <TD className="text-center tnum">
+                  {s.pct != null ? (
+                    <span
+                      className={`font-semibold ${
+                        s.pct < 50 ? "text-danger" : s.pct < 70 ? "text-warning" : "text-success"
+                      }`}
+                    >
+                      {s.pct}%
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
       </section>
     </div>
   );
