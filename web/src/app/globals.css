@@ -4,69 +4,89 @@
    A classe é aplicada por um script anti-flash no layout + ThemeToggle. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ===========================================================================
+   Celeste Academy — Aurora Minimal (design tokens)
+   Light = experiência do instrutor (calma, premium). Dark = experiência do
+   aluno (imersiva, gamificada). Todos os componentes consomem estes tokens.
+   =========================================================================== */
 :root {
-  --background: #f6f6fb;
-  --foreground: #0a0a0f;
+  --background: #f7f2ff;        /* lavanda quase branca */
+  --foreground: #17112b;        /* navy/roxo profundo (texto) */
   --card: #ffffff;
-  --card-foreground: #0a0a0f;
-  /* Superfície elevada (card sobre card, hover, header sticky). No light é um
-     branco levemente afastado do fundo; no dark sobe em luminância (sem sombra). */
-  --card-2: #fbfbff;
-  --muted: #f1f1f6;
-  --muted-foreground: #64646f;
-  --border: #e6e6ee;
+  --card-foreground: #17112b;
+  /* Superfície elevada (card sobre card, hover, header sticky). Lavanda suave. */
+  --card-2: #f1e8ff;
+  --muted: #f1e8ff;             /* superfície lavanda suave */
+  --muted-foreground: #6f6684;
+  --border: #e5dcf3;
   /* Borda mais sutil pra divisórias internas. */
-  --border-subtle: #eeeef4;
-  --ring: #7c3aed;
+  --border-subtle: #efe9fa;
+  --ring: #7b4dff;
 
-  /* Sombras (light): elevação real. No dark viram quase nulas (usa luminância). */
-  --shadow-sm: 0 1px 2px rgb(10 10 20 / 0.04), 0 1px 3px rgb(10 10 20 / 0.06);
-  --shadow-md: 0 2px 6px rgb(10 10 20 / 0.06), 0 8px 24px -8px rgb(10 10 20 / 0.10);
-  --shadow-lg: 0 12px 40px -12px rgb(10 10 20 / 0.18);
+  /* Sombras (light): elevação suave com tinta roxa. */
+  --shadow-sm: 0 1px 2px rgb(40 25 80 / 0.05), 0 1px 3px rgb(40 25 80 / 0.06);
+  --shadow-md: 0 10px 30px -8px rgb(40 25 80 / 0.10), 0 2px 6px rgb(40 25 80 / 0.05);
+  --shadow-lg: 0 20px 50px -16px rgb(40 25 80 / 0.18);
 
-  --primary: #7c3aed;          /* roxo vibrante */
+  --primary: #7b4dff;          /* roxo celestial */
   --primary-foreground: #ffffff;
-  --accent: #06b6d4;           /* ciano */
-  --accent-foreground: #04222a;
-  --success: #16a34a;          /* verde — aprovado/presente */
-  --danger: #e11d48;           /* rosa-vermelho — reprovado/falta */
-  --warning: #f59e0b;          /* amarelo — atraso/suspeita */
+  --accent: #6cb6ff;           /* azul aurora */
+  --accent-foreground: #071726;
+  --success: #1fa576;          /* verde (aprofundado p/ contraste como texto) */
+  --danger: #e0546a;           /* coral */
+  --warning: #d6841f;          /* âmbar (aprofundado p/ contraste como texto) */
+
+  /* Ouro celestial — só destaques/recompensas premium. */
+  --gold: #d9a84e;
+  --gold-foreground: #17112b;
+  --gold-soft: #f3d89b;
+
+  /* Marca celestial */
+  --deep-purple: #20133d;
+  --moon-cream: #fff8ea;
 
   /* Gamificação */
-  --xp: #f59e0b;               /* dourado — XP/nível */
-  --xp-2: #fb7185;             /* gradiente XP (fim) */
+  --xp: #d9a84e;               /* dourado — brilho de XP/nível */
+  --xp-2: #b86cff;             /* gradiente XP (meio) */
 
   --radius: 0.85rem;
 }
 
 .dark {
-  --background: #08080f;
-  --foreground: #f4f4f8;
-  --card: #13131e;
-  --card-foreground: #f4f4f8;
-  /* Elevação por LUMINÂNCIA: superfície sobe = fica mais clara (guia dark mode). */
-  --card-2: #1a1a28;
-  --muted: #1e1e2b;
-  --muted-foreground: #9a9aab;
-  --border: #262635;
-  --border-subtle: #1d1d29;
-  --ring: #a78bfa;
+  --background: #100b24;        /* navy profundo */
+  --foreground: #f3f0ff;
+  --card: #17102f;             /* superfície dark */
+  --card-foreground: #f3f0ff;
+  /* Elevação por LUMINÂNCIA: superfície sobe = fica mais clara. */
+  --card-2: #201642;
+  --muted: #201642;
+  --muted-foreground: #a99fc7;
+  --border: #3c2a68;
+  --border-subtle: #2a1f4d;
+  --ring: #b89bff;
 
   /* No dark, sombras não lêem — quase nulas; a hierarquia vem da luminância. */
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-md: 0 4px 16px -6px rgb(0 0 0 / 0.5);
-  --shadow-lg: 0 16px 48px -16px rgb(0 0 0 / 0.6);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 8px 28px -10px rgb(0 0 0 / 0.55);
+  --shadow-lg: 0 20px 56px -18px rgb(0 0 0 / 0.65);
 
-  --primary: #a78bfa;
-  --primary-foreground: #1a1024;
-  --accent: #22d3ee;
-  --accent-foreground: #04222a;
-  --success: #22c55e;
-  --danger: #fb7185;
-  --warning: #fbbf24;
+  --primary: #b89bff;          /* roxo suave (legível no dark) */
+  --primary-foreground: #17112b;
+  --accent: #6cb6ff;           /* azul aurora */
+  --accent-foreground: #071726;
+  --success: #46d69c;
+  --danger: #f5798a;
+  --warning: #f7b15c;
 
-  --xp: #fbbf24;
-  --xp-2: #fb7185;
+  --gold: #e6bd6a;
+  --gold-foreground: #17112b;
+  --gold-soft: #f3d89b;
+
+  --deep-purple: #20133d;
+  --moon-cream: #fff8ea;
+
+  --xp: #f3d89b;               /* dourado claro no dark */
+  --xp-2: #b86cff;
 }
 
 @theme inline {
@@ -87,9 +107,16 @@
   --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-gold-soft: var(--gold-soft);
+  --color-moon-cream: var(--moon-cream);
+  --color-deep-purple: var(--deep-purple);
   --color-xp: var(--xp);
   --color-xp-2: var(--xp-2);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-sora);
+  --font-serif: var(--font-cormorant);
   --font-mono: var(--font-geist-mono);
   --radius-xl: var(--radius);
 }
@@ -122,9 +149,9 @@ body {
   color: transparent;
 }
 
-/* Barra de XP. */
+/* Barra de XP — gradiente Aurora (roxo → lilás → ouro suave). */
 .xp-fill {
-  background: linear-gradient(90deg, var(--xp), var(--xp-2));
+  background: linear-gradient(90deg, #7b4dff 0%, #b86cff 50%, #f3d89b 100%);
 }
 
 /* Skeleton de carregamento (shimmer). */

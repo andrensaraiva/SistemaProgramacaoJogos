@@ -2,7 +2,7 @@
 
 import { forwardRef, type ButtonHTMLAttributes } from "react";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "gold";
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -17,6 +17,9 @@ const styles: Record<Variant, string> = {
     "bg-transparent text-foreground hover:bg-muted disabled:opacity-50",
   danger:
     "bg-danger text-white hover:opacity-90 disabled:opacity-50",
+  // Ouro celestial — apenas ações especiais, recompensas ou destaques premium.
+  gold:
+    "bg-gold text-gold-foreground hover:opacity-90 disabled:opacity-50",
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
@@ -26,7 +29,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
   return (
     <button
       ref={ref}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${styles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${styles[variant]} ${className}`}
       {...rest}
     />
   );

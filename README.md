@@ -87,6 +87,7 @@ Só 6 docs, um por assunto:
 - [**SETUP**](docs/SETUP.md) — setup do zero + Supabase CLI + fluxo de teste
 - [**DEPLOY**](docs/DEPLOY.md) — Vercel + Piston na Oracle Cloud
 - [**ALUNO_DISCORD**](docs/ALUNO_DISCORD.md) — spec/roadmap ativo da experiência do aluno
+- [**UI_AURORA_MINIMAL**](docs/UI_AURORA_MINIMAL.md) — design system do redesign visual (tokens, fontes, estágios)
 - [**ARDUINO_PLANO**](docs/ARDUINO_PLANO.md) — spec futura (Arduino)
 
 Padrões de contribuição (RLS, migrations, commits) em [CONTRIBUTING.md](CONTRIBUTING.md).
