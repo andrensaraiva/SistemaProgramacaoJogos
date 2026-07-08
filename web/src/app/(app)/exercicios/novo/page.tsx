@@ -4,15 +4,19 @@ import { requireCapability } from "@/lib/auth/guard";
 import { getEnabledLanguages } from "@/lib/exercises/languages";
 import { ferramentasHabilitadas } from "@/lib/canvas/tools";
 import { getInstitutionSettings } from "@/lib/reports/settings";
+import { getUcOptions } from "@/lib/curriculum/units";
+import { createClient } from "@/lib/supabase/server";
 
 import { NovoExercicioForm } from "./_form";
 
 export default async function NovoExercicioPage() {
   await requireCapability("gerenciar_curso");
 
-  const [langs, settings] = await Promise.all([
+  const supabase = await createClient();
+  const [langs, settings, ucOptions] = await Promise.all([
     getEnabledLanguages(),
     getInstitutionSettings(),
+    getUcOptions(supabase),
   ]);
   const creativeTools = ferramentasHabilitadas(settings.tools).map((t) => ({
     kind: t.kind,
@@ -36,6 +40,7 @@ export default async function NovoExercicioPage() {
       <NovoExercicioForm
         languages={langs.map((l) => ({ id: l.id, label: l.label }))}
         creativeTools={creativeTools}
+        ucOptions={ucOptions.map((u) => ({ id: u.id, label: u.label }))}
       />
     </div>
   );

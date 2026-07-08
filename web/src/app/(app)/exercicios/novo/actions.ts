@@ -27,6 +27,8 @@ const NovoSchema = z.object({
   difficulty: z.enum(["facil", "medio", "dificil", "desafio"]),
   xp_reward: z.coerce.number().int().min(0).max(200),
   is_public: z.coerce.boolean().default(true),
+  is_exam_suitable: z.coerce.boolean().default(false),
+  uc_ids: z.array(z.string().uuid()).default([]),
   // código
   language_id: z.string().trim().optional().default(""),
   starter_code: z.string().optional().default(""),
@@ -61,6 +63,8 @@ export async function criarExercicioManual(
     difficulty: formData.get("difficulty"),
     xp_reward: formData.get("xp_reward"),
     is_public: formData.get("is_public") === "on",
+    is_exam_suitable: formData.get("is_exam_suitable") === "on",
+    uc_ids: formData.getAll("uc_ids").filter((v): v is string => typeof v === "string"),
     language_id: formData.get("language_id") ?? "",
     starter_code: formData.get("starter_code") ?? "",
     example: formData.get("example") ?? "",
@@ -113,6 +117,7 @@ export async function criarExercicioManual(
       difficulty: d.difficulty,
       xp_reward: d.xp_reward,
       is_public: d.is_public,
+      is_exam_suitable: d.is_exam_suitable,
       exercise_type: d.exercise_type,
       is_group: d.is_group,
       example: d.example.trim() || null,
@@ -127,6 +132,14 @@ export async function criarExercicioManual(
 
   if (error || !exercise) {
     return { message: error?.message ?? "Não foi possível criar o exercício." };
+  }
+
+  // Catalogação: vincula o exercício às UC(s) escolhidas (N:N). Não bloqueia a
+  // criação se falhar — o professor pode revincular depois.
+  if (d.uc_ids.length > 0) {
+    await admin.from("exercise_units").insert(
+      d.uc_ids.map((uc_id) => ({ exercise_id: exercise.id, uc_id })),
+    );
   }
 
   redirect(`/exercicios/${exercise.id}`);

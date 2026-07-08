@@ -109,6 +109,111 @@ const EXERCISES = [
   },
 ];
 
+// Banco de exercícios CATALOGADOS — de AMBOS os professores, vinculados a UC(s)
+// e com a flag "sugerido para prova". Exercita os filtros do catálogo
+// (curso/UC/dificuldade/prova/autor) e o fluxo "usar em uma turma". `author`
+// "prof" = prof.demo (dono), "prof2" = prof2.demo. `ucs` referencia UCs pelo
+// título (mapeado para curricular_units.id no seedCatalogo).
+const CATALOGO = [
+  {
+    author: "prof2",
+    title: "Catálogo: FizzBuzz",
+    language: "python",
+    difficulty: "facil",
+    xp_reward: 15,
+    exam: false,
+    ucs: ["Codificação de Sistemas de Jogos Digitais"],
+    description:
+      "Leia um inteiro N e imprima de 1 a N, um por linha: `Fizz` para múltiplos de 3, `Buzz` para múltiplos de 5, `FizzBuzz` para múltiplos de ambos, senão o próprio número.",
+    starter_code: "n = int(input())\n# imprima de 1 a n aplicando as regras\n",
+    tests: [
+      { stdin: "5\n", expected_stdout: "1\n2\nFizz\n4\nBuzz\n", is_hidden: false },
+      { stdin: "3\n", expected_stdout: "1\n2\nFizz\n", is_hidden: true },
+    ],
+  },
+  {
+    author: "prof2",
+    title: "Catálogo: Fatorial",
+    language: "csharp",
+    difficulty: "dificil",
+    xp_reward: 30,
+    exam: true,
+    ucs: ["Codificação de Sistemas de Jogos Digitais"],
+    description: "Leia um inteiro N (0 ≤ N ≤ 12) e imprima N! (fatorial de N).",
+    starter_code:
+      "using System;\n\nclass Program\n{\n    static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        // calcule e imprima n!\n    }\n}\n",
+    tests: [
+      { stdin: "5\n", expected_stdout: "120\n", is_hidden: false },
+      { stdin: "0\n", expected_stdout: "1\n", is_hidden: true },
+    ],
+  },
+  {
+    author: "prof2",
+    title: "Catálogo: Contar vogais",
+    language: "python",
+    difficulty: "medio",
+    xp_reward: 20,
+    exam: true,
+    ucs: ["Codificação de Sistemas de Jogos Digitais"],
+    description:
+      "Leia uma linha de texto e imprima a quantidade de vogais (a, e, i, o, u — maiúsculas ou minúsculas).",
+    starter_code: "s = input()\n# conte as vogais e imprima o total\n",
+    tests: [
+      { stdin: "Programacao\n", expected_stdout: "5\n", is_hidden: false },
+      { stdin: "AEIOU\n", expected_stdout: "5\n", is_hidden: true },
+    ],
+  },
+  {
+    author: "prof",
+    title: "Catálogo: Inverter string",
+    language: "csharp",
+    difficulty: "facil",
+    xp_reward: 10,
+    exam: false,
+    ucs: ["Codificação de Sistemas de Jogos Digitais"],
+    description: "Leia uma linha e imprima o texto invertido (de trás para frente).",
+    starter_code:
+      "using System;\n\nclass Program\n{\n    static void Main()\n    {\n        string s = Console.ReadLine();\n        // imprima s invertida\n    }\n}\n",
+    tests: [
+      { stdin: "abc\n", expected_stdout: "cba\n", is_hidden: false },
+      { stdin: "Celeste\n", expected_stdout: "etseleC\n", is_hidden: true },
+    ],
+  },
+  {
+    author: "prof2",
+    title: "Catálogo: Encontrar o bug (soma de N números)",
+    language: "csharp",
+    difficulty: "medio",
+    xp_reward: 20,
+    exam: true,
+    ucs: ["Testes de Jogos Digitais"],
+    description:
+      "O código inicial tenta ler N e depois N números, somando-os — mas tem um bug no laço (estoura o índice). Corrija para que ele leia exatamente N números e imprima a soma.",
+    starter_code:
+      "using System;\n\nclass Program\n{\n    static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int soma = 0;\n        for (int i = 0; i <= n; i++) // bug: <= lê um número a mais\n        {\n            soma += int.Parse(Console.ReadLine());\n        }\n        Console.WriteLine(soma);\n    }\n}\n",
+    tests: [
+      { stdin: "3\n10\n20\n30\n", expected_stdout: "60\n", is_hidden: false },
+      { stdin: "1\n5\n", expected_stdout: "5\n", is_hidden: true },
+    ],
+  },
+  {
+    author: "prof",
+    title: "Catálogo: Média de notas",
+    language: "python",
+    difficulty: "facil",
+    xp_reward: 15,
+    exam: false,
+    ucs: ["Codificação de Sistemas de Jogos Digitais", "Testes de Jogos Digitais"],
+    description:
+      "Leia 3 notas (uma por linha) e imprima a média aritmética com 1 casa decimal.",
+    starter_code: "a = float(input())\nb = float(input())\nc = float(input())\n# imprima a média com 1 casa decimal\n",
+    tests: [
+      { stdin: "6\n7\n8\n", expected_stdout: "7.0\n", is_hidden: false },
+      { stdin: "10\n10\n10\n", expected_stdout: "10.0\n", is_hidden: true },
+    ],
+  },
+];
+
 // Curso técnico real (apenas a FORMAÇÃO TÉCNICA do PPC de Jogos Digitais —
 // ignorando a formação geral básica do ensino médio). Cargas e UCs baseadas no
 // itinerário do Técnico em Desenvolvimento de Sistemas / Jogos Digitais SENAI.
@@ -390,6 +495,10 @@ async function resetDemoData(supabase) {
       ]),
   );
 
+  // Exercícios do catálogo (seedCatalogo). exercise_units/testes/vínculos caem
+  // por cascade ao apagar o exercício. Prefixo "Catálogo:" identifica todos.
+  await must(supabase.from("exercises").delete().like("title", "Catálogo:%"));
+
   const titles = EXERCISES.map((exercise) => exercise.title);
   const { data: demoExercises, error: exercisesError } = await supabase
     .from("exercises")
@@ -543,11 +652,15 @@ async function seedDemo(supabase) {
   if (subError) throw subError;
 
   // ---- Camada curricular: curso + matriz + plano de ensino demo + frequência ----
-  const { classUnitId, matrix, classUnits } = await seedCurriculo(supabase, {
+  const { classUnitId, matrix, classUnits, ucs } = await seedCurriculo(supabase, {
     teacherId,
     classId: classroom.id,
     studentIds,
   });
+
+  // ---- Catálogo compartilhado: exercícios dos 2 professores, vinculados a UCs,
+  //      alguns marcados como prova (precisa da migration 0054 aplicada) ----
+  await seedCatalogo(supabase, { teacherId, teacher2Id, ucs });
 
   // ---- Trabalhos não-código: apresentação + modelo de resposta + grupo ----
   const { groupId } = await seedTrabalhos(supabase, {
@@ -1018,6 +1131,72 @@ async function seedProjetoIntegrador(
   console.log("Projeto integrador demo criado (1 sprint, 5 tarefas).");
 }
 
+// Banco de exercícios catalogado (feature "catálogo compartilhado"): cria os
+// exercícios de CATALOGO — de ambos os professores — com testes, vínculo a UC(s)
+// e flag is_exam_suitable. Auto-pula se a migration 0054 (exercise_units /
+// is_exam_suitable) ainda não estiver aplicada no banco.
+async function seedCatalogo(supabase, { teacherId, teacher2Id, ucs }) {
+  // Probe: a migration 0054 está aplicada?
+  const probe = await supabase.from("exercise_units").select("exercise_id").limit(1);
+  if (probe.error) {
+    console.log(
+      "Catálogo demo PULADO: aplique a migration 0054 (exercise_units + is_exam_suitable) e rode o seed de novo.",
+    );
+    return;
+  }
+
+  const ucIdByTitle = new Map((ucs ?? []).map((u) => [u.title, u.id]));
+  const authorOf = (a) => (a === "prof2" ? teacher2Id : teacherId);
+
+  let count = 0;
+  for (const ex of CATALOGO) {
+    const { data: row } = await supabase
+      .from("exercises")
+      .insert({
+        author_id: authorOf(ex.author),
+        title: ex.title,
+        description: ex.description,
+        starter_code: ex.starter_code,
+        language: ex.language === "python" ? "python" : "csharp",
+        language_id: ex.language ?? "csharp",
+        difficulty: ex.difficulty,
+        xp_reward: ex.xp_reward,
+        is_public: true,
+        is_exam_suitable: ex.exam ?? false,
+      })
+      .select("id")
+      .single()
+      .throwOnError();
+
+    if (ex.tests?.length) {
+      await must(
+        supabase.from("exercise_tests").insert(
+          ex.tests.map((t, i) => ({
+            exercise_id: row.id,
+            ord: i + 1,
+            stdin: t.stdin,
+            expected_stdout: t.expected_stdout,
+            is_hidden: t.is_hidden ?? false,
+            weight: 1,
+          })),
+        ),
+      );
+    }
+
+    const links = (ex.ucs ?? [])
+      .map((title) => ucIdByTitle.get(title))
+      .filter(Boolean)
+      .map((uc_id) => ({ exercise_id: row.id, uc_id }));
+    if (links.length) await must(supabase.from("exercise_units").insert(links));
+
+    count += 1;
+  }
+
+  console.log(
+    `Catálogo demo: ${count} exercícios (2 professores, vinculados a UCs, ${CATALOGO.filter((e) => e.exam).length} de prova).`,
+  );
+}
+
 // Grava o curso técnico, cria um plano de ensino do prof.demo para a UC de
 // codificação, vincula essa UC à Turma Demo e lança uma frequência de exemplo.
 async function seedCurriculo(supabase, { teacherId, classId, studentIds }) {
@@ -1290,7 +1469,7 @@ async function seedCurriculo(supabase, { teacherId, classId, studentIds }) {
   }
   console.log(`UCs vinculadas à Turma Demo: ${classUnits.length} (com plano + aulas).`);
 
-  return { classUnitId: classUnit.id, matrix, classUnits };
+  return { classUnitId: classUnit.id, matrix, classUnits, ucs: todasUcs };
 }
 
 // Cria a matriz de competências do curso e devolve os ids por código, para que
@@ -1755,6 +1934,11 @@ async function main() {
   console.log("NOVOS EXERCICIOS CRIATIVOS (lista 'Atividades Criativas (Demo)'):");
   console.log("  Pixel Art, Vetor, Arte Digital e Blocos (Celeste). Entre como ALUNO,");
   console.log("  abra a lista e teste cada editor; entregue; corrija como PROFESSOR.");
+  console.log("");
+  console.log("CATALOGO DE EXERCICIOS (menu Exercicios, como PROFESSOR):");
+  console.log("  6 exercicios 'Catalogo: ...' dos 2 professores, vinculados a UCs e");
+  console.log("  alguns marcados de prova. Teste filtros (curso/UC/dificuldade/prova/");
+  console.log("  autor) e o botao 'Usar em uma turma'. (Requer migration 0054 aplicada.)");
   console.log("");
   console.log(`Codigo da turma (entrar como aluno novo): ${INVITE_CODE}`);
 }

@@ -27,12 +27,16 @@ const TIPOS: { value: Tipo; label: string; hint: string }[] = BASE_ACTIVITY_TYPE
   (a) => ({ value: a.kind, label: a.label, hint: a.hint }),
 );
 
+type UcOpt = { id: string; label: string };
+
 export function NovoExercicioForm({
   languages,
   creativeTools = [],
+  ucOptions = [],
 }: {
   languages: Lang[];
   creativeTools?: CreativeTool[];
+  ucOptions?: UcOpt[];
 }) {
   const [state, action, pending] = useActionState<NovoExercicioState, FormData>(
     criarExercicioManual,
@@ -149,6 +153,42 @@ export function NovoExercicioForm({
           <Input id="xp_reward" name="xp_reward" type="number" min={0} max={200} defaultValue={10} />
         </Field>
       </div>
+
+      {/* Catálogo — vincula o exercício a UC(s) do plano de curso e etiqueta de prova.
+          Assim ele fica encontrável por curso/UC e outros professores podem aplicá-lo. */}
+      <fieldset className="flex flex-col gap-3 rounded-lg border border-border p-4">
+        <legend className="px-1 text-sm font-medium">Catálogo</legend>
+
+        <div>
+          <span className="text-sm font-medium">Unidades curriculares (UCs)</span>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Marque a(s) UC(s) que este exercício atende. Serve para colegas
+            encontrarem e aplicarem em suas turmas.
+          </p>
+          {ucOptions.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Nenhuma UC cadastrada ainda. Você pode vincular depois.
+            </p>
+          ) : (
+            <div className="max-h-52 overflow-y-auto rounded-lg border border-border bg-background/40 p-2">
+              {ucOptions.map((u) => (
+                <label
+                  key={u.id}
+                  className="flex cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+                >
+                  <input type="checkbox" name="uc_ids" value={u.id} className="mt-0.5 h-4 w-4" />
+                  <span>{u.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="is_exam_suitable" className="h-4 w-4" />
+          Sugerido para prova
+        </label>
+      </fieldset>
 
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="is_public" defaultChecked className="h-4 w-4" />
