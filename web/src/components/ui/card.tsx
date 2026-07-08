@@ -47,7 +47,7 @@ export function CardHeader({
   return (
     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="text-base font-semibold leading-tight text-foreground">{title}</h2>
+        <h2 className="font-display text-base font-semibold leading-tight text-foreground">{title}</h2>
         {description && (
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         )}

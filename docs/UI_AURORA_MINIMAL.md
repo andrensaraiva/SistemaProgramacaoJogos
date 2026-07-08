@@ -119,8 +119,11 @@ no dark, onde a hierarquia vem da luminância do `--card-2`).
   fontes (Inter/Sora/Cormorant), gradiente XP, variante `gold` no botão.
 - [x] **Estágio 2 — Marca:** logo Celeste Academy (crescente + faísca + serifa);
   sidebar herda a paleta via tokens.
-- [ ] **Estágio 3 — Cards do dashboard:** metric / progress / mission / class /
-  attention / ranking cards no estilo Aurora.
+- [x] **Estágio 3 — Cards do dashboard:** hierarquia tipográfica Aurora aplicada
+  via primitivos — números em `font-display` (Sora) no `StatCard`, títulos em
+  `font-display` no `CardHeader` e `PageHeader`; números do painel do aluno
+  (StatLink, streak, moedas, saudação) em Sora tabular. Propaga a todos os cards
+  dos dois dashboards sem mudar estrutura/comportamento.
 - [ ] **Estágio 4 — Modais / Toasts / Dialogs:** claro (instrutor) e escuro
   celebrativo (aluno, com XP/estrelas/badges com parcimônia).
 - [ ] **Estágio 5 — Tema por papel:** instrutor sempre claro, aluno sempre escuro

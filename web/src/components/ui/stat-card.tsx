@@ -46,7 +46,7 @@ export function StatCard({
           </span>
         )}
       </div>
-      <div className={`mt-2 text-3xl font-bold tnum leading-none ${valueTone[tone]}`}>{value}</div>
+      <div className={`mt-2 font-display text-3xl font-bold tnum leading-none ${valueTone[tone]}`}>{value}</div>
       {hint && <div className="mt-1.5 text-xs text-muted-foreground">{hint}</div>}
     </>
   );

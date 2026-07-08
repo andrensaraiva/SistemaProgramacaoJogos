@@ -51,7 +51,7 @@ function StatLink({
       className={`reveal-up ${delay} group rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg`}
     >
       <div className="text-sm font-medium text-muted-foreground">{title}</div>
-      <div className={`mt-2 text-3xl font-bold ${tone}`}>{value}</div>
+      <div className={`mt-2 font-display text-3xl font-bold tnum ${tone}`}>{value}</div>
       {hint && (
         <div className="mt-1 text-xs text-muted-foreground transition-colors group-hover:text-primary">
           {hint} →
@@ -139,7 +139,7 @@ export function PainelAluno({
             <AvatarWithFrame name={nome} frameId={avatar.frameId} skinId={avatar.skinId} size={72} />
           </Link>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold leading-tight sm:text-3xl">
+            <h1 className="font-display text-2xl font-bold leading-tight sm:text-3xl">
               Olá, <span className="text-gradient">{nome}</span>! 👋
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
@@ -166,7 +166,7 @@ export function PainelAluno({
             className="pop-in flex shrink-0 flex-col items-center gap-0.5 rounded-2xl border border-border bg-background/60 px-5 py-3 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
           >
             <span className="text-2xl">🪙</span>
-            <span className="text-lg font-bold leading-none">{avatar.moedas}</span>
+            <span className="font-display text-lg font-bold tnum leading-none">{avatar.moedas}</span>
             <span className="text-[11px] text-muted-foreground">moedas</span>
           </Link>
         </div>
@@ -186,7 +186,7 @@ export function PainelAluno({
         >
           <span className={`text-4xl ${streak.atual > 0 ? "flame-pulse" : "opacity-40 grayscale"}`}>🔥</span>
           <div>
-            <div className="text-3xl font-bold leading-none">{streak.atual}</div>
+            <div className="font-display text-3xl font-bold tnum leading-none">{streak.atual}</div>
             <div className="mt-1 text-xs text-muted-foreground">
               {streak.atual > 0 ? "dias seguidos" : "comece sua ofensiva"}
               {streak.recorde > 0 && <span className="block">recorde: {streak.recorde} dias</span>}
