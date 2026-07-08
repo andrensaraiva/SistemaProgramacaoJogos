@@ -100,6 +100,20 @@ recompensas / destaque premium).
 adiciona hover elevado; `tone` pinta faixa de severidade à esquerda (estado em
 **forma**, não só cor — acessibilidade).
 
+### Modal / Diálogo — [`components/ui/modal.tsx`](../web/src/components/ui/modal.tsx)
+`Modal` (primitivo) e `ConfirmDialog` (helper). Theme-aware pelos tokens
+(superfície clara no instrutor / escura no aluno; borda lavanda no claro / roxa
+no escuro), raio 20px, acessível (role=dialog, aria-modal, fecha no Esc e no
+backdrop, trava scroll, foca ao abrir), com ícone celestial opcional. O
+[`ConfirmForm`](../web/src/components/confirm-form.tsx) usa o `ConfirmDialog` no
+lugar do `confirm()` nativo — mesma API (`action`, `message`, `children` + opções
+`title`/`danger`), então todos os ~10 pontos de confirmação já herdam o visual.
+
+### Toast — [`components/reward-toast.tsx`](../web/src/components/reward-toast.tsx)
+Toast de recompensa do aluno (celebrativo): confete e destaques na paleta Aurora
+(roxo/ouro/azul/teal), borda dourada, XP em roxo e moedas em ouro. Entra do topo,
+some sozinho, respeita `prefers-reduced-motion`.
+
 ### Sombras / elevação
 `.shadow-e1/e2/e3` → tokens `--shadow-sm/md/lg` (tinta roxa no light; quase nulas
 no dark, onde a hierarquia vem da luminância do `--card-2`).
@@ -124,8 +138,10 @@ no dark, onde a hierarquia vem da luminância do `--card-2`).
   `font-display` no `CardHeader` e `PageHeader`; números do painel do aluno
   (StatLink, streak, moedas, saudação) em Sora tabular. Propaga a todos os cards
   dos dois dashboards sem mudar estrutura/comportamento.
-- [ ] **Estágio 4 — Modais / Toasts / Dialogs:** claro (instrutor) e escuro
-  celebrativo (aluno, com XP/estrelas/badges com parcimônia).
+- [x] **Estágio 4 — Modais / Toasts / Dialogs:** `Modal` + `ConfirmDialog`
+  (`components/ui/modal.tsx`) theme-aware 20px acessível; `ConfirmForm` migrado do
+  `confirm()` nativo para o diálogo da marca (mesma API); `RewardToast` alinhado à
+  paleta Aurora (confete/ouro/roxo).
 - [ ] **Estágio 5 — Tema por papel:** instrutor sempre claro, aluno sempre escuro
   (muda o fluxo de tema atual — decisão de arquitetura).
 - [ ] **Estágio 6 — Detalhes celestiais + refino tipográfico:** constelações

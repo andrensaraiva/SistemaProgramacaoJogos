@@ -14,7 +14,8 @@ export type Reward = {
   levelUpTo?: number | null;
 };
 
-const CONFETTI_COLORS = ["#22c55e", "#3b82f6", "#eab308", "#ec4899", "#a855f7"];
+// Confete Aurora: roxo, lilás, ouro, azul e teal celestiais.
+const CONFETTI_COLORS = ["#7B4DFF", "#B86CFF", "#D9A84E", "#6CB6FF", "#66D6C7"];
 
 export function RewardToast({
   reward,
@@ -60,7 +61,7 @@ function RewardToastInner({
       aria-live="polite"
     >
       <div
-        className={`reward-pop pointer-events-auto relative overflow-hidden rounded-2xl border border-success/40 bg-gradient-to-br from-success/20 via-card to-primary/10 px-6 py-4 shadow-2xl ${
+        className={`reward-pop pointer-events-auto relative overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-primary/20 via-card to-gold/10 px-6 py-4 shadow-e3 ${
           leaving ? "reward-leave" : ""
         }`}
       >
@@ -91,12 +92,12 @@ function RewardToastInner({
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm">
               {reward.xp > 0 && (
-                <span className="rounded-full bg-success/20 px-2.5 py-0.5 font-semibold text-success">
+                <span className="rounded-full bg-primary/15 px-2.5 py-0.5 font-semibold text-primary">
                   +{reward.xp} XP
                 </span>
               )}
               {temCoins && (
-                <span className="rounded-full bg-yellow-500/20 px-2.5 py-0.5 font-semibold text-yellow-600 dark:text-yellow-400">
+                <span className="rounded-full bg-gold/20 px-2.5 py-0.5 font-semibold text-gold">
                   +{reward.coins} 🪙
                 </span>
               )}

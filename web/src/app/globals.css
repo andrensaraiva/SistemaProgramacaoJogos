@@ -199,6 +199,17 @@ body {
   .drawer-overlay, .drawer-panel { animation: none; }
 }
 
+/* Modal/diálogo: overlay fade + painel com scale-fade calmo (Aurora Minimal). */
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-overlay { animation: drawer-fade 0.18s ease both; }
+.modal-panel { animation: modal-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay, .modal-panel { animation: none; }
+}
+
 /* ===========================================================================
    Animações do painel gamificado do aluno
    =========================================================================== */
