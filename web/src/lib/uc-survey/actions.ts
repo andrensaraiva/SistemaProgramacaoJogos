@@ -34,6 +34,13 @@ function dedupeHash(studentId: string, classUnitId: string): string {
  * respondeu. Anônimo: checamos "já respondeu" pelo dedupe_hash, não por id.
  */
 export async function getPesquisasPendentes(studentId: string): Promise<PesquisaPendente[]> {
+  // Caminho de LEITURA no render do painel: se o segredo não estiver configurado,
+  // não derruba a página — só esconde o widget (o envio, mais adiante, avisa).
+  if (!process.env.FEEDBACK_SECRET) {
+    console.warn("getPesquisasPendentes: FEEDBACK_SECRET ausente — pesquisas de UC desativadas.");
+    return [];
+  }
+
   const admin = createAdminClient();
 
   // Turmas do aluno.
@@ -99,6 +106,9 @@ export async function responderPesquisa(
   comment: string,
 ): Promise<SurveyResult> {
   const { user } = await verifySession();
+  if (!process.env.FEEDBACK_SECRET) {
+    return { ok: false, message: "Pesquisa indisponível: FEEDBACK_SECRET não configurado no servidor." };
+  }
   const admin = createAdminClient();
 
   // Valida notas.
