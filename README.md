@@ -82,6 +82,7 @@ Para contribuir: **[CONTRIBUTING.md](CONTRIBUTING.md)** → [docs/ARCHITECTURE.m
 
 Só 6 docs, um por assunto:
 
+- [**DOCUMENTO_DO_SISTEMA**](docs/DOCUMENTO_DO_SISTEMA.md) — visão funcional completa: o que o sistema faz, funcionalidades e projeções futuras (sem código)
 - [**CONTINUAR**](docs/CONTINUAR.md) — onde estamos: estado, backlog e histórico (comece aqui)
 - [**ARCHITECTURE**](docs/ARCHITECTURE.md) — como funciona por dentro + modularidade + UI/UX
 - [**SETUP**](docs/SETUP.md) — setup do zero + Supabase CLI + fluxo de teste
