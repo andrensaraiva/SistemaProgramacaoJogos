@@ -5,20 +5,49 @@ import { Card } from "@/components/ui/card";
 import { getProfile } from "@/lib/auth/dal";
 import { coinBalance } from "@/lib/cosmetics/coins";
 import { bannerById, freeIds } from "@/lib/cosmetics/registry";
+import { getTeacherDashboard } from "@/lib/dashboard/teacher";
+import { getFeedbackResumo } from "@/lib/feedback/actions";
 import { displayStreak, todayLocalISO } from "@/lib/gamification/streak";
 import { createClient } from "@/lib/supabase/server";
 
 import { PerfilHeader } from "./_header";
+import { PerfilProfessor } from "./_professor";
 import { CosmeticShop } from "./_shop";
 
-// Perfil do aluno — estilo Discord: banner + avatar (skin+moldura) + nível/XP,
-// saldo de moedas e a loja de cosméticos comprados com moedas Celeste.
+// Perfil — ramifica por papel: aluno (estilo Discord: banner+avatar+cosméticos+
+// constelação) ou professor (identidade profissional + impacto + reputação).
+// Admin/coordenador são barrados de /perfil pelo middleware.
 export default async function PerfilPage() {
   const profile = await getProfile();
   if (!profile) redirect("/entrar");
-  if (profile.role !== "aluno") redirect("/painel");
+  if (profile.role !== "aluno" && profile.role !== "professor") redirect("/painel");
 
   const supabase = await createClient();
+
+  // PROFESSOR: perfil profissional (turmas, alunos, exercícios, reputação).
+  if (profile.role === "professor") {
+    const [dash, feedback, exercicios, turmas] = await Promise.all([
+      getTeacherDashboard(profile.id),
+      getFeedbackResumo(profile.id),
+      supabase.from("exercises").select("id", { count: "exact", head: true }).eq("author_id", profile.id),
+      supabase.from("classes").select("id, name").eq("owner_id", profile.id).order("name"),
+    ]);
+    return (
+      <PerfilProfessor
+        nome={profile.display_name ?? ""}
+        emailInstitucional={profile.institutional_email}
+        emailPessoal={profile.personal_email}
+        frameId={profile.avatar_frame_id}
+        skinId={profile.avatar_skin_id}
+        turmasCount={dash.turmasCount}
+        alunosCount={dash.alunosCount}
+        exerciciosCount={exercicios.count ?? 0}
+        feedback={feedback}
+        turmas={turmas.data ?? []}
+      />
+    );
+  }
+
   const [{ data: allBadges }, { data: myBadges }, { data: owned }] = await Promise.all([
     supabase.from("badges").select("id, title, description").order("id"),
     supabase.from("user_badges").select("badge_id").eq("user_id", profile.id),

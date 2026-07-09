@@ -54,6 +54,8 @@ export const FEATURES: FeatureNavItem[] = [
   { id: "painel", href: "/painel", label: "Painel", icon: "painel", group: "Aprender", audience: "all", enabled: true },
   // Perfil estilo Discord (avatar+banner+cosméticos por XP) — só aluno.
   { id: "perfil", href: "/perfil", label: "Meu perfil", icon: "perfil", group: "Aprender", audience: "aluno", enabled: true },
+  // Perfil do professor (identidade + impacto de ensino + reputação) — mesma rota.
+  { id: "prof-perfil", href: "/perfil", label: "Meu perfil", icon: "perfil", group: "Aprender", audience: "professor", enabled: true },
   // Exercícios: rótulo por papel (mesma rota). Aluno pratica; professor cria/gerencia.
   { id: "exercicios", href: "/exercicios", label: "Exercícios", icon: "code", group: "Aprender", audience: "aluno", enabled: true },
   { id: "prof-exercicios", href: "/exercicios", label: "Meus exercícios", icon: "code", group: "Aprender", audience: "professor", enabled: true },
