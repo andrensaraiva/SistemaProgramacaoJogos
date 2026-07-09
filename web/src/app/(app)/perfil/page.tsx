@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { AchievementConstellation, type ConstellationStar } from "@/components/achievement-constellation";
 import { Card } from "@/components/ui/card";
 import { getProfile } from "@/lib/auth/dal";
 import { coinBalance } from "@/lib/cosmetics/coins";
@@ -18,13 +19,21 @@ export default async function PerfilPage() {
   if (profile.role !== "aluno") redirect("/painel");
 
   const supabase = await createClient();
-  const [{ count: conquistas }, { data: owned }] = await Promise.all([
-    supabase
-      .from("user_badges")
-      .select("badge_id", { count: "exact", head: true })
-      .eq("user_id", profile.id),
+  const [{ data: allBadges }, { data: myBadges }, { data: owned }] = await Promise.all([
+    supabase.from("badges").select("id, title, description").order("id"),
+    supabase.from("user_badges").select("badge_id").eq("user_id", profile.id),
     supabase.from("user_cosmetics").select("cosmetic_id").eq("user_id", profile.id),
   ]);
+
+  // Constelação: todas as conquistas do catálogo; as que o aluno tem ACENDEM.
+  const unlockedSet = new Set((myBadges ?? []).map((b) => b.badge_id));
+  const stars: ConstellationStar[] = (allBadges ?? []).map((b) => ({
+    id: b.id,
+    title: b.title,
+    description: b.description,
+    unlocked: unlockedSet.has(b.id),
+  }));
+  const conquistas = unlockedSet.size;
 
   const level = profile.level;
   const xpNoNivel = profile.xp % 100;
@@ -63,6 +72,13 @@ export default async function PerfilPage() {
         skinId={profile.avatar_skin_id}
         bannerStyle={banner.style}
       />
+
+      {/* Constelação de Conquistas — céu de estrelas que acendem ao desbloquear */}
+      {stars.length > 0 && (
+        <Card>
+          <AchievementConstellation stars={stars} />
+        </Card>
+      )}
 
       {/* Loja de cosméticos */}
       <Card>
