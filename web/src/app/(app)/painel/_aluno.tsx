@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { AvatarWithFrame } from "@/components/avatar-with-frame";
+import { Constellation } from "@/components/constellation";
 import { DesempenhoLista } from "@/components/desempenho-uc";
 import { StudentOnboardingTour } from "@/components/student-onboarding-tour";
 import { UpcomingDeadlines, type DeadlineItem } from "@/components/upcoming-deadlines";
@@ -132,8 +133,9 @@ export function PainelAluno({
 
       {/* HERO de XP animado — coração visual do painel */}
       <div className="reveal-up relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/15 via-card to-accent/10 p-6 sm:p-8">
-        {/* glow decorativo */}
+        {/* glow + constelação decorativos */}
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
+        <Constellation className="absolute right-4 top-3 h-20 w-40 text-gold-soft/40" />
         <div className="relative flex flex-wrap items-center gap-5">
           <Link href="/perfil" title="Ver meu perfil" className="pop-in shrink-0 transition-transform hover:scale-105">
             <AvatarWithFrame name={nome} frameId={avatar.frameId} skinId={avatar.skinId} size={72} />

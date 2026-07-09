@@ -26,9 +26,11 @@ Tailwind v4 com `@theme inline` em [`web/src/app/globals.css`](../web/src/app/gl
 re-veste o app inteiro sem tocar em componente.
 
 - Tema claro = bloco `:root`. Tema escuro = bloco `.dark` no `<html>`.
-- O toggle é **manual** (script anti-flash em `layout.tsx` + persistência em
-  `localStorage`). **Ainda não é por papel** — fazer instrutor=sempre-claro e
-  aluno=sempre-escuro é um estágio futuro (muda o fluxo de tema).
+- **Tema por PAPEL na área logada** (`(app)/layout.tsx`): aluno → escuro,
+  instrutor/coordenador/admin → claro. Um `<script>` inline aplica/remove `.dark`
+  no `<html>` antes da pintura (anti-flash), sobrepondo o script raiz. O toggle
+  manual foi removido do app. Páginas públicas (`(auth)`, landing) seguem o
+  script raiz (localStorage/preferência do SO).
 
 **Ao criar UI nova, use sempre os tokens** (nunca hex cru), assim ela nasce
 correta nos dois temas.
@@ -114,6 +116,12 @@ Toast de recompensa do aluno (celebrativo): confete e destaques na paleta Aurora
 (roxo/ouro/azul/teal), borda dourada, XP em roxo e moedas em ouro. Entra do topo,
 some sozinho, respeita `prefers-reduced-motion`.
 
+### Detalhe celestial — [`components/constellation.tsx`](../web/src/components/constellation.tsx)
+`Constellation` — SVG decorativo sutil (estrelas + linhas + faíscas), `aria-hidden`
+e sem eventos; cor por `currentColor` (defina `text-*`/opacity) e tamanho por
+`w/h`. Usado atrás do hero do aluno (ouro suave) e do cartão de login (roxo/ouro).
+Usar com parcimônia, só onde reforça a marca.
+
 ### Sombras / elevação
 `.shadow-e1/e2/e3` → tokens `--shadow-sm/md/lg` (tinta roxa no light; quase nulas
 no dark, onde a hierarquia vem da luminância do `--card-2`).
@@ -142,10 +150,14 @@ no dark, onde a hierarquia vem da luminância do `--card-2`).
   (`components/ui/modal.tsx`) theme-aware 20px acessível; `ConfirmForm` migrado do
   `confirm()` nativo para o diálogo da marca (mesma API); `RewardToast` alinhado à
   paleta Aurora (confete/ouro/roxo).
-- [ ] **Estágio 5 — Tema por papel:** instrutor sempre claro, aluno sempre escuro
-  (muda o fluxo de tema atual — decisão de arquitetura).
-- [ ] **Estágio 6 — Detalhes celestiais + refino tipográfico:** constelações
-  sutis, `font-display`/`font-serif` nos títulos das telas.
+- [x] **Estágio 5 — Tema por papel:** instrutor/coordenador/admin sempre claro,
+  aluno sempre escuro, via script inline anti-flash no `(app)/layout.tsx`; toggle
+  manual removido do app.
+- [x] **Estágio 6 — Detalhes celestiais + refino tipográfico:** componente
+  `Constellation` atrás do hero do aluno e do login; título do login em
+  `font-display` com a marca em `font-serif`.
 
-Ao continuar em outra sessão: leia este arquivo, rode um estágio por vez e
-valide com `npm run typecheck && npm run build` após cada um.
+**Redesign Aurora Minimal concluído (estágios 1–6).** Próximos passos possíveis
+(fora do escopo original): refinar telas internas específicas (turmas, correção,
+relatórios) e a landing pública. Ao continuar em outra sessão: leia este arquivo
+e valide com `npm run typecheck && npm run build`.

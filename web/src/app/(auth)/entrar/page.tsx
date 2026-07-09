@@ -12,7 +12,9 @@ export default async function EntrarPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold">Entrar na Celeste Academy</h1>
+        <h1 className="font-display text-2xl font-bold">
+          Entrar na <span className="font-serif">Celeste Academy</span>
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Plataforma de turmas e provas. Use seu e-mail (institucional ou
           pessoal) e sua senha. No primeiro acesso, você define uma nova senha.
