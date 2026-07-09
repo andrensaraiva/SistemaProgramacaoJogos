@@ -1,6 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { AvatarWithFrame } from "@/components/avatar-with-frame";
 import { NotificationBell } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { XpBar } from "@/components/xp-bar";
 import { logout } from "@/lib/auth/actions";
@@ -12,12 +13,6 @@ export default async function AppLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const profile = await getProfile();
   const role = (profile?.role ?? "aluno") as "aluno" | "professor" | "admin" | "coordenador";
-  // Aurora Minimal — tema POR PAPEL: aluno = escuro (imersivo/gamificado);
-  // instrutor/coordenador/admin = claro (calmo/premium). Um script inline aplica
-  // a classe .dark no <html> antes da pintura (sem flash), sobrepondo o
-  // toggle/localStorage do script raiz para a área logada.
-  const isStudent = role === "aluno";
-  const roleThemeScript = `document.documentElement.classList.${isStudent ? "add" : "remove"}('dark');`;
   const roleLabel =
     role === "admin"
       ? "Administrador"
@@ -44,18 +39,19 @@ export default async function AppLayout({
         </div>
       </div>
       {role === "aluno" && <XpBar xp={profile.xp} level={profile.level} />}
-      <form action={logout}>
-        <Button type="submit" variant="secondary" className="w-full">
-          Sair
-        </Button>
-      </form>
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <form action={logout} className="flex-1">
+          <Button type="submit" variant="secondary" className="w-full">
+            Sair
+          </Button>
+        </form>
+      </div>
     </div>
   ) : null;
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      {/* Tema por papel: aplica .dark antes da pintura (anti-flash). */}
-      <script dangerouslySetInnerHTML={{ __html: roleThemeScript }} />
       <AppSidebar
         role={role}
         footer={sidebarFooter}

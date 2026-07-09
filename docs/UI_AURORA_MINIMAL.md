@@ -26,11 +26,11 @@ Tailwind v4 com `@theme inline` em [`web/src/app/globals.css`](../web/src/app/gl
 re-veste o app inteiro sem tocar em componente.
 
 - Tema claro = bloco `:root`. Tema escuro = bloco `.dark` no `<html>`.
-- **Tema por PAPEL na área logada** (`(app)/layout.tsx`): aluno → escuro,
-  instrutor/coordenador/admin → claro. Um `<script>` inline aplica/remove `.dark`
-  no `<html>` antes da pintura (anti-flash), sobrepondo o script raiz. O toggle
-  manual foi removido do app. Páginas públicas (`(auth)`, landing) seguem o
-  script raiz (localStorage/preferência do SO).
+- **Escolha do usuário** (não por papel): o `ThemeToggle` no rodapé da sidebar
+  alterna claro/escuro e persiste em `localStorage`; um script anti-flash no
+  `layout.tsx` raiz aplica a preferência (ou a do SO) antes da pintura. Cada
+  pessoa — aluno ou instrutor — escolhe o tema que preferir; o estilo Aurora
+  Minimal vale nos dois.
 
 **Ao criar UI nova, use sempre os tokens** (nunca hex cru), assim ela nasce
 correta nos dois temas.
@@ -150,9 +150,9 @@ no dark, onde a hierarquia vem da luminância do `--card-2`).
   (`components/ui/modal.tsx`) theme-aware 20px acessível; `ConfirmForm` migrado do
   `confirm()` nativo para o diálogo da marca (mesma API); `RewardToast` alinhado à
   paleta Aurora (confete/ouro/roxo).
-- [x] **Estágio 5 — Tema por papel:** instrutor/coordenador/admin sempre claro,
-  aluno sempre escuro, via script inline anti-flash no `(app)/layout.tsx`; toggle
-  manual removido do app.
+- [x] **Estágio 5 — Tema:** ~~por papel~~ **revertido a pedido** — cada usuário
+  escolhe claro/escuro pelo `ThemeToggle` (mantido no rodapé da sidebar). O estilo
+  Aurora Minimal vale nos dois temas.
 - [x] **Estágio 6 — Detalhes celestiais + refino tipográfico:** componente
   `Constellation` atrás do hero do aluno e do login; título do login em
   `font-display` com a marca em `font-serif`.
